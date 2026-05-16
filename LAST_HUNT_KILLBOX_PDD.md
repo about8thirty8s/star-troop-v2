@@ -402,7 +402,7 @@ One player controls the Hunter. Three players are soldiers. This is the endgame 
 
 The Hunter player sees the thermal view. The soldiers see normal view. They communicate on different information. Emergent drama guaranteed.
 
-### Network Foundation
+### Network Foundation Prerequisites
 
 Before multiplayer work begins, the engine needs:
 1. Entity position serialization (not currently structured for this)
@@ -664,4 +664,3 @@ We build weird things. We make them incredible.
 *Document prepared by VULCAN — President, Side Scroller Division — Driftgate Studios*
 *Classification: INTERNAL CONFIDENTIAL*
 *Version: 1.0 | May 2026*
-
