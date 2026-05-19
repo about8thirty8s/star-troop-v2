@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StarTroop — Game Design Document</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Oswald:wght@400;700&display=swap');
+
+  :root {
+    --red: #c0392b;
+    --orange: #e67e22;
+    --yellow: #f1c40f;
+    --dark: #0a0a0a;
+    --dark2: #111;
+    --dark3: #1a1a1a;
+    --dark4: #222;
+    --text: #d4c89a;
+    --dim: #7a7060;
+    --green: #27ae60;
+    --blue: #2980b9;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    line-height: 1.6;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+    background: radial-gradient(ellipse at center, #2c0a00 0%, #0a0a0a 70%);
+    border-bottom: 2px solid var(--red);
+  }
+
+  .hero-stars {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, #fff8, transparent),
+      radial-gradient(1px 1px at 30% 60%, #fff6, transparent),
+      radial-gradient(1px 1px at 50% 10%, #fff9, transparent),
+      radial-gradient(1px 1px at 70% 40%, #fff5, transparent),
+      radial-gradient(1px 1px at 80% 80%, #fff7, transparent),
+      radial-gradient(1px 1px at 20% 90%, #fff4, transparent),
+      radial-gradient(1px 1px at 90% 15%, #fff8, transparent),
+      radial-gradient(1px 1px at 45% 75%, #fff6, transparent),
+      radial-gradient(1px 1px at 60% 55%, #fff5, transparent),
+      radial-gradient(1px 1px at 15% 45%, #fff7, transparent);
+  }
+
+  .hero-planet {
+    position: absolute;
+    bottom: -80px; left: 50%;
+    transform: translateX(-50%);
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 35% 35%, #8b3a00, #3d1500 50%, #1a0800);
+    box-shadow: 0 0 120px #c0392b66, inset -40px -20px 60px #00000088;
+    opacity: 0.6;
+  }
+
+  .hero-content { position: relative; z-index: 2; padding: 2rem; }
+
+  .fed-logo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 6px;
+    color: var(--dim);
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+  }
+
+  .hero h1 {
+    font-family: 'Oswald', sans-serif;
+    font-size: clamp(4rem, 12vw, 9rem);
+    font-weight: 700;
+    letter-spacing: -2px;
+    line-height: 0.9;
+    color: #fff;
+    text-shadow:
+      0 0 40px var(--red),
+      0 0 80px var(--orange),
+      4px 4px 0 var(--red);
+  }
+
+  .hero h1 span { color: var(--red); }
+
+  .hero-sub {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 8px;
+    color: var(--orange);
+    margin-top: 0.75rem;
+    text-transform: uppercase;
+  }
+
+  .hero-tagline {
+    margin-top: 2rem;
+    font-size: 1rem;
+    color: var(--dim);
+    max-width: 500px;
+    font-style: italic;
+  }
+
+  .hero-meta {
+    margin-top: 2.5rem;
+    display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap;
+  }
+  .hero-meta span {
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: var(--dim);
+    border: 1px solid #333;
+    padding: 0.4rem 1rem;
+    text-transform: uppercase;
+  }
+  .hero-meta span b { color: var(--orange); }
+
+  .scroll-hint {
+    position: absolute; bottom: 2rem;
+    font-size: 0.7rem; letter-spacing: 3px;
+    color: var(--dim); text-transform: uppercase;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
+
+  /* ── NAV ── */
+  .nav {
+    position: sticky; top: 0; z-index: 100;
+    background: #0a0a0aee;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #c0392b44;
+    display: flex; gap: 0; overflow-x: auto;
+  }
+  .nav a {
+    color: var(--dim);
+    text-decoration: none;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 0.9rem 1.2rem;
+    white-space: nowrap;
+    border-right: 1px solid #1a1a1a;
+    transition: all 0.2s;
+  }
+  .nav a:hover { color: var(--orange); background: #1a0800; }
+
+  /* ── SECTIONS ── */
+  .section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 5rem 2rem;
+  }
+
+  .section-label {
+    font-size: 0.6rem;
+    letter-spacing: 5px;
+    color: var(--red);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .section-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
+    line-height: 1;
+  }
+
+  .section-divider {
+    width: 60px; height: 3px;
+    background: linear-gradient(90deg, var(--red), transparent);
+    margin-bottom: 2.5rem;
+  }
+
+  .section-body {
+    color: #a09880;
+    font-size: 0.9rem;
+    max-width: 700px;
+    margin-bottom: 2rem;
+    line-height: 1.8;
+  }
+
+  hr.ruled { border: none; border-top: 1px solid #1e1e1e; margin: 4rem 0; }
+
+  /* ── PITCH BOX ── */
+  .pitch-box {
+    background: linear-gradient(135deg, #1a0800, #0d0d0d);
+    border: 1px solid var(--red);
+    border-left: 4px solid var(--red);
+    padding: 2rem 2.5rem;
+    margin: 2rem 0;
+    font-size: 1.05rem;
+    color: var(--text);
+    line-height: 1.9;
+    position: relative;
+  }
+  .pitch-box::before {
+    content: '"';
+    font-family: 'Oswald', sans-serif;
+    font-size: 6rem;
+    color: var(--red);
+    opacity: 0.15;
+    position: absolute;
+    top: -1rem; left: 1rem;
+    line-height: 1;
+  }
+
+  /* ── CORE LOOP ── */
+  .loop-row {
+    display: flex; gap: 0; margin: 2rem 0; flex-wrap: wrap;
+  }
+  .loop-step {
+    flex: 1; min-width: 140px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    position: relative;
+  }
+  .loop-step.day { background: linear-gradient(180deg, #1a1200, #111); border-top: 3px solid var(--yellow); }
+  .loop-step.night { background: linear-gradient(180deg, #0a0015, #111); border-top: 3px solid #6c3cbd; }
+  .loop-step .step-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .loop-step .step-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 3px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+  .loop-step .step-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.1rem;
+    color: #fff;
+  }
+  .loop-arrow {
+    display: flex; align-items: center;
+    color: var(--red); font-size: 1.5rem;
+    padding: 0 0.25rem;
+    align-self: center;
+  }
+
+  /* ── TABLES ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.85rem;
+  }
+  th {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--orange);
+    background: #111;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--orange);
+  }
+  td {
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid #1a1a1a;
+    color: #a09880;
+    vertical-align: top;
+  }
+  tr:hover td { background: #111; color: var(--text); }
+  td:first-child { color: var(--text); font-weight: bold; }
+
+  /* ── ENEMY CARDS ── */
+  .enemy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+  .enemy-card {
+    background: var(--dark3);
+    border: 1px solid #2a2a2a;
+    padding: 1.5rem;
+    transition: all 0.2s;
+    cursor: default;
+  }
+  .enemy-card:hover {
+    border-color: var(--red);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px #c0392b22;
+  }
+  .enemy-card .enemy-name {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.1rem;
+    color: #fff;
+    margin-bottom: 0.25rem;
+  }
+  .enemy-card .enemy-class {
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    color: var(--red);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+  .enemy-card .enemy-desc { font-size: 0.8rem; color: var(--dim); line-height: 1.6; }
+  .threat { display: flex; gap: 3px; margin-top: 0.75rem; }
+  .threat-dot { width: 8px; height: 8px; border-radius: 50%; background: #222; }
+  .threat-dot.active { background: var(--red); box-shadow: 0 0 4px var(--red); }
+
+  /* ── TECH TREE ── */
+  .tech-tiers { display: flex; flex-direction: column; gap: 1px; margin: 2rem 0; }
+  .tech-tier {
+    display: flex; align-items: stretch;
+  }
+  .tier-label {
+    width: 140px; min-width: 140px;
+    padding: 1.5rem;
+    display: flex; flex-direction: column; justify-content: center;
+    font-family: 'Oswald', sans-serif;
+  }
+  .tier-label .tier-num { font-size: 2rem; font-weight: 700; line-height: 1; }
+  .tier-label .tier-name { font-size: 0.65rem; letter-spacing: 3px; text-transform: uppercase; }
+  .tier-1 .tier-label { background: #111; border-left: 4px solid #27ae60; }
+  .tier-1 .tier-label .tier-num { color: #27ae60; }
+  .tier-2 .tier-label { background: #111; border-left: 4px solid var(--orange); }
+  .tier-2 .tier-label .tier-num { color: var(--orange); }
+  .tier-3 .tier-label { background: #111; border-left: 4px solid var(--red); }
+  .tier-3 .tier-label .tier-num { color: var(--red); }
+  .tier-items {
+    flex: 1;
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    padding: 1rem;
+    background: #0d0d0d;
+    border-bottom: 1px solid #1a1a1a;
+    align-items: center;
+  }
+  .tier-item {
+    font-size: 0.75rem;
+    color: var(--dim);
+    border: 1px solid #2a2a2a;
+    padding: 0.3rem 0.75rem;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .tier-item:hover { color: var(--text); border-color: #555; }
+
+  /* ── WIN/LOSE ── */
+  .outcome-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 2rem 0; }
+  .outcome-box {
+    padding: 2rem;
+    border: 1px solid;
+  }
+  .outcome-box.win { border-color: var(--green); background: #001a0a; }
+  .outcome-box.lose { border-color: var(--red); background: #1a0000; }
+  .outcome-box .outcome-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+  .outcome-box.win .outcome-label { color: var(--green); }
+  .outcome-box.lose .outcome-label { color: var(--red); }
+  .outcome-box p { font-size: 0.85rem; color: var(--dim); line-height: 1.8; }
+
+  /* ── GALLERY ── */
+  .gallery-section { background: var(--dark2); padding: 5rem 0; border-top: 1px solid #1a1a1a; }
+  .gallery-inner { max-width: 1300px; margin: 0 auto; padding: 0 2rem; }
+
+  .gallery-tabs {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    margin-bottom: 2.5rem;
+  }
+  .tab-btn {
+    background: var(--dark3);
+    border: 1px solid #2a2a2a;
+    color: var(--dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab-btn:hover, .tab-btn.active {
+    background: var(--red);
+    border-color: var(--red);
+    color: #fff;
+  }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+
+  .gallery-card {
+    background: var(--dark3);
+    border: 1px solid #222;
+    overflow: hidden;
+    transition: all 0.25s;
+    cursor: pointer;
+  }
+  .gallery-card:hover {
+    border-color: var(--orange);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px #00000066;
+  }
+  .gallery-card.hidden { display: none; }
+
+  .card-img {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #111 repeating-linear-gradient(
+      45deg,
+      #0d0d0d 0px, #0d0d0d 10px,
+      #111 10px, #111 20px
+    );
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+  .card-img img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+  .card-img .img-loader {
+    position: absolute;
+    font-size: 0.6rem;
+    color: var(--dim);
+    letter-spacing: 2px;
+  }
+  .card-info { padding: 0.75rem 1rem; }
+  .card-name {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.95rem;
+    color: #fff;
+    margin-bottom: 0.15rem;
+  }
+  .card-cat {
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .card-cat.chars { color: #3498db; }
+  .card-cat.enemies { color: var(--red); }
+  .card-cat.buildings { color: var(--orange); }
+  .card-cat.effects { color: #f1c40f; }
+  .card-cat.weapons { color: #95a5a6; }
+  .card-cat.props { color: #8e44ad; }
+  .card-cat.terrain { color: #27ae60; }
+  .card-cat.backgrounds { color: #2980b9; }
+  .card-cat.vehicles { color: #16a085; }
+  .card-cat.ui { color: #e67e22; }
+  .card-cat.concept { color: #e74c3c; }
+
+  /* ── LIGHTBOX ── */
+  .lightbox {
+    display: none;
+    position: fixed; inset: 0; z-index: 1000;
+    background: #000000cc;
+    backdrop-filter: blur(8px);
+    align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img {
+    max-width: 80vw;
+    max-height: 75vh;
+    object-fit: contain;
+    image-rendering: pixelated;
+    border: 1px solid #333;
+  }
+  .lightbox-name {
+    margin-top: 1rem;
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.5rem;
+    color: #fff;
+  }
+  .lightbox-cat {
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+  }
+  .lightbox-close {
+    position: absolute; top: 1.5rem; right: 2rem;
+    font-size: 2rem; color: var(--dim); cursor: pointer;
+    background: none; border: none; font-family: inherit;
+  }
+  .lightbox-close:hover { color: #fff; }
+
+  /* ── FOOTER ── */
+  .footer {
+    background: var(--dark);
+    border-top: 1px solid #1a1a1a;
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+  .footer p { font-size: 0.7rem; color: var(--dim); letter-spacing: 2px; margin: 0.4rem 0; }
+  .footer strong { color: var(--orange); }
+
+  /* ── WAVE BADGE ── */
+  .wave-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+  }
+  .wave-card {
+    border: 1px solid #2a2a2a;
+    padding: 1rem;
+    text-align: center;
+    background: #0d0d0d;
+  }
+  .wave-card .wave-num {
+    font-family: 'Oswald', sans-serif;
+    font-size: 2rem;
+    color: var(--red);
+    line-height: 1;
+  }
+  .wave-card .wave-label {
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+  }
+  .wave-card .wave-event { font-size: 0.8rem; color: var(--text); margin-top: 0.5rem; }
+
+  /* ── MOCKUPS ── */
+  .mockups-section { background: #0a0a0a; padding: 5rem 0; border-top: 2px solid var(--red); }
+  .mockup-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  .mockup-card {
+    background: var(--dark3);
+    border: 1px solid #222;
+    overflow: hidden;
+    transition: all 0.25s;
+    display: flex;
+    flex-direction: column;
+  }
+  .mockup-card:hover { border-color: var(--orange); box-shadow: 0 16px 48px #00000077; }
+  .mockup-img-wrap {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .mockup-img-wrap img {
+    width: 100%;
+    display: block;
+    image-rendering: pixelated;
+    transition: transform 0.3s;
+  }
+  .mockup-card:hover .mockup-img-wrap img { transform: scale(1.02); }
+  .mockup-overlay {
+    position: absolute; inset: 0;
+    background: #00000066;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .mockup-overlay span {
+    font-size: 0.65rem; letter-spacing: 4px;
+    color: #fff; text-transform: uppercase;
+    border: 1px solid #fff; padding: 0.5rem 1.5rem;
+  }
+  .mockup-card:hover .mockup-overlay { opacity: 1; }
+  .mockup-info { padding: 1.25rem 1.5rem; flex: 1; }
+  .mockup-num {
+    font-family: 'Oswald', sans-serif;
+    font-size: 3rem; font-weight: 700;
+    color: #1e1e1e; line-height: 1;
+    float: right; margin-left: 1rem;
+  }
+  .mockup-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.2rem; color: #fff;
+    margin-bottom: 0.5rem;
+  }
+  .mockup-desc { font-size: 0.8rem; color: var(--dim); line-height: 1.7; margin-bottom: 0.75rem; }
+  .mockup-tag {
+    display: inline-block;
+    font-size: 0.6rem; letter-spacing: 3px;
+    text-transform: uppercase; padding: 0.25rem 0.75rem;
+    border: 1px solid;
+  }
+  .day-tag { color: var(--yellow); border-color: var(--yellow); }
+  .night-tag { color: #9b59b6; border-color: #9b59b6; }
+  .dawn-tag { color: var(--orange); border-color: var(--orange); }
+
+  .mockup-lightbox {
+    display: none;
+    position: fixed; inset: 0; z-index: 2000;
+    background: #000000dd;
+    backdrop-filter: blur(12px);
+    align-items: center; justify-content: center;
+    flex-direction: column; cursor: pointer;
+  }
+  .mockup-lightbox.open { display: flex; }
+  .mockup-lightbox img {
+    max-width: 92vw; max-height: 85vh;
+    object-fit: contain; image-rendering: pixelated;
+    border: 1px solid #333;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════ HERO -->
+<section class="hero">
+  <div class="hero-stars"></div>
+  <div class="hero-planet"></div>
+  <div class="hero-content">
+    <p class="fed-logo">☆ United Citizens Federation — Military Intelligence ☆</p>
+    <h1>STAR<span>TROOP</span></h1>
+    <p class="hero-sub">Game Design Document · v1.0</p>
+    <p class="hero-tagline">"The only good Bug is a dead Bug."</p>
+    <div class="hero-meta">
+      <span><b>Genre:</b> Side-Scrolling Survival / Tower Defense</span>
+      <span><b>Style:</b> 16-bit Pixel Art</span>
+      <span><b>Ref:</b> Kingdom: New Lands</span>
+      <span><b>Version:</b> 1.0 · May 2026</span>
+    </div>
+  </div>
+  <p class="scroll-hint">▼ scroll to read ▼</p>
+</section>
+
+<!-- ══════════════════════════════════════════ NAV -->
+<nav class="nav">
+  <a href="#pitch">Pitch</a>
+  <a href="#loop">Core Loop</a>
+  <a href="#world">World</a>
+  <a href="#base">Base</a>
+  <a href="#units">Units</a>
+  <a href="#enemies">Enemies</a>
+  <a href="#waves">Waves</a>
+  <a href="#resources">Resources</a>
+  <a href="#tech">Tech Tree</a>
+  <a href="#winlose">Win / Lose</a>
+  <a href="#audio">Audio</a>
+  <a href="#mockups">Mockups</a><a href="#gallery">Gallery</a>
+</nav>
+
+<!-- ══════════════════════════════════════════ PITCH -->
+<div id="pitch" class="section">
+  <p class="section-label">01 — Elevator Pitch</p>
+  <h2 class="section-title">Last Man Standing</h2>
+  <div class="section-divider"></div>
+  <div class="pitch-box">
+    You are the last ranking officer on a bug-ravaged planet. Your dropship is down. Your unit is scattered across the wasteland. By day you push outward — scouting, mining, rescuing survivors, building your perimeter. By night the bugs come. They always come. Hold the line or die screaming.
+  </div>
+  <p class="section-body">
+    StarTroop is a Kingdom: New Lands-style 2D side-scroller set in the Starship Troopers universe. 
+    Simple to pick up, brutal to master. Every night escalates. Every survivor matters. 
+    The goal: hold out long enough to call Federation evac and get off this rock alive.
+  </p>
+</div>
+
+<hr class="ruled">
+
+<!-- ══════════════════════════════════════════ CORE LOOP -->
+<div id="loop" class="section">
+  <p class="section-label">02 — Core Loop</p>
+  <h2 class="section-title">Build by Day. Bleed by Night.</h2>
+  <div class="section-divider"></div>
+  <p class="section-body">Two phases. Repeat. Escalate. The day gives you breathing room. The night takes it away.</p>
+
+  <div class="loop-row">
+    <div class="loop-step day">
+      <div class="step-icon">🌅</div>
+      <div class="step-label">Day</div>
+      <div class="step-title">Explore</div>
+    </div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step day">
+      <div class="step-icon">⛏️</div>
+      <div class="step-label">Day</div>
+      <div class="step-title">Gather</div>
+    </div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step day">
+      <div class="step-icon">🚀</div>
+      <div class="step-label">Day</div>
+      <div class="step-title">Rescue</div>
+    </div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step day">
+      <div class="step-icon">🔧</div>
+      <div class="step-label">Day</div>
+      <div class="step-title">Build</div>
+    </div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step night">
+      <div class="step-icon">🌑</div>
+      <div class="step-label">Night</div>
+      <div class="step-title">Defend</div>
+    </div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step night">
+      <div class="step-icon">💀</div>
+      <div class="step-label">Night</div>
+      <div class="step-title">Survive</div>
+    </div>
+  </div>
+
+  <p class="section-body">
+    Win condition: Build and charge the Federation Evac Beacon. Defend it for 3 consecutive nights while it transmits. Escape alive.
+  </p>
+</div>
+
+<hr class="ruled">
+
+<!-- ══════════════════════════════════════════ WORLD -->
+<div id="world" class="section">
+  <p class="section-label">03 — World Structure</p>
+  <h2 class="section-title">Planet P — Bug Territory</h2>
+  <div class="section-divider"></div>
+
+  <table>
+    <tr><th>Zone</th><th>Direction</th><th>Contents</th></tr>
+    <tr><td>Base Camp</td><td>Centre</td><td>Command Post, all buildable structures, your starting point</td></tr>
+    <tr><td>Left Wing</td><td>West</td><td>Mining zones, underground caves, rock ore nodes, bug burrow clusters</td></tr>
+    <tr><td>Right Wing</td><td>East</td><td>Ruins, crash sites, rescue pods, downed dropships, survivor camps</td></tr>
+    <tr><td>Deep Territory</td><td>Both flanks</td><td>Dense bug presence, rare resources, Brain Bug lair (end-game)</td></tr>
+  </table>
+
+  <p class="section-body">
+    The world uses a single large horizontal level with the base locked to centre-screen. The camera scrolls as the player explores outward. Bug attacks come from both flanks simultaneously at night — there is no safe direction.
+  </p>
+  <p class="section-body">
+    <b>Sky:</b> Perpetual red-orange alien atmosphere. Twin moons rise at dusk. At night the sky shifts to deep purple-black, lit only by your searchlights and the muzzle flash of your Morita rifles.
+  </p>
+</div>
+
+<hr class="ruled">
+
+<!-- ══════════════════════════════════════════ BASE -->
+<div id="base" class="section">
+  <p class="section-label">04 — Base Structures</p>
+  <h2 class="section-title">Build Your Perimeter</h2>
+  <div class="section-divider"></div>
+  <p class="section-body">All structures are built in the central base zone. Placement is horizontal — you choose which side of your base each building occupies, affecting defensive coverage.</p>
+
+  <table>
+    <tr><th>Building</th><th>Function</th><th>Requires</th></tr>
+    <tr><td>Command Post</td><td>Tech tree hub, upgrades, evac beacon unlock</td><td>Start</td></tr>
+    <tr><td>Barracks</td><td>Trains rescued survivors into Mobile Infantry</td><td>Start</td></tr>
+    <tr><td>Armory</td><td>Produces Morita ammo, unlocks weapon upgrades</td><td>Ore Refinery</td></tr>
+    <tr><td>Med Bay</td><td>Heals units, revives wounded after bug attacks</td><td>Start</td></tr>
+    <tr><td>Power Generator</td><td>Powers electric fences and auto-turrets</td><td>Tier 2</td></tr>
+    <tr><td>Ore Refinery</td><td>Converts raw ore into buildable materials</td><td>Tier 1</td></tr>
+    <tr><td>Research Lab</td><td>Scientists work here to unlock tech</td><td>Tier 2</td></tr>
+    <tr><td>Guard Tower</td><td>Manned or auto-turret position</td><td>Start</td></tr>
+    <tr><td>Defensive Wall</td><td>Modular, upgradeable perimeter sections</td><td>Start</td></tr>
+    <tr><td>Electric Fence</td><td>Slows and damages bug waves on contact</td><td>Generator</td></tr>
+    <tr><td>Landing Pad</td><td>Allows rescue pods to arrive, recruits Pilots</td><td>Tier 2</td></tr>
+    <tr><td>Evac Beacon</td><td>Win condition — transmits for 3 nights</td><td>Tier 3 + Pilot</td></tr>
+  </table>
+</div>
+
+<hr class="ruled">
+
+<!-- ══════════════════════════════════════════ UNITS -->
+<div id="units" class="section">
+  <p class="section-label">05 — Unit Roster</p>
+  <h2 class="section-title">Your Federation</h2>
+  <div class="section-divider"></div>
+  <p class="section-body">Survivors are found in crash sites and rescue pods scattered across the map. Rescue them and escort them back to base — they then choose (or are assigned) a role.</p>
+
+  <table>
+    <tr><th>Class</th><th>Day Role</th><th>Night Role</th><th>Special</th></tr>
+    <tr><td>Mobile Infantry</td><td>Patrol, escort</td><td>Hold the defensive line, Morita fire</td><td>Can be upgraded to Power Armor</td></tr>
+    <tr><td>Scientist</td><td>Research Lab, builds faster</td><td>Retreats to Med Bay</td><td>Accelerates tech unlock speed</td></tr>
+    <tr><td>Miner</td><td>Extracts ore, clears terrain</td><td>Retreats to base interior</td><td>Finds hidden resource caches</td></tr>
+    <tr><td>Medic</td><td>Heals wounded units</td><td>Keeps MI alive during bug waves</td><td>Can revive downed soldiers</td></tr>
+    <tr><td>Pilot</td><td>Unlocks dropship calls</td><td>Operates landing pad defenses</td><td>Required for Evac Beacon activation</td></tr>
+  </table>
+
+  <p class="section-body" style="margin-top:1.5rem">
+    <b>The Player — The Officer:</b> Morita assault rifle, pistol sidearm, grenades. 
+    Command abilities include Rally (boosts nearby MI morale), Airstrike Call-in (Tier 3), and Retreat Signal (pulls all units behind the wall line).
+  </p>
+</div>
+
+<hr class="ruled">
+
+<!-- ══════════════════════════════════════════ ENEMIES -->
+<div id="enemies" class="section">
+  <p class="section-label">06 — Enemy Codex</p>
+  <h2 class="section-title">Know Your Bug</h2>
+  <div class="section-divider"></div>
+  <p class="section-body">Five bug types. Each demands a different response. All of them want you dead.</p>
+
+  <div class="enemy-grid">
+    <div class="enemy-card">
+      <div class="enemy-name">Warrior Bug</div>
+      <div class="enemy-class">Swarm · Melee</div>
+      <div class="enemy-desc">Fast, aggressive. Comes in overwhelming numbers. The bread and butter of every night wave. No armour — dies to sustained Morita fire.</div>
+      <div class="threat">
+        <div class="threat-dot active"></div><div class="threat-dot active"></div>
+        <div class="threat-dot active"></div><div class="threat-dot"></div><div class="threat-dot"></div>
+      </div>
+    </div>
+    <div class="enemy-card">
+      <div class="enemy-name">Tanker Bug</div>
+      <div class="enemy-class">Heavy · Fire</div>
+      <div class="enemy-desc">Slow, heavily armoured. Sprays burning fluid from its abdomen. Rare but devastating — capable of destroying structures. Prioritise with grenades and concentrated fire.</div>
+      <div class="threat">
+        <div class="threat-dot active"></div><div class="threat-dot active"></div>
+        <div class="threat-dot active"></div><div class="threat-dot active"></div><div class="threat-dot"></div>
+      </div>
+    </div>
+    <div class="enemy-card">
+      <div class="enemy-name">Hopper Bug</div>
+      <div class="enemy-class">Aerial · Flanker</div>
+      <div class="enemy-desc">Winged. Bypasses all ground defenses and walls. Targets Scientists and Miners first — your non-combat units are its prey. Introduced Night 5.</div>
+      <div class="threat">
+        <div class="threat-dot active"></div><div class="threat-dot active"></div>
+        <div class="threat-dot active"></div><div class="threat-dot active"></div><div class="threat-dot"></div>
+      </div>
+    </div>
+    <div class="enemy-card">
+      <div class="enemy-name">Brain Bug</div>
+      <div class="enemy-class">Boss · Psychic</div>
+      <div class="enemy-desc">Grotesque, pulsing, terrifying. Slow but unstoppable. Psychic attack disorients your units. Appears Night 15. Kill it fast — every second it lives costs you a soldier.</div>
+      <div class="threat">
+        <div class="threat-dot active"></div><div class="threat-dot active"></div>
+        <div class="threat-dot active"></div><div class="threat-dot active"></div><div class="threat-dot active"></div>
+      </div>
+    </div>
+    <div class="enemy-card">
+      <div class="enemy-name">Plasma Bug</div>
+      <div class="enemy-class">Artillery · Off-screen</div>
+      <div class="enemy-desc">Immobile artillery unit. Sits beyond sight range and launches plasma bolts that arc onto your base. Destroys structures in 2-3 hits. Must be hunted down proactively during the day.</div>
+      <div class="threat">
+        <div class="threat-dot active"></div><div class="threat-dot active"></div>
+        <div class="threat-dot active"></div><div class="threat-dot active"></div><div class="threat-dot active"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="ruled">
+
+<!-- ══════════════════════════════════════════ WAVES -->
+<div id="waves" class="section">
+  <p class="section-label">07 — Night Wave System</p>
+  <h2 class="section-title">Escalation Protocol</h2>
+  <div class="section-divider"></div>
+  <p class="section-body">Bugs attack from both flanks simultaneously. Every night gets harder. Every night you survive earns resources and XP. There is no plateau — the bugs always escalate.</p>
+
+  <div class="wave-row">
+    <div class="wave-card">
+      <div class="wave-num">1</div>
+      <div class="wave-label">Night</div>
+      <div class="wave-event">Small Warrior swarm. Survive it — you have enough ammo.</div>
+    </div>
+    <div class="wave-card">
+      <div class="wave-num">5</div>
+      <div class="wave-label">Night</div>
+      <div class="wave-event">First Hopper Bug appearance. Build overhead cover or lose your Scientists.</div>
+    </div>
+    <div class="wave-card">
+      <div class="wave-num">10</div>
+      <div class="wave-label">Night</div>
+      <div class="wave-event">First Tanker Bug. Grenades. Lots of them.</div>
+    </div>
+    <div class="wave-card">
+      <div class="wave-num">12</div>
+      <div class="wave-label">Night</div>
+      <div class="wave-event">Plasma Bug detected off-screen. Pray your walls hold.</div>
+    </div>
+    <div class="wave-card">
+      <div class="wave-num">15</div>
+      <div class="wave-label">Night</div>
+      <div class="wave-event">Brain Bug encounter. Full psychic assault. Rally everything.</div>
+    </div>
+    <div class="wave-card">
+      <div class="wave-num">20+</div>
+      <div class="wave-label">Night</div>
+      <div class="wave-event">Combined arms. All types. Both sides. Electric fence better be on.</div>
+    </div>
+  </div>
+</div>
+
+<hr class="ruled">
+
+<!-- ══════════════════════════════════════════ RESOURCES -->
+<div id="resources" class="section">
+  <p class="section-label">08 — Resource System</p>
+  <h2 class="section-title">What You're Fighting For</h2>
+  <div class="section-divider"></div>
+
+  <table>
+    <tr><th>Resource</th><th>Source</th><th>Used For</th></tr>
+    <tr><td>⛏ Ore</td><td>Miners, rock nodes on the map</td><td>All construction, ammo production</td></tr>
+    <tr><td>⚡ Power Cells</td><td>Generator output, salvage from crash sites</td><td>Electric fences, auto-turrets, Evac Beacon</td></tr>
+    <tr><td>🧪 Biomass</td><td>Bug corpses after waves</td><td>Research Lab, Med Bay upgrades</td></tr>
+    <tr><td>🔫 Morita Ammo</td><td>Armory production, supply drops</td><td>Infantry rifles, guard tower turrets</td></tr>
+    <tr><td>🥫 Food</td><td>Grow pods, salvaged rations</td><td>Unit morale, healing speed</td></tr>
+  </table>
+
+  <p class="section-body">Resource scarcity is the core tension driver during the day phase. Deciding where to allocate your Miners and how aggressively to push into bug territory is the primary strategic challenge.</p>
+</div>
+
+<hr class="ruled">
+
+<!-- ══════════════════════════════════════════ TECH TREE -->
+<div id="tech" class="section">
+  <p class="section-label">09 — Tech Tree</p>
+  <h2 class="section-title">Federation Progression</h2>
+  <div class="section-divider"></div>
+  <p class="section-body">Three tiers. Each tier unlocks when the previous tier's core buildings are operational. Scientists in the Research Lab accelerate unlock speed.</p>
+
+  <div class="tech-tiers">
+    <div class="tech-tier tier-1">
+      <div class="tier-label">
+        <div class="tier-num">T1</div>
+        <div class="tier-name">Survival</div>
+      </div>
+      <div class="tier-items">
+        <span class="tier-item">Basic Wall</span>
+        <span class="tier-item">Basic Turret</span>
+        <span class="tier-item">Barracks</span>
+        <span class="tier-item">Med Bay</span>
+        <span class="tier-item">Ore Refinery</span>
+        <span class="tier-item">Guard Tower (manned)</span>
+      </div>
+    </div>
+    <div class="tech-tier tier-2">
+      <div class="tier-label">
+        <div class="tier-num">T2</div>
+        <div class="tier-name">Hold the Line</div>
+      </div>
+      <div class="tier-items">
+        <span class="tier-item">Electric Fence</span>
+        <span class="tier-item">Auto-Turret</span>
+        <span class="tier-item">Research Lab</span>
+        <span class="tier-item">Power Generator</span>
+        <span class="tier-item">Landing Pad</span>
+        <span class="tier-item">Armory</span>
+        <span class="tier-item">Wall Reinforcement</span>
+      </div>
+    </div>
+    <div class="tech-tier tier-3">
+      <div class="tier-label">
+        <div class="tier-num">T3</div>
+        <div class="tier-name">Federation Power</div>
+      </div>
+      <div class="tier-items">
+        <span class="tier-item">Power Armor (MI upgrade)</span>
+        <span class="tier-item">Nuke Mine</span>
+        <span class="tier-item">Orbital Strike Beacon</span>
+        <span class="tier-item">Evac Pad</span>
+        <span class="tier-item">Airstrike Call-in</span>
+        <span class="tier-item">Flamethrower Turret</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="ruled">
+
+<!-- ══════════════════════════════════════════ WIN / LOSE -->
+<div id="winlose" class="section">
+  <p class="section-label">10 — Win / Lose Conditions</p>
+  <h2 class="section-title">Victory or Oblivion</h2>
+  <div class="section-divider"></div>
+
+  <div class="outcome-row">
+    <div class="outcome-box win">
+      <div class="outcome-label">☆ Victory Condition</div>
+      <p>Build the Evac Beacon at your Command Post. Defend your base for 3 consecutive nights while the beacon transmits. On the third dawn, a Federation dropship arrives. Get everyone on board. Get off this rock.</p>
+    </div>
+    <div class="outcome-box lose">
+      <div class="outcome-label">☠ Defeat Condition</div>
+      <p>The Command Post is destroyed. All units are killed. You are overrun, flanked, or simply out of ammo in the wrong moment. The bugs won this one. Restart. Learn. Come back harder.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="ruled">
+
+<!-- ══════════════════════════════════════════ AUDIO -->
+<div id="audio" class="section">
+  <p class="section-label">11 — Audio Direction</p>
+  <h2 class="section-title">Sound of the Bug War</h2>
+  <div class="section-divider"></div>
+
+  <table>
+    <tr><th>Element</th><th>Direction</th></tr>
+    <tr><td>Morita Fire</td><td>Rapid crackle-thud. Iconic burst. Each shot punchy with short reverb tail. Screen shake on auto-fire.</td></tr>
+    <tr><td>Bug Sounds</td><td>Skittering chitin, shrieking war cries, wet impact sounds on kill. Brain Bug: deep psychic drone.</td></tr>
+    <tr><td>Day Ambience</td><td>Wind across alien plains. Distant chirps. Tools working. Radio chatter between MI units.</td></tr>
+    <tr><td>Night Ambience</td><td>Distant bug screams. Low rumble building into wave. Searchlight hum. Heartbeat bass pulse.</td></tr>
+    <tr><td>Music</td><td>Basil Poledouris-inspired military orchestral. Drums-heavy during combat. Sparse, tense strings at dawn. Triumphant brass on wave clear.</td></tr>
+    <tr><td>UI</td><td>Federation military tone stings. Clipped, crisp, efficient. No fanfare — this is a war.</td></tr>
+  </table>
+</div>
+
+<hr class="ruled">
+
+<!-- ══════════════════════════════════════════ GALLERY -->
+<div id="gallery" class="gallery-section">
+  <div class="gallery-inner">
+    <p class="section-label">12 — Asset Gallery</p>
+    <h2 class="section-title">45 Production Assets</h2>
+    <div class="section-divider"></div>
+    <p class="section-body">All assets generated in 16-bit pixel art style, true alpha-transparent PNGs, ready for engine integration.</p>
+
+    <div class="gallery-tabs">
+      <button class="tab-btn active" onclick="filterGallery('all', this)">All (45)</button>
+      <button class="tab-btn" onclick="filterGallery('chars', this)">Characters (6)</button>
+      <button class="tab-btn" onclick="filterGallery('enemies', this)">Enemies (6)</button>
+      <button class="tab-btn" onclick="filterGallery('buildings', this)">Buildings (13)</button>
+      <button class="tab-btn" onclick="filterGallery('effects', this)">FX (4)</button>
+      <button class="tab-btn" onclick="filterGallery('props', this)">Props (6)</button>
+      <button class="tab-btn" onclick="filterGallery('terrain', this)">Terrain (2)</button>
+      <button class="tab-btn" onclick="filterGallery('backgrounds', this)">Backgrounds (2)</button>
+      <button class="tab-btn" onclick="filterGallery('concept', this)">Concept Art (3)</button>
+      <button class="tab-btn" onclick="filterGallery('vehicles', this)">Vehicles (1)</button>
+      <button class="tab-btn" onclick="filterGallery('ui', this)">UI (2)</button>
+    </div>
+
+    <div class="gallery-grid" id="galleryGrid"></div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lbImg" src="" alt="">
+  <div class="lightbox-name" id="lbName"></div>
+  <div class="lightbox-cat" id="lbCat"></div>
+</div>
+
+
+<!-- ══════════════════════════════════════════ MOCKUPS -->
+<div id="mockups" class="mockups-section">
+  <div class="section" style="max-width:1300px">
+    <p class="section-label">13 — Gameplay Mockups</p>
+    <h2 class="section-title">What It Looks Like Playing</h2>
+    <div class="section-divider"></div>
+    <p class="section-body">10 generated concept screens covering every major gameplay moment — base building, night defence, exploration, rescues, boss encounters, and the final evac push.</p>
+
+    <div class="mockup-grid" id="mockupGrid">
+
+      <div class="mockup-card" onclick="openMockup(this)">
+        <div class="mockup-img-wrap">
+          <img src="https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/b2ac8d252_generated_image.png" loading="lazy" alt="Day Base Building">
+          <div class="mockup-overlay"><span>CLICK TO EXPAND</span></div>
+        </div>
+        <div class="mockup-info">
+          <div class="mockup-num">01</div>
+          <div class="mockup-title">Day — Base Building</div>
+          <div class="mockup-desc">Command Post and Barracks operational. Infantry on patrol. Day-night arc shows plenty of time left. Resource bars healthy — time to expand.</div>
+          <div class="mockup-tag day-tag">☀ DAY PHASE</div>
+        </div>
+      </div>
+
+      <div class="mockup-card" onclick="openMockup(this)">
+        <div class="mockup-img-wrap">
+          <img src="https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/ef6fbc25e_generated_image.png" loading="lazy" alt="Night Defence">
+          <div class="mockup-overlay"><span>CLICK TO EXPAND</span></div>
+        </div>
+        <div class="mockup-info">
+          <div class="mockup-num">02</div>
+          <div class="mockup-title">Night — Base Under Attack</div>
+          <div class="mockup-desc">Warrior bugs charging both flanks. Morita muzzle flash lighting the darkness. Electric fence crackling. Hold the line.</div>
+          <div class="mockup-tag night-tag">🌑 NIGHT PHASE</div>
+        </div>
+      </div>
+
+      <div class="mockup-card" onclick="openMockup(this)">
+        <div class="mockup-img-wrap">
+          <img src="https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/27526ea0c_generated_image.png" loading="lazy" alt="Day Exploration">
+          <div class="mockup-overlay"><span>CLICK TO EXPAND</span></div>
+        </div>
+        <div class="mockup-info">
+          <div class="mockup-num">03</div>
+          <div class="mockup-title">Day — Exploration</div>
+          <div class="mockup-desc">Officer pushes east through the alien wasteland. Crashed dropship wreckage ahead. Ore nodes and bug burrows dotting the landscape. Everything out here wants to kill you.</div>
+          <div class="mockup-tag day-tag">☀ DAY PHASE</div>
+        </div>
+      </div>
+
+      <div class="mockup-card" onclick="openMockup(this)">
+        <div class="mockup-img-wrap">
+          <img src="https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/ed155b669_generated_image.png" loading="lazy" alt="Rescue Pod Discovery">
+          <div class="mockup-overlay"><span>CLICK TO EXPAND</span></div>
+        </div>
+        <div class="mockup-info">
+          <div class="mockup-num">04</div>
+          <div class="mockup-title">Rescue Pod — Survivor Found</div>
+          <div class="mockup-desc">Survivor emerges from a buried escape pod. Class assignment UI — Mobile Infantry, Scientist, or Miner. Choose wisely. Every recruit matters.</div>
+          <div class="mockup-tag day-tag">☀ DAY PHASE</div>
+        </div>
+      </div>
+
+      <div class="mockup-card" onclick="openMockup(this)">
+        <div class="mockup-img-wrap">
+          <img src="https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/2063528cd_generated_image.png" loading="lazy" alt="Mining Operation">
+          <div class="mockup-overlay"><span>CLICK TO EXPAND</span></div>
+        </div>
+        <div class="mockup-info">
+          <div class="mockup-num">05</div>
+          <div class="mockup-title">Day — Mining Operation</div>
+          <div class="mockup-desc">Miners working the ore nodes on the western flank. Ore counter ticking up. Cave entrance in the background — something lives in there.</div>
+          <div class="mockup-tag day-tag">☀ DAY PHASE</div>
+        </div>
+      </div>
+
+      <div class="mockup-card" onclick="openMockup(this)">
+        <div class="mockup-img-wrap">
+          <img src="https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/accdfd2cd_generated_image.png" loading="lazy" alt="Tanker Bug Encounter">
+          <div class="mockup-overlay"><span>CLICK TO EXPAND</span></div>
+        </div>
+        <div class="mockup-info">
+          <div class="mockup-num">06</div>
+          <div class="mockup-title">Night — Tanker Bug Breach</div>
+          <div class="mockup-desc">Tanker Bug torching the wall section. Infantry scattering. Grenade it. NOW. One of these can level a building in seconds.</div>
+          <div class="mockup-tag night-tag">🌑 NIGHT PHASE</div>
+        </div>
+      </div>
+
+      <div class="mockup-card" onclick="openMockup(this)">
+        <div class="mockup-img-wrap">
+          <img src="https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/36d01258e_generated_image.png" loading="lazy" alt="Build Menu UI">
+          <div class="mockup-overlay"><span>CLICK TO EXPAND</span></div>
+        </div>
+        <div class="mockup-info">
+          <div class="mockup-num">07</div>
+          <div class="mockup-title">Day — Build Menu Open</div>
+          <div class="mockup-desc">Tech tree and build panel open. Command Post highlighted. Federation military UI chrome. Costs shown in ore and power. Day phase — use the time.</div>
+          <div class="mockup-tag day-tag">☀ DAY PHASE</div>
+        </div>
+      </div>
+
+      <div class="mockup-card" onclick="openMockup(this)">
+        <div class="mockup-img-wrap">
+          <img src="https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/310021c26_generated_image.png" loading="lazy" alt="Hopper Bug Aerial Attack">
+          <div class="mockup-overlay"><span>CLICK TO EXPAND</span></div>
+        </div>
+        <div class="mockup-info">
+          <div class="mockup-num">08</div>
+          <div class="mockup-title">Night — Hopper Bug Air Assault</div>
+          <div class="mockup-desc">Hoppers diving from the night sky. Already inside the perimeter. Targeting the Science Lab. Soldiers shooting upward. Searchlights tracking. Total chaos.</div>
+          <div class="mockup-tag night-tag">🌑 NIGHT PHASE</div>
+        </div>
+      </div>
+
+      <div class="mockup-card" onclick="openMockup(this)">
+        <div class="mockup-img-wrap">
+          <img src="https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/b7fb4c83c_generated_image.png" loading="lazy" alt="Dawn After Night">
+          <div class="mockup-overlay"><span>CLICK TO EXPAND</span></div>
+        </div>
+        <div class="mockup-info">
+          <div class="mockup-num">09</div>
+          <div class="mockup-title">Dawn — After the Wave</div>
+          <div class="mockup-desc">First light. Bug corpses and green ichor everywhere. Medic healing the wounded. Biomass pickup icons hovering. You survived. Start building again.</div>
+          <div class="mockup-tag dawn-tag">🌅 DAWN</div>
+        </div>
+      </div>
+
+      <div class="mockup-card" onclick="openMockup(this)">
+        <div class="mockup-img-wrap">
+          <img src="https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/1869f2cec_generated_image.png" loading="lazy" alt="Evac Beacon Final Stand">
+          <div class="mockup-overlay"><span>CLICK TO EXPAND</span></div>
+        </div>
+        <div class="mockup-info">
+          <div class="mockup-num">10</div>
+          <div class="mockup-title">Final Stand — Evac Beacon 66%</div>
+          <div class="mockup-desc">Beacon charging. Power Armor MI on the walls. All bug types attacking simultaneously. Beacon progress bar at 66%. Two nights down. One to go. Don't die now.</div>
+          <div class="mockup-tag night-tag">🌑 FINAL STAND</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MOCKUP LIGHTBOX -->
+<div class="mockup-lightbox" id="mockupLightbox" onclick="closeMockupLightbox()">
+  <button class="lightbox-close" onclick="closeMockupLightbox()">✕</button>
+  <img id="mlbImg" src="" alt="">
+  <div class="lightbox-name" id="mlbName"></div>
+</div>
+
+<!-- ══════════════════════════════════════════ FOOTER -->
+<footer class="footer">
+  <p><strong>StarTroop</strong> — Game Design Document v1.0</p>
+  <p>Driftgate Studios · May 2026</p>
+  <p style="margin-top:1rem; font-size:0.6rem; opacity:0.4;">"Would you like to know more?"</p>
+</footer>
+
+<script>
+const assets = [
+  { name:'Mobile Infantry',   cat:'chars',       url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/ed90b2e8b_generated_image.png' },
+  { name:'Scientist',         cat:'chars',       url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/0bbe8e965_generated_image.png' },
+  { name:'Miner',             cat:'chars',       url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/27610176c_generated_image.png' },
+  { name:'Medic',             cat:'chars',       url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/cd0277f5c_generated_image.png' },
+  { name:'Pilot',             cat:'chars',       url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/4e9d9499c_generated_image.png' },
+  { name:'Power Armor MI',    cat:'chars',       url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/41b6441aa_generated_image.png' },
+  { name:'Warrior Bug',       cat:'enemies',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/f46f89021_generated_image.png' },
+  { name:'Tanker Bug',        cat:'enemies',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/cb1536b85_generated_image.png' },
+  { name:'Hopper Bug',        cat:'enemies',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/20c21a6fb_generated_image.png' },
+  { name:'Brain Bug',         cat:'enemies',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/73fc0bd79_generated_image.png' },
+  { name:'Plasma Bug',        cat:'enemies',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/d35a83155_generated_image.png' },
+  { name:'Warrior Swarm',     cat:'enemies',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/26f622d68_generated_image.png' },
+  { name:'Command Post',      cat:'buildings',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/6b011f5b9_generated_image.png' },
+  { name:'Barracks',          cat:'buildings',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/6c36b9e25_generated_image.png' },
+  { name:'Armory',            cat:'buildings',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/7f1f1b18d_generated_image.png' },
+  { name:'Research Lab',      cat:'buildings',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/8bbe803ff_generated_image.png' },
+  { name:'Power Generator',   cat:'buildings',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/bd459fe15_generated_image.png' },
+  { name:'Med Bay',           cat:'buildings',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/80d8dbca4_generated_image.png' },
+  { name:'Ore Refinery',      cat:'buildings',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/10ccb6117_generated_image.png' },
+  { name:'Guard Tower',       cat:'buildings',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/eeae1bc9d_generated_image.png' },
+  { name:'Electric Fence',    cat:'buildings',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/936708e30_generated_image.png' },
+  { name:'Landing Pad',       cat:'buildings',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/041b4ba96_generated_image.png' },
+  { name:'Evac Beacon',       cat:'buildings',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/ef2e201d4_generated_image.png' },
+  { name:'Defensive Wall',    cat:'buildings',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/48e4088f7_generated_image.png' },
+  { name:'Morita Muzzle Flash',cat:'effects',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/4f3fc81b8_generated_image.png' },
+  { name:'Bug Gore Splatter', cat:'effects',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/2a0c4d79f_generated_image.png' },
+  { name:'Grenade Explosion', cat:'effects',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/db78112a5_generated_image.png' },
+  { name:'Plasma Bolt',       cat:'effects',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/dfeb55daf_generated_image.png' },
+  { name:'Morita Rifle',      cat:'weapons',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/2b0b07fcf_generated_image.png' },
+  { name:'Rescue Pod',        cat:'props',       url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/e0b484b1e_generated_image.png' },
+  { name:'Dropship Crash Site',cat:'props',      url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/804bd4626_generated_image.png' },
+  { name:'Ore Node',          cat:'props',       url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/3a12d4cb6_generated_image.png' },
+  { name:'Bug Burrow',        cat:'props',       url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/7963c5135_generated_image.png' },
+  { name:'Nuke Mine',         cat:'props',       url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/e60039151_generated_image.png' },
+  { name:'Orbital Beacon',    cat:'props',       url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/e29c5e21f_generated_image.png' },
+  { name:'Alien Surface',     cat:'terrain',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/67824c6cd_generated_image.png' },
+  { name:'Alien Flora',       cat:'terrain',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/c1842fdbd_generated_image.png' },
+  { name:'Alien Sky — Day',   cat:'backgrounds', url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/52b600972_generated_image.png' },
+  { name:'Alien Sky — Night', cat:'backgrounds', url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/23d73cf9f_generated_image.png' },
+  { name:'Federation Dropship',cat:'vehicles',   url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/5cabb6d7f_generated_image.png' },
+  { name:'Day/Night Arc HUD', cat:'ui',          url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/b5f7e36ae_generated_image.png' },
+  { name:'Resource Icons',    cat:'ui',          url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/00f068550_generated_image.png' },
+  { name:'Night Combat',      cat:'concept',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/ba301673d_generated_image.png' },
+  { name:'Title Screen',      cat:'concept',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/9f2600e6c_generated_image.png' },
+  { name:'Base Overview',     cat:'concept',     url:'https://media.base44.com/images/public/69bcf44dd0a7ea36ce8fe2a9/100e807e2_generated_image.png' },
+];
+
+const catLabels = {
+  chars:'Character', enemies:'Enemy', buildings:'Building',
+  effects:'FX', weapons:'Weapon', props:'Prop',
+  terrain:'Terrain', backgrounds:'Background', vehicles:'Vehicle',
+  ui:'UI', concept:'Concept Art'
+};
+
+function buildGallery() {
+  const grid = document.getElementById('galleryGrid');
+  assets.forEach((a, i) => {
+    const card = document.createElement('div');
+    card.className = 'gallery-card';
+    card.dataset.cat = a.cat;
+    card.innerHTML = `
+      <div class="card-img">
+        <span class="img-loader">LOADING...</span>
+        <img src="${a.url}" alt="${a.name}" loading="lazy" onload="this.previousElementSibling.style.display='none'" onerror="this.previousElementSibling.textContent='NO SIGNAL'">
+      </div>
+      <div class="card-info">
+        <div class="card-name">${a.name}</div>
+        <div class="card-cat ${a.cat}">${catLabels[a.cat]}</div>
+      </div>`;
+    card.addEventListener('click', () => openLightbox(a));
+    grid.appendChild(card);
+  });
+}
+
+function filterGallery(cat, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.gallery-card').forEach(card => {
+    card.classList.toggle('hidden', cat !== 'all' && card.dataset.cat !== cat);
+  });
+}
+
+function openLightbox(a) {
+  document.getElementById('lbImg').src = a.url;
+  document.getElementById('lbName').textContent = a.name;
+  document.getElementById('lbCat').textContent = catLabels[a.cat];
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeLightbox(); });
+
+buildGallery();
+
+function openMockup(card) {
+  const img = card.querySelector('img');
+  const title = card.querySelector('.mockup-title').textContent;
+  document.getElementById('mlbImg').src = img.src;
+  document.getElementById('mlbName').textContent = title;
+  document.getElementById('mockupLightbox').classList.add('open');
+  event.stopPropagation();
+}
+function closeMockupLightbox() {
+  document.getElementById('mockupLightbox').classList.remove('open');
+}
+
+</script>
+</body>
+</html>
