@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Star Troop — Sentry Compositor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d0a1a; color: #c8c8c8; font-family: 'Courier New', monospace; }
+  h1 { text-align:center; padding: 14px; color: #e8a840; font-size:18px; letter-spacing:2px; border-bottom:1px solid #333; }
+  #layout { display:flex; gap:0; height: calc(100vh - 50px); }
+  #sidebar { width:280px; min-width:220px; background:#12101e; padding:16px; overflow-y:auto; border-right:1px solid #333; display:flex; flex-direction:column; gap:14px; }
+  #preview { flex:1; display:flex; align-items:center; justify-content:center; background:#080612; overflow:hidden; position:relative; }
+  canvas { image-rendering: pixelated; border:1px solid #2a2a4a; }
+  label { font-size:11px; color:#888; text-transform:uppercase; letter-spacing:1px; display:block; margin-bottom:4px; }
+  input[type=range] { width:100%; accent-color:#e8a840; }
+  input[type=file] { font-size:11px; color:#aaa; width:100%; }
+  .row { display:flex; align-items:center; gap:8px; }
+  .val { min-width:34px; text-align:right; font-size:12px; color:#e8a840; }
+  .section { background:#1a1826; border-radius:4px; padding:10px; display:flex; flex-direction:column; gap:10px; }
+  .section-title { font-size:10px; color:#e8a840; letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid #333; padding-bottom:4px; margin-bottom:2px; }
+  button { background:#2a1e40; color:#e8a840; border:1px solid #4a3a60; padding:7px 12px; cursor:pointer; font-family:inherit; font-size:12px; border-radius:3px; width:100%; }
+  button:hover { background:#3a2e50; }
+  button.active { background:#4a2e10; border-color:#e8a840; }
+  select { background:#1a1826; color:#c8c8c8; border:1px solid #333; padding:5px; width:100%; font-family:inherit; font-size:12px; }
+  #drop-zone { border:2px dashed #333; border-radius:4px; padding:20px; text-align:center; font-size:11px; color:#555; cursor:pointer; transition: border-color 0.2s; }
+  #drop-zone.over { border-color:#e8a840; color:#e8a840; }
+  .thumb-row { display:flex; gap:6px; flex-wrap:wrap; }
+  .thumb { width:60px; height:60px; border:2px solid #333; border-radius:3px; cursor:pointer; object-fit:contain; background:#0d0a1a; image-rendering:pixelated; }
+  .thumb.active { border-color:#e8a840; }
+  #status { font-size:10px; color:#556; text-align:center; margin-top:4px; }
+  .kbd { display:inline-block; background:#1a1826; border:1px solid #444; border-radius:2px; padding:1px 5px; font-size:10px; color:#aaa; }
+</style>
+</head>
+<body>
+<h1>⚙ STAR TROOP — SENTRY COMPOSITOR</h1>
+<div id="layout">
+  <div id="sidebar">
+
+    <div class="section">
+      <div class="section-title">Load Sprites</div>
+      <div id="drop-zone">Drop PNGs here<br><small>or click to browse</small></div>
+      <input type="file" id="file-input" accept="image/png" multiple style="display:none">
+      <div class="thumb-row" id="thumb-row"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Sprite Slots</div>
+      <label>Left Idle</label>
+      <select id="sel-left"><option value="">— none —</option></select>
+      <label>Right Idle</label>
+      <select id="sel-right"><option value="">— none —</option></select>
+      <label>Alert / Scan</label>
+      <select id="sel-alert"><option value="">— none —</option></select>
+      <label>Firing</label>
+      <select id="sel-fire"><option value="">— none —</option></select>
+      <label>Destroyed</label>
+      <select id="sel-dest"><option value="">— none —</option></select>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Preview State</div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <button id="btn-left"  class="active" onclick="setState('left')">← Left</button>
+        <button id="btn-right"             onclick="setState('right')">Right →</button>
+        <button id="btn-alert"             onclick="setState('alert')">Alert</button>
+        <button id="btn-fire"              onclick="setState('fire')">Fire</button>
+        <button id="btn-dest"              onclick="setState('dest')">Destroyed</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Scale & Position</div>
+      <label>Scale <span class="val" id="val-scale">1.0x</span></label>
+      <div class="row"><input type="range" id="rng-scale" min="0.2" max="4" step="0.05" value="1"></div>
+      <label>X Offset <span class="val" id="val-x">0</span></label>
+      <div class="row"><input type="range" id="rng-x" min="-200" max="200" step="1" value="0"></div>
+      <label>Y Offset <span class="val" id="val-y">0</span></label>
+      <div class="row"><input type="range" id="rng-y" min="-200" max="200" step="1" value="0"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Canvas</div>
+      <label>BG Color</label>
+      <select id="sel-bg">
+        <option value="#080612">Dark (game bg)</option>
+        <option value="#3a2e10">Terrain brown</option>
+        <option value="#ffffff">White</option>
+        <option value="transparent">Transparent grid</option>
+      </select>
+      <label>Canvas Size</label>
+      <select id="sel-size">
+        <option value="480x480">480×480</option>
+        <option value="960x540">960×540 (game)</option>
+        <option value="320x320">320×320</option>
+      </select>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Export</div>
+      <button onclick="exportPNG()">💾 Export Current PNG</button>
+      <button onclick="exportSheet()">📋 Export Spritesheet</button>
+      <div id="status">Load sprites to begin</div>
+    </div>
+
+    <div style="font-size:10px; color:#444; line-height:1.6;">
+      <span class="kbd">Drop</span> PNGs to load &nbsp;
+      <span class="kbd">←→</span> cycle states<br>
+      Works fully offline — no server needed
+    </div>
+  </div>
+
+  <div id="preview">
+    <canvas id="canvas" width="480" height="480"></canvas>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const images   = {};   // name → HTMLImageElement
+const slots    = { left: null, right: null, alert: null, fire: null, dest: null };
+let   curState = 'left';
+let   scale    = 1.0;
+let   offX     = 0;
+let   offY     = 0;
+let   bgMode   = '#080612';
+let   canvasW  = 480;
+let   canvasH  = 480;
+
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+// ── Image loading ──────────────────────────────────────────────────────────
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const key = file.name.replace(/\.png$/i, '');
+      images[key] = img;
+      addThumb(key, img);
+      populateSelects();
+      // Auto-assign based on filename
+      autoAssign(key, img);
+      setStatus(`Loaded: ${key} (${img.width}×${img.height})`);
+      render();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function autoAssign(key, img) {
+  const k = key.toLowerCase();
+  if (k.includes('idle_left')  || k.includes('left_idle'))  { slots.left  = img; document.getElementById('sel-left').value  = key; }
+  if (k.includes('idle_right') || k.includes('right_idle')) { slots.right = img; document.getElementById('sel-right').value = key; }
+  if (k.includes('alert') || k.includes('scan'))            { slots.alert = img; document.getElementById('sel-alert').value = key; }
+  if (k.includes('fire') || k.includes('firing'))           { slots.fire  = img; document.getElementById('sel-fire').value  = key; }
+  if (k.includes('destroy') || k.includes('dead'))          { slots.dest  = img; document.getElementById('sel-dest').value  = key; }
+}
+
+function addThumb(key, img) {
+  // Remove existing thumb with same key
+  const existing = document.getElementById('thumb-' + key);
+  if (existing) existing.remove();
+
+  const t = document.createElement('img');
+  t.className = 'thumb';
+  t.id = 'thumb-' + key;
+  t.src = img.src;
+  t.title = key;
+  t.onclick = () => {
+    // assign to current slot sel
+    const slotId = `sel-${curState}`;
+    document.getElementById(slotId).value = key;
+    updateSlots();
+  };
+  document.getElementById('thumb-row').appendChild(t);
+}
+
+function populateSelects() {
+  const keys = Object.keys(images);
+  const sels = ['sel-left','sel-right','sel-alert','sel-fire','sel-dest'];
+  sels.forEach(id => {
+    const sel = document.getElementById(id);
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— none —</option>';
+    keys.forEach(k => {
+      const opt = document.createElement('option');
+      opt.value = k; opt.textContent = k;
+      sel.appendChild(opt);
+    });
+    if (keys.includes(cur)) sel.value = cur;
+  });
+}
+
+function updateSlots() {
+  const get = id => {
+    const v = document.getElementById(id).value;
+    return v ? (images[v] || null) : null;
+  };
+  slots.left  = get('sel-left');
+  slots.right = get('sel-right');
+  slots.alert = get('sel-alert');
+  slots.fire  = get('sel-fire');
+  slots.dest  = get('sel-dest');
+  render();
+}
+
+['sel-left','sel-right','sel-alert','sel-fire','sel-dest'].forEach(id => {
+  document.getElementById(id).addEventListener('change', updateSlots);
+});
+
+// ── State switching ────────────────────────────────────────────────────────
+const stateOrder = ['left','right','alert','fire','dest'];
+
+function setState(s) {
+  curState = s;
+  stateOrder.forEach(st => {
+    document.getElementById('btn-' + st).classList.toggle('active', st === s);
+  });
+  render();
+}
+
+// Keyboard cycling
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') { const i = stateOrder.indexOf(curState); setState(stateOrder[(i+1) % stateOrder.length]); }
+  if (e.key === 'ArrowLeft')  { const i = stateOrder.indexOf(curState); setState(stateOrder[(i-1+stateOrder.length) % stateOrder.length]); }
+});
+
+// ── Controls ───────────────────────────────────────────────────────────────
+document.getElementById('rng-scale').addEventListener('input', e => {
+  scale = parseFloat(e.target.value);
+  document.getElementById('val-scale').textContent = scale.toFixed(2) + 'x';
+  render();
+});
+document.getElementById('rng-x').addEventListener('input', e => {
+  offX = parseInt(e.target.value);
+  document.getElementById('val-x').textContent = offX;
+  render();
+});
+document.getElementById('rng-y').addEventListener('input', e => {
+  offY = parseInt(e.target.value);
+  document.getElementById('val-y').textContent = offY;
+  render();
+});
+document.getElementById('sel-bg').addEventListener('change', e => {
+  bgMode = e.target.value;
+  render();
+});
+document.getElementById('sel-size').addEventListener('change', e => {
+  const [w, h] = e.target.value.split('x').map(Number);
+  canvasW = w; canvasH = h;
+  canvas.width = w; canvas.height = h;
+  ctx.imageSmoothingEnabled = false;
+  render();
+});
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render() {
+  ctx.clearRect(0, 0, canvasW, canvasH);
+
+  // Background
+  if (bgMode === 'transparent') {
+    drawGrid();
+  } else {
+    ctx.fillStyle = bgMode;
+    ctx.fillRect(0, 0, canvasW, canvasH);
+  }
+
+  // Current sprite
+  const img = slots[curState];
+  if (!img) {
+    ctx.fillStyle = '#333';
+    ctx.font = '13px Courier New';
+    ctx.fillStyle = '#556';
+    ctx.textAlign = 'center';
+    ctx.fillText('No sprite assigned for: ' + curState, canvasW / 2, canvasH / 2);
+    ctx.textAlign = 'left';
+    return;
+  }
+
+  const dw = img.width  * scale;
+  const dh = img.height * scale;
+  const dx = (canvasW - dw) / 2 + offX;
+  const dy = (canvasH - dh) / 2 + offY;
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, dx, dy, dw, dh);
+
+  // Ground line indicator
+  ctx.strokeStyle = 'rgba(100,80,40,0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(0, dy + dh); ctx.lineTo(canvasW, dy + dh);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Dimension label
+  ctx.fillStyle = 'rgba(80,60,20,0.7)';
+  ctx.fillRect(4, 4, 130, 16);
+  ctx.fillStyle = '#e8a840';
+  ctx.font = '10px Courier New';
+  ctx.fillText(`${img.width}×${img.height}  →  ${Math.round(dw)}×${Math.round(dh)}`, 8, 15);
+}
+
+function drawGrid() {
+  const s = 16;
+  for (let y = 0; y < canvasH; y += s) {
+    for (let x = 0; x < canvasW; x += s) {
+      ctx.fillStyle = (Math.floor(x/s) + Math.floor(y/s)) % 2 === 0 ? '#1a1826' : '#12101e';
+      ctx.fillRect(x, y, s, s);
+    }
+  }
+}
+
+// ── Export ─────────────────────────────────────────────────────────────────
+function exportPNG() {
+  render();
+  const a = document.createElement('a');
+  a.download = `sentry_${curState}_export.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  setStatus('Exported: ' + a.download);
+}
+
+function exportSheet() {
+  const states = ['left','right','alert','fire','dest'];
+  const activeStates = states.filter(s => slots[s]);
+  if (!activeStates.length) { setStatus('No sprites loaded'); return; }
+
+  const cellW = canvasW;
+  const cellH = canvasH;
+  const sheetCanvas = document.createElement('canvas');
+  sheetCanvas.width  = cellW * activeStates.length;
+  sheetCanvas.height = cellH;
+  const sctx = sheetCanvas.getContext('2d');
+  sctx.imageSmoothingEnabled = false;
+
+  activeStates.forEach((s, i) => {
+    const img = slots[s];
+    if (!img) return;
+    // fill bg
+    sctx.fillStyle = '#080612';
+    sctx.fillRect(i * cellW, 0, cellW, cellH);
+    // draw sprite centered
+    const dw = img.width  * scale;
+    const dh = img.height * scale;
+    const dx = i * cellW + (cellW - dw) / 2 + offX;
+    const dy = (cellH - dh) / 2 + offY;
+    sctx.drawImage(img, dx, dy, dw, dh);
+    // label
+    sctx.fillStyle = 'rgba(0,0,0,0.5)';
+    sctx.fillRect(i * cellW, cellH - 18, cellW, 18);
+    sctx.fillStyle = '#e8a840';
+    sctx.font = '10px Courier New';
+    sctx.fillText(s.toUpperCase(), i * cellW + 4, cellH - 5);
+  });
+
+  const a = document.createElement('a');
+  a.download = 'sentry_spritesheet.png';
+  a.href = sheetCanvas.toDataURL('image/png');
+  a.click();
+  setStatus(`Exported sheet: ${activeStates.length} states`);
+}
+
+// ── Drop zone ──────────────────────────────────────────────────────────────
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('click', () => document.getElementById('file-input').click());
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  [...e.dataTransfer.files].filter(f => f.type === 'image/png').forEach(loadFile);
+});
+document.getElementById('file-input').addEventListener('change', e => {
+  [...e.target.files].forEach(loadFile);
+  e.target.value = '';
+});
+
+function setStatus(msg) { document.getElementById('status').textContent = msg; }
+
+// Init render
+render();
+</script>
+</body>
+</html>
