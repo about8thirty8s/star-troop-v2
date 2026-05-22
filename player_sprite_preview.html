@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body { background: #222; padding: 20px; font-family: monospace; }
+.row { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 30px; }
+img { image-rendering: pixelated; border: 1px solid #555; }
+.label { color: #aaa; font-size: 12px; margin-top: 4px; }
+.bg-dark { background: #1a1a1a; padding: 10px; }
+.bg-mid  { background: #4a6a3a; padding: 10px; }
+</style>
+</head>
+<body>
+<h2 style="color:#0f8">Player Sprite Candidates</h2>
+
+<div class="row">
+  <div>
+    <div class="label">Candidate A — on dark</div>
+    <div class="bg-dark"><img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/29757d2e0_generated_image.png" style="width:512px; height:auto"></div>
+    <div class="bg-mid"><img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/29757d2e0_generated_image.png" style="width:512px; height:auto"></div>
+  </div>
+</div>
+
+<div class="row">
+  <div>
+    <div class="label">Candidate B — on dark</div>
+    <div class="bg-dark"><img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/802aef200_generated_image.png" style="width:512px; height:auto"></div>
+    <div class="bg-mid"><img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/802aef200_generated_image.png" style="width:512px; height:auto"></div>
+  </div>
+</div>
+
+<p style="color:#888">Both shown at 2x scale. Frames run left→right: Walk(0-3) | Idle(4) | Jump(5) | Shoot(6) | Dead(7)</p>
+</body>
+</html>
