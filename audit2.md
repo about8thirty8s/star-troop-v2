@@ -1,114 +1,107 @@
-# STAR TROOP — ROUND 2 DEEP AUDIT
+# SKATEBALL AUDIT ROUND 2
+## Date: 2026-06-04
 
-## CRITICAL BUGS
+## 🔴 CRITICAL — still broken from last session
 
-### C1. DebugOverlay import — file doesn't exist
-GameEngine imports `from './systems/DebugOverlay'` but no such file is in the repo.
-This is a hard runtime crash on load — the entire game is broken.
+### AI-1: New P2 AI never landed — old code still live
+L937-974 is the OLD AI block. The new patrol timer / shot timer / ramp jump logic 
+from previous session was written but never replaced this block (the commit replaced 
+a different version of the file that diverged). P2 AI still:
+- Only shoots from keydown event (also still alive at L1390-1410)
+- Patrol is `600 + sin(t/1400)*100` — never goes near ramps or hoop
+- Jump is random `0.003` — no ramp awareness
+- There's ALSO a separate setInterval at L1462-1488 shooting every 3.5-5.5s
+  but from WRONG position (ball.x at pickup point, not current P2 position)
 
-### C2. Player.update uses dt step normalization but handleInput doesn't
-update() does `this.x += this.vx * step` where step = dt/16.667.
-But handleInput() sets `this.vx = moveX * PLAYER.SPEED` raw every frame.
-At 60fps (dt≈16.667) step≈1 → fine. At 30fps (dt≈33) step≈2 → player moves 2x speed.
-Inconsistent frame-rate behavior. Should use vx consistently.
+### AI-2: P2 AI pickup requires lastTouchPlayerId !== 2 
+But after P2 shoots and ball goes LOOSE from floor bounce, lastTouchPlayerId=2.
+P2 can NEVER pick up its own rebound from the floor. Dead ball scenario.
+Fix: allow P2 to pick up LOOSE balls after 0.8s regardless of lastTouch.
 
-### C3. getWorldMouseX() offset is wrong
-`return this.mouseX + this.camera.x - CANVAS_WIDTH / 2`
-camera.x IS the world-space center of screen. mouseX is screen-space (0..960).
-Correct: `return this.camera.x - CANVAS_WIDTH/2 + this.mouseX`
-That's the same thing — actually correct. BUT mouseY is raw screen Y which
-equals world Y only because the world has no vertical camera offset. Fine for now.
+### AI-3: grind popup STILL fires outside if(p1.grinding) (L1329)
+The previous fix went into a commit that got overwritten. Still broken.
 
-### C4. Bug spawn: `new WarriorBug(spawnX)` — WaveManager calls this but
-WarriorBug constructor only takes `x`. The spawn sets bug.y = GROUND_Y correctly.
-But spawnX can be negative or > WORLD_WIDTH (clamp is applied after). 
-The clamp `Math.max(50, Math.min(WORLD_WIDTH - 50, spawnX))` IS applied — ok.
-Actually fine. Not a bug.
+### AI-4: Double P2 shot systems — keydown AND setInterval
+L1390-1410: P2 shoots in keydown (only when P1 presses a key)
+L1462-1488: P2 shoots via setInterval (correct approach but wrong ball.x source)
+Two systems fighting. Remove keydown one. Fix setInterval to use p2.x as shot origin.
 
-### C5. SquadFormation.reformFormation — sets state='follow' but slotIndex may be stale
-When dawn hits, units are dispersed (state='hold', defenseX set).
-reformFormation sets state back to 'follow'. But slotIndex was assigned during
-initial rescue and never cleared. If units died overnight, remaining units keep
-their old slot indices — gaps form in the formation and never fill.
-Should call assignSlot() to repack slots on reform.
+## 🔴 CRITICAL — new issues found
 
-### C6. Infantry removed from array while iterating in engine update
-`for (let i = infantry.length-1; i>=0; i--)` then `infantry.splice(i,1)` — 
-reverse iteration is correct for splice. This is fine actually.
+### B-1: Ball scored state persists — never transitions after timeout
+After scoring, ball.state = SCORED. After 1200ms a NEW ball is created in ballRef.
+But `setBallDisplay` updates the display. However the ballRef update is in setTimeout
+which closes over stale `p1Ref.current.x` at time of score. If P1 has moved, 
+wrong position. Also: if matchOver fires during the timeout, ball reset still runs.
+Fix: guard the setTimeout callback with matchOver check.
 
-### C7. Player._fire muzzle position uses this.height * 0.55 but shoulder
-is at -16px from feet in drawPlayer. Player.height = 32 (check constants).
-0.55 * 32 = 17.6 ≈ 18px from ground. drawPlayer shoulder is at y - 16 - bob.
-Close but not exact — on bob frame the muzzle can be 1px off. Negligible.
+### B-2: Ball follows P2 when P2 holds it — but ball is at wrong height
+`ball.y = p2.y - 38` — P2's y is foot position, -38 = ball at chest. Fine.
+But when P2 is airborne, this looks correct. When on ramp, p2.y changes with ramp.
+Not a bug per se, but ball wobbles slightly at ramp junctions. Fine for now.
 
-## SERIOUS ISSUES
+### B-3: Shot charge leaks between possessions
+If P1 charges shot, ball gets stolen (F key), shotChargeRef doesn't reset.
+When P1 gets ball back, isChargingRef.current is still false (so won't fire),
+but shotChargeRef.current holds old value. Minor but messy.
+Fix: reset shotChargeRef on ball possession change.
 
-### S1. SquadIdle references IDLE_STATES constants that may not be exported
-SquadIdle uses `IDLE_STATES.ALERT` etc internally. If these are local consts
-only, that's fine. But the system also reads `unit.idleState` which is set
-in MobileInfantry constructor as a plain string 'idle_alert'. String mismatch
-risk if IDLE_STATES object keys don't match. Need to verify.
+## 🟡 GAMEPLAY ISSUES
 
-### S2. AISystem infantry 'engage' state is set nowhere — it's checked but never assigned
-updateInfantry has `case 'engage':` which reverts state. But nothing in the codebase
-sets mi.state = 'engage'. It's dead code. The state machine has a phantom state.
+### G-1: Dunk eligibility check hardcodes HOOPS.right
+checkDunkEligibility is called with HOOPS.right always. Fine for P1. 
+But reason strings are confusing when P1 is on the left side of court.
+Fix: check if P1 is actually within dunk range of right hoop, give better reason text.
 
-### S3. CombatSystem projectile trail renders even when trail array is empty
-`ctx.beginPath()` then loops over empty trail → calls stroke() on empty path.
-Minor perf waste every frame for every projectile. Should guard with trail.length > 1.
+### G-2: P1 can shoot at wrong hoop (left hoop scores are rejected but silently)
+If P1 shoots at left hoop (ball goes left), isValidScore = false, nothing happens.
+Ball just becomes a rebound. No popup to tell P1 "WRONG HOOP!"
+Fix: when isValidScore=false, show "WRONG BASKET!" popup briefly.
 
-### S4. Particle system: text particles get vy but no decay — rise forever at constant speed
-`p.y += p.vy` with vy=-0.8, no friction. Text rises at constant velocity.
-Should add vy *= 0.96 or similar easing so it slows and fades naturally.
+### G-3: Match win at 21 but score can overshoot
+finalPoints can be up to 15 in one shot. Score can go 19→34.
+addScore should cap at 21 (or whatever the win threshold is).
+Check matchSystem.js.
 
-### S5. Buildings: no visual damage states — they look identical at 1hp vs full hp
-drawBuilding doesn't check b.hp ratio. A building at 5% hp looks brand new.
-Should show cracks/damage overlay scaling with damage.
+### G-4: P1 speed cap inconsistent with ramp speed
+vx capped at 680 on ramp but max normal speed is ~400*dt≈400px/s.
+On ramp descent P1 can reach 680, then jump off ramp at 680px/s horizontal.
+This launches P1 across the entire arena instantly. Need air-entry speed cap.
+Fix: when transitioning from grounded to airborne, clamp vx to ±420.
 
-### S6. Night overlay _drawNightOverlay — flashlight cone doesn't follow aimAngle
-The cone is drawn as a radial gradient centered on the player — a full circle,
-not a directed cone. When aiming, the light doesn't shift toward the aim direction.
-Missed opportunity for atmosphere AND gameplay readability.
+### G-5: Combo drops too easily
+tickCombo drops on landing. Every time P1 lands from any jump, combo resets.
+Should only drop if player has been grounded for >0.5s without a trick or grind.
+Makes combos feel pointless — they vanish the moment you land.
 
-### S7. WaveManager: bugs always spawn left OR right, never both simultaneously
-`const side = Math.random() > 0.5 ? 1 : -1` — one side per spawn tick.
-On later waves (5+) with fast spawn intervals, you still only get one-sided pressure.
-Should allow two-sided spawns on wave 3+.
+### G-6: Steal range (58px) never works in practice
+P1 moves at ~400px/s, P2 AI moves at ~340px/s. They pass through each other 
+at 740px/s relative speed. 58px window = ~78ms to press F. Way too short.
+Fix: extend to 80px range, and give a 0.3s grace window after entering range.
 
-### S8. DayNightSystem.getTimeRemaining() — need to check implementation
-Called in HUD but behavior unknown without seeing full source.
+## 🟢 FEEL / POLISH
 
-### S9. Renderer._drawNightOverlay creates radialGradient every frame
-Performance waste. Should cache or only recreate when darkness changes significantly.
+### P-1: Shot arc preview uses wrong color per quality
+Arc always shows in white/default. Should be green=PERFECT, yellow=GOOD, red=BAD.
 
-## MINOR / POLISH
+### P-2: Grind direction — K held while MOVING LEFT on a right-to-left rail
+Works fine going right. Going left: vx is negative, ramp physics applies slope boost.
+May fling P1 left at max speed through grind. Cap grind vx at ±400.
 
-### M1. Score never displays anywhere meaningful except game-over screen
-HUD shows score in top bar but it's tiny. No satisfying score pop on kill.
-Bug kill adds WARRIOR_BUG.SCORE — should show floating +score above the kill.
+### P-3: Ball shadow doesn't track to ramp surfaces
+Ball shadow is hardcoded at y=329. When ball bounces on ramp, shadow is in wrong place.
+Use getSurfaceY(ball.x) for shadow Y.
 
-### M2. Grenade has no visual fuse timer on the grenade itself
-The fuse spark only appears when life < 600ms. Should be visible from throw.
-Player has no idea when it'll blow.
+### P-4: SkaterAvatar renders above Hoops (zIndex 15 > hoop z)
+Skaters walk "in front of" hoops which look wrong. Hoops should be z:25.
 
-### M3. Player invulnerability timer 300ms is very short — feels unfair
-300ms at 60fps = 18 frames of invuln after a hit. Bugs attack every ATTACK_RATE ms.
-If ATTACK_RATE < 300ms, player can get chain-stunned. Should be 500ms minimum.
+### P-5: ArenaFloorMarkings renders center court markings under police car
+Police car is positioned at center. Center court markings overlap weirdly.
+Minor visual issue — remove center circle from floor markings (or offset it).
 
-### M4. drawBuilding — buildings have no ground shadow/anchor
-They float slightly above ground visually. A 2px dark shadow line underneath
-would ground them significantly.
+### P-6: matchSystem addScore doesn't cap at win score
+Score can go 19 → 34. Should call checkWin after adding and cap final displayed score.
 
-### M5. Crosshair disappears behind the pause/win/lose overlay
-Crosshair is drawn before pause screen. During pause, crosshair is hidden under
-the overlay. This is actually correct behavior — crosshair shouldn't show during pause.
-Not a bug.
-
-### M6. No audio at all — missed opportunity
-The game is silent. Even procedural beep-boop SFX would dramatically improve feel.
-Out of scope for this pass but worth noting.
-
-### M7. SquadFormation slot dx values are always negative (behind player when facing right)
-When player faces LEFT, `slot.dx * facing` flips to positive = slots appear in FRONT.
-The formation correctly trails behind but the math means facing-left units bunch
-in a different spatial pattern than facing-right. Acceptable but asymmetric.
+### P-7: "FIND A RAIL!" popup on every K press when not grinding
+Too noisy. Only show it if player has been near a rail recently (within 2s).
+Otherwise just silently ignore.
