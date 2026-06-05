@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OPERATION THUNDER — Visual Northstar & Game Mockup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --gold:    #facc15;
+    --red:     #ef4444;
+    --green:   #22c55e;
+    --dim:     #4ade80;
+    --panel:   rgba(0,0,0,0.82);
+    --border:  rgba(0,180,0,0.35);
+    --font:    'Oswald', sans-serif;
+    --mono:    'Share Tech Mono', monospace;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: #060a04;
+    color: #e5e7eb;
+    font-family: var(--font);
+    overflow-x: hidden;
+  }
+
+  /* ── SCANLINES ── */
+  body::before {
+    content:'';
+    position:fixed; inset:0; pointer-events:none; z-index:9999;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+  }
+
+  /* ── TYPOGRAPHY ── */
+  .label     { font-size:9px; letter-spacing:3px; color:rgba(255,255,255,0.35); text-transform:uppercase; font-family:var(--mono); }
+  .gold      { color: var(--gold); }
+  .red       { color: var(--red); }
+  .green     { color: var(--green); }
+  .dim-green { color: var(--dim); }
+
+  /* ── SECTION DIVIDER ── */
+  .section-title {
+    font-size:10px; letter-spacing:6px; color:rgba(0,200,0,0.5);
+    text-align:center; padding:6px 0; border-top:1px solid rgba(0,180,0,0.2);
+    border-bottom:1px solid rgba(0,180,0,0.2); margin-bottom:24px;
+    font-family:var(--mono);
+  }
+
+  /* ── PANELS ── */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding:10px 14px;
+  }
+  .panel-gold { border-color: rgba(250,204,21,0.4); }
+
+  /* ── PAGE ── */
+  .page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+
+  /* ═══════════════════════════════════════════════════════
+     COVER
+  ═══════════════════════════════════════════════════════ */
+  .cover {
+    position:relative;
+    width:100%; height:480px;
+    overflow:hidden;
+    margin-bottom:48px;
+    border:1px solid rgba(0,180,0,0.3);
+  }
+  .cover-bg {
+    position:absolute; inset:0;
+    background-image: url('https://media.base44.com/images/public/6a07d557e104123d6d54764f/06c411449_generated_image.png');
+    background-size:cover; background-position:center;
+    filter:brightness(0.45) saturate(0.8);
+  }
+  .cover-vignette {
+    position:absolute; inset:0;
+    background:radial-gradient(ellipse 120% 90% at 50% 100%, transparent 30%, rgba(0,0,0,0.9) 90%);
+  }
+  .cover-content {
+    position:relative; z-index:2;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    height:100%; text-align:center; gap:8px;
+  }
+  .cover-studio {
+    font-size:10px; letter-spacing:6px; color:rgba(0,220,0,0.6); font-family:var(--mono);
+  }
+  .cover-title {
+    font-size:72px; font-weight:900; color:var(--gold); letter-spacing:6px;
+    text-shadow:0 0 60px rgba(250,204,21,0.5), 0 6px 30px rgba(0,0,0,0.9);
+    line-height:1;
+  }
+  .cover-sub {
+    font-size:22px; font-weight:700; color:var(--red); letter-spacing:12px;
+    text-shadow:0 0 20px rgba(239,68,68,0.6);
+  }
+  .cover-tagline {
+    margin-top:12px; font-size:13px; color:rgba(255,255,255,0.5);
+    letter-spacing:3px; font-family:var(--mono);
+  }
+  .cover-pillbar {
+    margin-top:16px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center;
+  }
+  .cover-pill {
+    font-size:8px; letter-spacing:2px; color:rgba(0,200,0,0.7);
+    border:1px solid rgba(0,180,0,0.35); padding:4px 10px; font-family:var(--mono);
+  }
+
+
+  /* ═══════════════════════════════════════════════════════
+     MISSION GRID
+  ═══════════════════════════════════════════════════════ */
+  .missions-grid {
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:16px;
+    margin-bottom:48px;
+  }
+  .mission-card {
+    position:relative; overflow:hidden;
+    border:1px solid rgba(0,180,0,0.3);
+    background:#000;
+  }
+  .mission-card-img {
+    width:100%; height:200px; object-fit:cover;
+    display:block;
+    filter:brightness(0.7) saturate(0.85);
+    transition:filter 0.3s;
+  }
+  .mission-card:hover .mission-card-img { filter:brightness(0.9) saturate(1); }
+  .mission-overlay {
+    position:absolute; bottom:0; left:0; right:0;
+    background:linear-gradient(transparent, rgba(0,0,0,0.95));
+    padding:32px 12px 12px;
+  }
+  .mission-num { font-size:10px; color:rgba(250,204,21,0.6); letter-spacing:3px; font-family:var(--mono); }
+  .mission-name { font-size:18px; font-weight:700; color:#fff; letter-spacing:2px; margin:2px 0; }
+  .mission-brief { font-size:9px; color:rgba(255,255,255,0.55); letter-spacing:0.5px; font-family:var(--mono); }
+  .mission-footer {
+    background:rgba(0,6,0,0.95); border-top:1px solid rgba(0,180,0,0.2);
+    padding:8px 12px;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .mission-stat-key { font-size:7px; color:rgba(255,255,255,0.3); letter-spacing:2px; font-family:var(--mono); }
+  .mission-stat-val { font-size:13px; font-weight:700; color:var(--gold); }
+  .mission-env-badge {
+    font-size:7px; letter-spacing:2px; padding:2px 6px;
+    border:1px solid rgba(0,180,0,0.4); color:rgba(0,200,0,0.7); font-family:var(--mono);
+  }
+
+
+  /* ═══════════════════════════════════════════════════════
+     IN-GAME MOCKUPS (the real money shots)
+  ═══════════════════════════════════════════════════════ */
+  .gameplay-section { margin-bottom:60px; }
+  .gameplay-grid {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:3px;
+    margin-bottom:3px;
+  }
+  .gameplay-full { margin-bottom:3px; }
+
+  .gameplay-frame {
+    position:relative; overflow:hidden;
+    border:1px solid rgba(0,180,0,0.2);
+  }
+  .gameplay-frame-wide {
+    position:relative; overflow:hidden;
+    border:1px solid rgba(0,180,0,0.2);
+  }
+  .gameplay-bg {
+    width:100%; display:block;
+    object-fit:cover;
+  }
+  .gameplay-bg-wide { width:100%; height:460px; object-fit:cover; display:block; }
+
+  /* ── HUD OVERLAY ── */
+  .hud-overlay {
+    position:absolute; inset:0; pointer-events:none;
+  }
+
+  /* crosshair */
+  .crosshair {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  }
+  .crosshair svg { display:block; }
+
+  /* objectives */
+  .hud-objectives {
+    position:absolute; top:14px; left:14px;
+  }
+  .hud-obj-label {
+    font-size:7px; color:rgba(250,204,21,0.6); letter-spacing:3px;
+    font-family:var(--mono); margin-bottom:4px;
+  }
+  .hud-obj-item {
+    display:flex; align-items:center; gap:6px;
+    font-size:9px; font-family:var(--mono); margin-bottom:3px;
+  }
+  .hud-obj-done { color:#4ade80; opacity:0.6; text-decoration:line-through; }
+  .hud-obj-pending { color:#e5e7eb; }
+
+  /* radio top right */
+  .hud-radio {
+    position:absolute; top:14px; right:14px;
+    background:rgba(0,0,0,0.78); border:1px solid rgba(0,180,0,0.4);
+    padding:6px 10px; max-width:200px;
+  }
+  .hud-radio-label { font-size:7px; color:rgba(0,200,0,0.6); letter-spacing:3px; font-family:var(--mono); margin-bottom:3px; }
+  .hud-radio-line  { font-size:9px; color:rgba(0,255,0,0.85); font-style:italic; font-family:var(--mono); }
+
+  /* wave counter */
+  .hud-wave {
+    position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,0.82); border:1px solid rgba(250,204,21,0.5);
+    padding:6px 16px; text-align:center;
+  }
+  .hud-wave-label { font-size:7px; color:rgba(250,204,21,0.6); letter-spacing:3px; font-family:var(--mono); }
+  .hud-wave-num   { font-size:28px; font-weight:900; color:var(--red); line-height:1; }
+  .hud-wave-sub   { font-size:8px; color:rgba(255,255,255,0.5); letter-spacing:2px; font-family:var(--mono); }
+
+  /* kill feed */
+  .hud-killfeed {
+    position:absolute; top:50px; right:14px;
+    font-family:var(--mono); font-size:8px; text-align:right;
+  }
+  .hud-killfeed div { color:var(--red); margin-bottom:2px; }
+
+  /* bottom bar */
+  .hud-bottom {
+    position:absolute; bottom:0; left:0; right:0;
+    display:flex; align-items:flex-end; justify-content:space-between;
+    padding:0 14px 14px; gap:8px;
+  }
+
+  /* health block */
+  .hud-health {
+    background:rgba(0,0,0,0.78); border:1px solid rgba(0,180,0,0.35);
+    padding:8px 12px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .hud-portrait {
+    width:44px; height:44px; object-fit:cover; object-position:top;
+    border:2px solid #4ade80; flex-shrink:0;
+  }
+  .hud-portrait-low { border-color:var(--red); }
+  .hud-hp-num {
+    font-size:34px; font-weight:900; line-height:1;
+    color:#4ade80; text-shadow:0 0 16px rgba(74,222,128,0.6);
+  }
+  .hud-hp-num-low { color:var(--red); text-shadow:0 0 16px rgba(239,68,68,0.6); }
+  .hud-hp-label { font-size:7px; color:rgba(255,255,255,0.35); letter-spacing:2px; font-family:var(--mono); }
+  .hud-hp-bar { width:64px; height:4px; background:rgba(255,255,255,0.1); margin-top:4px; border:1px solid rgba(255,255,255,0.15); }
+  .hud-hp-fill { height:100%; background:#4ade80; }
+  .hud-hp-fill-low { background:var(--red); }
+
+  /* ammo block */
+  .hud-ammo {
+    background:rgba(0,0,0,0.78); border:1px solid rgba(0,180,0,0.35);
+    padding:8px 12px;
+  }
+  .hud-weapon-name { font-size:8px; color:rgba(250,204,21,0.7); letter-spacing:3px; font-family:var(--mono); margin-bottom:4px; }
+  .hud-ammo-nums   { display:flex; align-items:baseline; gap:8px; margin-bottom:6px; }
+  .hud-ammo-clip   { font-size:32px; font-weight:900; color:#fff; line-height:1; }
+  .hud-ammo-res    { font-size:16px; color:rgba(255,255,255,0.4); }
+  .hud-pips        { display:flex; gap:2px; }
+  .pip-full        { width:6px; height:10px; border-radius:1px; background:rgba(250,204,21,0.65); }
+  .pip-empty       { width:6px; height:10px; border-radius:1px; background:rgba(255,255,255,0.1); }
+
+  /* frag */
+  .hud-frag {
+    background:rgba(0,0,0,0.78); border:1px solid rgba(0,180,0,0.35);
+    padding:8px 12px; display:flex; flex-direction:column; align-items:center; gap:4px;
+  }
+  .frag-pip { width:8px; height:14px; border-radius:2px; background:linear-gradient(180deg,#5a7a3a,#3a5a1a); border:1px solid rgba(100,150,60,0.5); }
+  .hud-frag-label { font-size:7px; color:rgba(100,200,80,0.7); letter-spacing:2px; font-family:var(--mono); }
+
+  /* radar */
+  .hud-radar-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .hud-radar {
+    width:80px; height:80px; border-radius:50%;
+    background:radial-gradient(circle, rgba(0,20,0,0.92) 60%, rgba(0,40,0,0.85) 100%);
+    border:2px solid rgba(0,160,0,0.6);
+    box-shadow:0 0 12px rgba(0,200,0,0.3);
+    position:relative; overflow:hidden;
+  }
+  .radar-ring { position:absolute; border-radius:50%; border:1px solid rgba(0,160,0,0.18); top:50%; left:50%; transform:translate(-50%,-50%); }
+  .radar-crossh { position:absolute; background:rgba(0,160,0,0.15); }
+  .radar-north  { position:absolute; top:3px; left:50%; transform:translateX(-50%); font-size:7px; color:rgba(0,220,0,0.8); font-family:var(--mono); }
+  .radar-player { position:absolute; top:50%; left:50%; transform:translate(-50%,-70%) rotate(0deg); width:0; height:0; border-left:3px solid transparent; border-right:3px solid transparent; border-bottom:7px solid rgba(0,255,80,0.95); filter:drop-shadow(0 0 3px #00ff50); }
+  .radar-blip   { position:absolute; width:5px; height:5px; border-radius:50%; background:var(--red); box-shadow:0 0 4px var(--red); transform:translate(-50%,-50%); }
+  .radar-compass { font-size:9px; color:rgba(0,220,0,0.85); font-family:var(--mono); letter-spacing:2px; }
+  .radar-range   { font-size:7px; color:rgba(0,180,0,0.5); font-family:var(--mono); }
+
+  /* weapon slot strip */
+  .hud-slots {
+    position:absolute; bottom:108px; right:14px;
+    display:flex; gap:3px;
+  }
+  .hud-slot {
+    padding:4px 6px; min-width:28px; text-align:center;
+    background:rgba(0,0,0,0.65); border:1px solid rgba(0,180,0,0.3);
+    font-family:var(--mono); font-size:7px; color:rgba(255,255,255,0.4);
+  }
+  .hud-slot-active {
+    background:rgba(180,100,0,0.85); border-color:rgba(250,150,0,0.8);
+    color:#fff; box-shadow:0 0 8px rgba(200,100,0,0.5);
+  }
+
+  /* mission label overlay */
+  .mission-label-overlay {
+    position:absolute; top:0; left:0; right:0;
+    background:linear-gradient(180deg, rgba(0,0,0,0.75), transparent);
+    padding:12px 14px;
+    display:flex; justify-content:space-between; align-items:flex-start;
+  }
+  .mission-label-title { font-size:14px; font-weight:700; color:#fff; letter-spacing:2px; }
+  .mission-label-brief { font-size:8px; color:rgba(255,255,255,0.55); font-family:var(--mono); margin-top:2px; }
+  .mission-label-env   { font-size:7px; letter-spacing:2px; color:rgba(0,200,0,0.7); padding:3px 8px; border:1px solid rgba(0,180,0,0.35); font-family:var(--mono); }
+
+
+  /* ═══════════════════════════════════════════════════════
+     WEAPON SHOWCASE
+  ═══════════════════════════════════════════════════════ */
+  .weapons-section { margin-bottom:60px; }
+  .weapons-row {
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:3px;
+    margin-bottom:3px;
+  }
+  .weapon-card { position:relative; overflow:hidden; border:1px solid rgba(0,180,0,0.2); }
+  .weapon-card-img { width:100%; height:160px; object-fit:cover; display:block; filter:brightness(0.65); }
+  .weapon-card:hover .weapon-card-img { filter:brightness(0.85); }
+  .weapon-card-overlay {
+    position:absolute; bottom:0; left:0; right:0;
+    background:linear-gradient(transparent, rgba(0,0,0,0.96));
+    padding:24px 10px 10px;
+  }
+  .weapon-card-num  { font-size:8px; color:rgba(250,204,21,0.6); letter-spacing:2px; font-family:var(--mono); }
+  .weapon-card-name { font-size:13px; font-weight:700; color:#fff; letter-spacing:1px; margin:2px 0; }
+  .weapon-card-desc { font-size:7px; color:rgba(255,255,255,0.5); font-family:var(--mono); margin-bottom:6px; }
+  .weapon-card-stats { display:flex; gap:8px; flex-wrap:wrap; }
+  .weapon-stat { font-size:8px; color:rgba(250,204,21,0.7); font-family:var(--mono); }
+  .weapon-pips { display:flex; gap:1px; margin-top:3px; }
+  .wpip-full  { width:5px; height:7px; border-radius:1px; background:rgba(250,204,21,0.6); }
+  .wpip-empty { width:5px; height:7px; border-radius:1px; background:rgba(255,255,255,0.08); }
+
+  /* weapon type badge */
+  .weapon-type-badge {
+    position:absolute; top:8px; right:8px;
+    font-size:7px; letter-spacing:2px; font-family:var(--mono);
+    padding:2px 6px;
+  }
+  .badge-auto   { background:rgba(239,68,68,0.3); border:1px solid rgba(239,68,68,0.5); color:var(--red); }
+  .badge-semi   { background:rgba(250,204,21,0.2); border:1px solid rgba(250,204,21,0.4); color:var(--gold); }
+  .badge-heavy  { background:rgba(180,0,0,0.3); border:1px solid rgba(220,0,0,0.5); color:#ff6060; }
+  .badge-launch { background:rgba(200,100,0,0.3); border:1px solid rgba(255,150,0,0.5); color:#ff9040; }
+  .badge-melee  { background:rgba(100,100,100,0.3); border:1px solid rgba(160,160,160,0.4); color:#ccc; }
+
+
+  /* ═══════════════════════════════════════════════════════
+     SYSTEMS BREAKDOWN
+  ═══════════════════════════════════════════════════════ */
+  .systems-grid {
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+    margin-bottom:60px;
+  }
+  .system-card {
+    background:rgba(0,0,0,0.7); border:1px solid rgba(0,180,0,0.25);
+    padding:16px;
+  }
+  .system-card-title {
+    font-size:11px; font-weight:700; color:var(--gold); letter-spacing:3px;
+    border-bottom:1px solid rgba(250,204,21,0.2); padding-bottom:6px; margin-bottom:10px;
+  }
+  .system-item { display:flex; gap:8px; align-items:flex-start; margin-bottom:6px; }
+  .system-dot  { width:4px; height:4px; border-radius:50%; background:rgba(0,200,0,0.7); margin-top:5px; flex-shrink:0; }
+  .system-text { font-size:9px; color:rgba(255,255,255,0.6); font-family:var(--mono); line-height:1.5; }
+  .system-text strong { color:rgba(255,255,255,0.85); }
+
+
+  /* ═══════════════════════════════════════════════════════
+     MAIN MENU MOCKUP
+  ═══════════════════════════════════════════════════════ */
+  .menu-mockup {
+    position:relative; overflow:hidden;
+    border:1px solid rgba(0,180,0,0.3);
+    margin-bottom:48px;
+    height:600px;
+  }
+  .menu-bg {
+    position:absolute; inset:0;
+    background-image:url('https://media.base44.com/images/public/6a07d557e104123d6d54764f/06c411449_generated_image.png');
+    background-size:cover; background-position:center;
+    filter:brightness(0.3) saturate(0.6);
+  }
+  .menu-scanlines {
+    position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px);
+  }
+  .menu-content { position:relative; z-index:2; padding:28px 32px; height:100%; display:flex; flex-direction:column; }
+  .menu-header  { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; }
+  .menu-logo-studio { font-size:9px; color:rgba(0,200,0,0.55); letter-spacing:4px; font-family:var(--mono); margin-bottom:6px; }
+  .menu-logo-main   { font-size:52px; font-weight:900; color:var(--gold); letter-spacing:4px; line-height:1; text-shadow:0 0 40px rgba(250,204,21,0.4); }
+  .menu-logo-sub    { font-size:16px; font-weight:700; color:var(--red); letter-spacing:8px; margin-top:2px; text-shadow:0 0 12px rgba(239,68,68,0.5); }
+  .menu-radio-box   {
+    background:rgba(0,0,0,0.75); border:1px solid rgba(0,180,0,0.4);
+    padding:8px 14px; max-width:220px;
+  }
+  .menu-mission-grid {
+    display:grid; grid-template-columns:repeat(5,1fr); gap:8px;
+    flex:1; min-height:0;
+  }
+  .menu-mission-card { position:relative; overflow:hidden; border:1px solid rgba(0,180,0,0.25); cursor:pointer; }
+  .menu-mission-card-active { border-color:rgba(250,204,21,0.7); box-shadow:0 0 16px rgba(250,204,21,0.2); }
+  .menu-mcard-img { width:100%; height:100%; object-fit:cover; display:block; filter:brightness(0.6); }
+  .menu-mcard-overlay {
+    position:absolute; inset:0;
+    background:linear-gradient(transparent 40%, rgba(0,0,0,0.95));
+    padding:0 10px 10px;
+    display:flex; flex-direction:column; justify-content:flex-end;
+  }
+  .menu-mcard-num  { font-size:9px; color:rgba(250,204,21,0.6); letter-spacing:2px; font-family:var(--mono); }
+  .menu-mcard-name { font-size:12px; font-weight:700; color:#fff; margin:2px 0; }
+  .menu-mcard-brief{ font-size:7px; color:rgba(255,255,255,0.45); font-family:var(--mono); }
+  .menu-footer {
+    margin-top:12px;
+    background:rgba(0,0,0,0.82); border-top:1px solid rgba(0,180,0,0.25);
+    padding:12px 0 0;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .deploy-btn {
+    background:linear-gradient(135deg, #92400e, #b45309);
+    border:2px solid rgba(250,204,21,0.6);
+    color:var(--gold); font-family:var(--font);
+    font-size:14px; font-weight:900; letter-spacing:4px;
+    padding:12px 32px; cursor:pointer;
+    box-shadow:0 0 20px rgba(180,83,9,0.4);
+  }
+
+
+  /* ═══════════════════════════════════════════════════════
+     ENEMY TYPE CARDS
+  ═══════════════════════════════════════════════════════ */
+  .enemies-grid {
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:12px;
+    margin-bottom:48px;
+  }
+  .enemy-card {
+    background:rgba(0,0,0,0.7); border:1px solid rgba(0,180,0,0.2); overflow:hidden;
+  }
+  .enemy-card-header {
+    padding:10px 12px;
+    border-bottom:1px solid rgba(0,180,0,0.2);
+  }
+  .enemy-type-name { font-size:12px; font-weight:700; color:#fff; letter-spacing:1px; }
+  .enemy-role      { font-size:7px; color:rgba(0,200,0,0.6); letter-spacing:2px; font-family:var(--mono); margin-top:2px; }
+  .enemy-stats     { padding:10px 12px; }
+  .enemy-stat-row  { display:flex; justify-content:space-between; margin-bottom:4px; }
+  .enemy-stat-k    { font-size:8px; color:rgba(255,255,255,0.35); letter-spacing:1px; font-family:var(--mono); }
+  .enemy-stat-v    { font-size:8px; color:rgba(255,255,255,0.75); font-family:var(--mono); font-weight:700; }
+  .enemy-bar-wrap  { height:3px; background:rgba(255,255,255,0.1); margin-top:2px; margin-bottom:6px; }
+  .enemy-bar-fill  { height:100%; background:var(--red); }
+  .enemy-threat    {
+    margin:8px 12px 10px;
+    font-size:7px; letter-spacing:2px; padding:3px 6px;
+    text-align:center; font-family:var(--mono);
+  }
+  .threat-low    { border:1px solid rgba(74,222,128,0.4); color:var(--green); }
+  .threat-med    { border:1px solid rgba(250,204,21,0.4); color:var(--gold); }
+  .threat-high   { border:1px solid rgba(239,68,68,0.5); color:var(--red); }
+  .threat-extreme{ border:1px solid rgba(255,0,0,0.6); color:#ff4040; background:rgba(180,0,0,0.15); }
+
+
+  /* ═══════════════════════════════════════════════════════
+     FOOTER
+  ═══════════════════════════════════════════════════════ */
+  .doc-footer {
+    border-top:1px solid rgba(0,180,0,0.2);
+    padding:20px 0 40px;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .footer-brand { font-size:9px; color:rgba(0,200,0,0.4); letter-spacing:3px; font-family:var(--mono); }
+  .footer-doc   { font-size:8px; color:rgba(255,255,255,0.2); font-family:var(--mono); }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ═══════ COVER ═══════ -->
+  <div class="cover">
+    <div class="cover-bg"></div>
+    <div class="cover-vignette"></div>
+    <div class="cover-content">
+      <div class="cover-studio">● DRIFTGATE STUDIOS — SIDE SCROLLER DIVISION</div>
+      <div class="cover-title">OPERATION THUNDER</div>
+      <div class="cover-sub">TOUR OF DUTY</div>
+      <div class="cover-tagline">VISUAL NORTHSTAR + GAME MOCKUP DOCUMENT — v1.0</div>
+      <div class="cover-pillbar">
+        <div class="cover-pill">THREE.JS 3D ENGINE</div>
+        <div class="cover-pill">FIRST PERSON SHOOTER</div>
+        <div class="cover-pill">VIETNAM WAR — 1968</div>
+        <div class="cover-pill">5 MISSIONS</div>
+        <div class="cover-pill">6 WEAPONS</div>
+        <div class="cover-pill">5 ENEMY TYPES</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════ MAIN MENU MOCKUP ═══════ -->
+  <div class="section-title">// MAIN MENU — MOCKUP</div>
+
+  <div class="menu-mockup">
+    <div class="menu-bg"></div>
+    <div class="menu-scanlines"></div>
+    <div class="menu-content">
+
+      <div class="menu-header">
+        <div>
+          <div class="menu-logo-studio">● DRIFTGATE STUDIOS PRESENTS</div>
+          <div class="menu-logo-main">OPERATION THUNDER</div>
+          <div class="menu-logo-sub">TOUR OF DUTY</div>
+        </div>
+        <div class="menu-radio-box">
+          <div class="label" style="margin-bottom:4px;">RADIO</div>
+          <div style="font-size:10px;color:rgba(0,255,0,0.85);font-style:italic;font-family:var(--mono);">"CHARLIE IN THE TREES!"</div>
+        </div>
+      </div>
+
+      <div class="menu-mission-grid">
+        <!-- Mission 1 — selected -->
+        <div class="menu-mission-card menu-mission-card-active">
+          <img class="menu-mcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/af1573c86_generated_image.png" alt="Jungle Patrol" style="filter:brightness(0.8);">
+          <div class="menu-mcard-overlay">
+            <div class="menu-mcard-num">01.</div>
+            <div class="menu-mcard-name">JUNGLE PATROL</div>
+            <div class="menu-mcard-brief">Deep in the jungle. Ambush ahead.</div>
+          </div>
+        </div>
+        <!-- Mission 2 -->
+        <div class="menu-mission-card">
+          <img class="menu-mcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/5a1063e01_generated_image.png" alt="Village Sweep">
+          <div class="menu-mcard-overlay">
+            <div class="menu-mcard-num">02.</div>
+            <div class="menu-mcard-name">VILLAGE SWEEP</div>
+            <div class="menu-mcard-brief">Enemy forces in the village.</div>
+          </div>
+        </div>
+        <!-- Mission 3 -->
+        <div class="menu-mission-card">
+          <img class="menu-mcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/7a0d728e3_generated_image.png" alt="Tunnel Rat">
+          <div class="menu-mcard-overlay">
+            <div class="menu-mcard-num">03.</div>
+            <div class="menu-mcard-name">TUNNEL RAT</div>
+            <div class="menu-mcard-brief">Dark. Tight. Terrifying.</div>
+          </div>
+        </div>
+        <!-- Mission 4 -->
+        <div class="menu-mission-card">
+          <img class="menu-mcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/87d724e6a_generated_image.png" alt="Firebase Defense">
+          <div class="menu-mcard-overlay">
+            <div class="menu-mcard-num">04.</div>
+            <div class="menu-mcard-name">FIREBASE DEFENSE</div>
+            <div class="menu-mcard-brief">Hold the line. Survive the night.</div>
+          </div>
+        </div>
+        <!-- Mission 5 -->
+        <div class="menu-mission-card">
+          <img class="menu-mcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/8054aa882_generated_image.png" alt="Heli Extraction">
+          <div class="menu-mcard-overlay">
+            <div class="menu-mcard-num">05.</div>
+            <div class="menu-mcard-name">HELICOPTER EXTRACTION</div>
+            <div class="menu-mcard-brief">Get to the LZ. Now.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer bar -->
+      <div class="menu-footer">
+        <div style="display:flex;gap:24px;">
+          <div>
+            <div class="label">SELECTED</div>
+            <div style="font-size:16px;font-weight:700;color:var(--gold);letter-spacing:2px;margin-top:2px;">01. JUNGLE PATROL</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;background:rgba(0,0,0,0.8);border:1px solid rgba(0,180,0,0.35);padding:8px 12px;">
+            <img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/f6249cef2_generated_image.png" style="width:36px;height:36px;object-fit:cover;object-position:top;border:1px solid rgba(74,222,128,0.5);" alt="">
+            <div>
+              <div class="label">HEALTH</div>
+              <div style="font-size:28px;font-weight:900;color:#4ade80;line-height:1;text-shadow:0 0 12px rgba(74,222,128,0.5);">100</div>
+            </div>
+            <div style="width:1px;height:40px;background:rgba(0,180,0,0.3);"></div>
+            <div>
+              <div class="label" style="margin-bottom:2px;">M16A1</div>
+              <div style="display:flex;align-items:baseline;gap:6px;">
+                <span style="font-size:24px;font-weight:900;color:#fff;">30</span>
+                <span style="font-size:14px;color:rgba(255,255,255,0.4);">180</span>
+              </div>
+              <div style="display:flex;gap:2px;margin-top:3px;">
+                ${Array(8).fill('<div class="pip-full"></div>').join('')}
+                ${Array(2).fill('<div class="pip-empty"></div>').join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div class="cover-pill">AUTHENTIC VIETNAM</div>
+          <div class="cover-pill">RADIO CHATTER</div>
+          <div class="cover-pill">MULTIPLE MISSIONS</div>
+          <div class="cover-pill">NO GLORY. ONLY SURVIVAL.</div>
+        </div>
+        <button class="deploy-btn">DEPLOY ▸</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════ IN-GAME MOCKUPS ═══════ -->
+  <div class="section-title">// IN-GAME MOCKUPS — ALL 5 MISSIONS</div>
+
+  <!-- ─── MISSION 1: JUNGLE PATROL — WIDE ─── -->
+  <div style="margin-bottom:3px;">
+    <div class="gameplay-frame-wide" style="border:1px solid rgba(0,180,0,0.25);">
+      <img class="gameplay-bg-wide" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/b47c43e1a_generated_image.png" alt="Jungle Patrol gameplay">
+
+      <div class="hud-overlay">
+        <!-- Mission label -->
+        <div class="mission-label-overlay">
+          <div>
+            <div class="mission-label-title">01. JUNGLE PATROL</div>
+            <div class="mission-label-brief">Patrol the jungle perimeter. Eliminate all hostiles.</div>
+          </div>
+          <div class="mission-label-env">JUNGLE</div>
+        </div>
+
+        <!-- Objectives -->
+        <div class="hud-objectives" style="top:60px;">
+          <div class="hud-obj-label">OBJECTIVE</div>
+          <div class="hud-obj-item hud-obj-pending"><span style="color:var(--gold);">▸</span> Eliminate all hostiles <span style="color:rgba(255,255,255,0.3);font-size:8px;">(7/10)</span></div>
+          <div class="hud-obj-item hud-obj-pending" style="opacity:0.5;"><span style="color:rgba(255,255,255,0.3);">▸</span> Reach extraction point</div>
+        </div>
+
+        <!-- Radio -->
+        <div class="hud-radio">
+          <div class="hud-radio-label">RADIO</div>
+          <div class="hud-radio-line">"Movement front! Stay sharp!"</div>
+        </div>
+
+        <!-- Kill feed -->
+        <div class="hud-killfeed" style="top:60px;">
+          <div style="opacity:0.9;">☠ VC Rifleman</div>
+          <div style="opacity:0.6;">☠ VC Rifleman</div>
+          <div style="opacity:0.35;">☠ VC Ambusher</div>
+        </div>
+
+        <!-- Weapon slots -->
+        <div class="hud-slots">
+          <div class="hud-slot hud-slot-active"><div style="font-size:9px;font-weight:700;">1</div><div>KNIFE</div></div>
+          <div class="hud-slot hud-slot-active" style="background:rgba(180,100,0,0.85);border-color:rgba(250,150,0,0.8);color:#fff;"><div style="font-size:9px;font-weight:700;">2</div><div>M16</div></div>
+          <div class="hud-slot"><div style="font-size:9px;font-weight:700;">3</div><div>—</div></div>
+        </div>
+
+        <!-- Crosshair -->
+        <div class="crosshair">
+          <svg width="36" height="36" viewBox="0 0 36 36">
+            <line x1="18" y1="2" x2="18" y2="13" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"/>
+            <line x1="18" y1="23" x2="18" y2="34" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"/>
+            <line x1="2" y1="18" x2="13" y2="18" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"/>
+            <line x1="23" y1="18" x2="34" y2="18" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"/>
+            <circle cx="18" cy="18" r="1.5" fill="rgba(255,255,255,0.5)"/>
+          </svg>
+        </div>
+
+        <!-- Bottom HUD -->
+        <div class="hud-bottom">
+          <!-- Health -->
+          <div class="hud-health">
+            <img class="hud-portrait" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/f6249cef2_generated_image.png" alt="soldier">
+            <div>
+              <div class="hud-hp-label">HEALTH</div>
+              <div class="hud-hp-num">87</div>
+              <div class="hud-hp-bar"><div class="hud-hp-fill" style="width:87%;"></div></div>
+            </div>
+          </div>
+
+          <!-- Frag -->
+          <div class="hud-frag">
+            <div style="display:flex;gap:3px;">
+              <div class="frag-pip"></div>
+              <div class="frag-pip"></div>
+            </div>
+            <div class="hud-frag-label">FRAG ×2</div>
+          </div>
+
+          <!-- Ammo -->
+          <div class="hud-ammo">
+            <div class="hud-weapon-name">M16A1</div>
+            <div class="hud-ammo-nums">
+              <span class="hud-ammo-clip">24</span>
+              <span class="hud-ammo-res">120</span>
+            </div>
+            <div class="hud-pips">
+              <div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div>
+              <div class="pip-empty"></div><div class="pip-empty"></div><div class="pip-empty"></div><div class="pip-empty"></div>
+            </div>
+          </div>
+
+          <!-- Radar -->
+          <div class="hud-radar-wrap">
+            <div class="hud-radar">
+              <div class="radar-ring" style="width:65%;height:65%;"></div>
+              <div class="radar-ring" style="width:35%;height:35%;"></div>
+              <div class="radar-crossh" style="top:50%;left:0;right:0;height:1px;"></div>
+              <div class="radar-crossh" style="left:50%;top:0;bottom:0;width:1px;"></div>
+              <div class="radar-north">N</div>
+              <div class="radar-player"></div>
+              <div class="radar-blip" style="left:62%;top:28%;"></div>
+              <div class="radar-blip" style="left:38%;top:35%;"></div>
+              <div class="radar-blip" style="left:70%;top:55%;"></div>
+              <div class="radar-blip" style="left:25%;top:65%;"></div>
+              <div class="radar-blip" style="left:55%;top:75%;"></div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <div class="radar-compass">NE</div>
+              <div class="radar-range">25m</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MISSIONS 2+3 SIDE BY SIDE ─── -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:3px;">
+
+    <!-- Mission 2: Village Sweep -->
+    <div class="gameplay-frame" style="position:relative;overflow:hidden;border:1px solid rgba(0,180,0,0.2);">
+      <img style="width:100%;height:340px;object-fit:cover;display:block;" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/b8f813db5_generated_image.png" alt="Village Sweep">
+      <div class="hud-overlay">
+        <div class="mission-label-overlay">
+          <div>
+            <div class="mission-label-title">02. VILLAGE SWEEP</div>
+            <div class="mission-label-brief">Clear the enemy village. Watch for ambushes.</div>
+          </div>
+          <div class="mission-label-env">VILLAGE</div>
+        </div>
+        <div class="hud-objectives" style="top:60px;">
+          <div class="hud-obj-label">OBJECTIVE</div>
+          <div class="hud-obj-item hud-obj-done"><span>✓</span> Clear the village</div>
+          <div class="hud-obj-item hud-obj-pending"><span style="color:var(--gold);">▸</span> Reach extraction</div>
+        </div>
+        <div class="hud-radio"><div class="hud-radio-label">RADIO</div><div class="hud-radio-line">"Building clear! Move up!"</div></div>
+        <div class="crosshair"><svg width="30" height="30" viewBox="0 0 30 30"><line x1="15" y1="2" x2="15" y2="10" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/><line x1="15" y1="20" x2="15" y2="28" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/><line x1="2" y1="15" x2="10" y2="15" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/><line x1="20" y1="15" x2="28" y2="15" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/></svg></div>
+        <div class="hud-bottom">
+          <div class="hud-health">
+            <img class="hud-portrait" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/f6249cef2_generated_image.png" alt="">
+            <div><div class="hud-hp-label">HEALTH</div><div class="hud-hp-num" style="font-size:28px;">61</div><div class="hud-hp-bar"><div class="hud-hp-fill" style="width:61%;"></div></div></div>
+          </div>
+          <div class="hud-ammo">
+            <div class="hud-weapon-name">M60</div>
+            <div class="hud-ammo-nums"><span class="hud-ammo-clip">87</span><span class="hud-ammo-res">350</span></div>
+            <div class="hud-pips"><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-empty"></div><div class="pip-empty"></div><div class="pip-empty"></div></div>
+          </div>
+          <div class="hud-radar-wrap">
+            <div class="hud-radar">
+              <div class="radar-ring" style="width:65%;height:65%;"></div><div class="radar-ring" style="width:35%;height:35%;"></div><div class="radar-crossh" style="top:50%;left:0;right:0;height:1px;"></div><div class="radar-crossh" style="left:50%;top:0;bottom:0;width:1px;"></div><div class="radar-north">N</div><div class="radar-player"></div>
+              <div class="radar-blip" style="left:68%;top:42%;"></div><div class="radar-blip" style="left:72%;top:60%;"></div>
+            </div>
+            <div style="display:flex;gap:8px;"><div class="radar-compass">E</div><div class="radar-range">25m</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mission 3: Tunnel Rat -->
+    <div class="gameplay-frame" style="position:relative;overflow:hidden;border:1px solid rgba(0,180,0,0.2);">
+      <img style="width:100%;height:340px;object-fit:cover;display:block;" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/a24ace343_generated_image.png" alt="Tunnel Rat">
+      <div class="hud-overlay">
+        <div class="mission-label-overlay">
+          <div>
+            <div class="mission-label-title">03. TUNNEL RAT</div>
+            <div class="mission-label-brief">Dark. Tight. Terrifying.</div>
+          </div>
+          <div class="mission-label-env" style="border-color:rgba(239,68,68,0.4);color:rgba(239,68,68,0.7);">TUNNEL</div>
+        </div>
+        <div class="hud-objectives" style="top:60px;">
+          <div class="hud-obj-label">OBJECTIVE</div>
+          <div class="hud-obj-item hud-obj-pending"><span style="color:var(--gold);">▸</span> Clear the tunnels <span style="color:rgba(255,255,255,0.3);font-size:8px;">(3/10)</span></div>
+        </div>
+        <!-- Flashlight badge -->
+        <div style="position:absolute;top:60px;right:14px;background:rgba(0,0,0,0.8);border:1px solid rgba(250,204,21,0.5);padding:4px 8px;font-size:8px;color:var(--gold);font-family:var(--mono);letter-spacing:2px;">⚡ FLASH</div>
+        <div class="crosshair"><svg width="30" height="30" viewBox="0 0 30 30"><line x1="15" y1="2" x2="15" y2="10" stroke="rgba(255,255,255,0.65)" stroke-width="1.5"/><line x1="15" y1="20" x2="15" y2="28" stroke="rgba(255,255,255,0.65)" stroke-width="1.5"/><line x1="2" y1="15" x2="10" y2="15" stroke="rgba(255,255,255,0.65)" stroke-width="1.5"/><line x1="20" y1="15" x2="28" y2="15" stroke="rgba(255,255,255,0.65)" stroke-width="1.5"/></svg></div>
+        <div class="hud-bottom">
+          <div class="hud-health">
+            <img class="hud-portrait hud-portrait-low" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/f6249cef2_generated_image.png" alt="">
+            <div><div class="hud-hp-label">HEALTH</div><div class="hud-hp-num hud-hp-num-low" style="font-size:28px;">38</div><div class="hud-hp-bar"><div class="hud-hp-fill hud-hp-fill-low" style="width:38%;"></div></div></div>
+          </div>
+          <div class="hud-ammo">
+            <div class="hud-weapon-name">M1911</div>
+            <div class="hud-ammo-nums"><span class="hud-ammo-clip">5</span><span class="hud-ammo-res">21</span></div>
+            <div class="hud-pips"><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-empty"></div><div class="pip-empty"></div><div class="pip-empty"></div><div class="pip-empty"></div></div>
+          </div>
+          <div class="hud-radar-wrap">
+            <div class="hud-radar">
+              <div class="radar-ring" style="width:65%;height:65%;"></div><div class="radar-ring" style="width:35%;height:35%;"></div><div class="radar-crossh" style="top:50%;left:0;right:0;height:1px;"></div><div class="radar-crossh" style="left:50%;top:0;bottom:0;width:1px;"></div><div class="radar-north">N</div><div class="radar-player"></div>
+              <div class="radar-blip" style="left:54%;top:38%;width:7px;height:7px;"></div>
+            </div>
+            <div style="display:flex;gap:8px;"><div class="radar-compass">N</div><div class="radar-range">5m</div></div>
+          </div>
+        </div>
+        <!-- Blood vignette for low health -->
+        <div style="position:absolute;inset:0;background:radial-gradient(ellipse at center, transparent 50%, rgba(180,0,0,0.5) 100%);pointer-events:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MISSIONS 4+5 SIDE BY SIDE ─── -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:48px;">
+
+    <!-- Mission 4: Firebase Defense -->
+    <div class="gameplay-frame" style="position:relative;overflow:hidden;border:1px solid rgba(0,180,0,0.2);">
+      <img style="width:100%;height:340px;object-fit:cover;display:block;" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/23a54722d_generated_image.png" alt="Firebase Defense">
+      <div class="hud-overlay">
+        <div class="mission-label-overlay">
+          <div>
+            <div class="mission-label-title">04. FIREBASE DEFENSE</div>
+            <div class="mission-label-brief">Hold the line. Survive the night.</div>
+          </div>
+          <div class="mission-label-env" style="border-color:rgba(239,68,68,0.5);color:rgba(239,68,68,0.8);">NIGHT ASSAULT</div>
+        </div>
+        <!-- Wave counter -->
+        <div class="hud-wave" style="top:60px;">
+          <div class="hud-wave-label">WAVE 6 / 10</div>
+          <div class="hud-wave-num">27</div>
+          <div class="hud-wave-sub">ENEMIES REMAINING</div>
+        </div>
+        <div class="crosshair"><svg width="30" height="30" viewBox="0 0 30 30"><line x1="15" y1="2" x2="15" y2="10" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/><line x1="15" y1="20" x2="15" y2="28" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/><line x1="2" y1="15" x2="10" y2="15" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/><line x1="20" y1="15" x2="28" y2="15" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/></svg></div>
+        <div class="hud-bottom">
+          <div class="hud-health">
+            <img class="hud-portrait" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/f6249cef2_generated_image.png" alt="">
+            <div><div class="hud-hp-label">HEALTH</div><div class="hud-hp-num" style="font-size:28px;">100</div><div class="hud-hp-bar"><div class="hud-hp-fill" style="width:100%;"></div></div></div>
+          </div>
+          <div class="hud-frag"><div style="display:flex;gap:3px;"><div class="frag-pip"></div><div class="frag-pip"></div></div><div class="hud-frag-label">CLAYMORE ×2</div></div>
+          <div class="hud-ammo">
+            <div class="hud-weapon-name">M60</div>
+            <div class="hud-ammo-nums"><span class="hud-ammo-clip">180</span><span class="hud-ammo-res">400</span></div>
+            <div class="hud-pips"><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div></div>
+          </div>
+          <div class="hud-radar-wrap">
+            <div class="hud-radar">
+              <div class="radar-ring" style="width:65%;height:65%;"></div><div class="radar-ring" style="width:35%;height:35%;"></div><div class="radar-crossh" style="top:50%;left:0;right:0;height:1px;"></div><div class="radar-crossh" style="left:50%;top:0;bottom:0;width:1px;"></div><div class="radar-north">N</div><div class="radar-player"></div>
+              <div class="radar-blip" style="left:20%;top:20%;"></div><div class="radar-blip" style="left:80%;top:25%;"></div><div class="radar-blip" style="left:15%;top:75%;"></div><div class="radar-blip" style="left:75%;top:70%;"></div><div class="radar-blip" style="left:50%;top:15%;"></div><div class="radar-blip" style="left:30%;top:50%;"></div><div class="radar-blip" style="left:70%;top:45%;"></div>
+            </div>
+            <div style="display:flex;gap:8px;"><div class="radar-compass">NW</div><div class="radar-range">50m</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mission 5: Helicopter Extraction -->
+    <div class="gameplay-frame" style="position:relative;overflow:hidden;border:1px solid rgba(0,180,0,0.2);">
+      <img style="width:100%;height:340px;object-fit:cover;display:block;" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/a66aaaada_generated_image.png" alt="Helicopter Extraction">
+      <div class="hud-overlay">
+        <div class="mission-label-overlay">
+          <div>
+            <div class="mission-label-title">05. HELICOPTER EXTRACTION</div>
+            <div class="mission-label-brief">Get to the LZ. Now.</div>
+          </div>
+          <div class="mission-label-env">LZ BRAVO</div>
+        </div>
+        <div class="hud-objectives" style="top:60px;">
+          <div class="hud-obj-label">OBJECTIVE</div>
+          <div class="hud-obj-item hud-obj-done"><span>✓</span> Secure the LZ</div>
+          <div class="hud-obj-item hud-obj-pending"><span style="color:#4ade80;">▸</span> <span style="color:#4ade80;">REACH EXTRACTION — 40m</span></div>
+        </div>
+        <div class="hud-radio"><div class="hud-radio-label">RADIO</div><div class="hud-radio-line">"Bird's on approach! GO GO GO!"</div></div>
+        <div class="crosshair"><svg width="30" height="30" viewBox="0 0 30 30"><line x1="15" y1="2" x2="15" y2="10" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/><line x1="15" y1="20" x2="15" y2="28" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/><line x1="2" y1="15" x2="10" y2="15" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/><line x1="20" y1="15" x2="28" y2="15" stroke="rgba(255,255,255,0.7)" stroke-width="1.5"/></svg></div>
+        <div class="hud-bottom">
+          <div class="hud-health">
+            <img class="hud-portrait" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/f6249cef2_generated_image.png" alt="">
+            <div><div class="hud-hp-label">HEALTH</div><div class="hud-hp-num" style="font-size:28px;">74</div><div class="hud-hp-bar"><div class="hud-hp-fill" style="width:74%;"></div></div></div>
+          </div>
+          <div class="hud-frag"><div style="display:flex;gap:3px;"><div class="frag-pip"></div><div class="frag-pip"></div></div><div class="hud-frag-label">FRAG ×2</div></div>
+          <div class="hud-ammo">
+            <div class="hud-weapon-name">M16A1</div>
+            <div class="hud-ammo-nums"><span class="hud-ammo-clip">18</span><span class="hud-ammo-res">90</span></div>
+            <div class="hud-pips"><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-full"></div><div class="pip-empty"></div><div class="pip-empty"></div><div class="pip-empty"></div><div class="pip-empty"></div><div class="pip-empty"></div></div>
+          </div>
+          <div class="hud-radar-wrap">
+            <div class="hud-radar">
+              <div class="radar-ring" style="width:65%;height:65%;"></div><div class="radar-ring" style="width:35%;height:35%;"></div><div class="radar-crossh" style="top:50%;left:0;right:0;height:1px;"></div><div class="radar-crossh" style="left:50%;top:0;bottom:0;width:1px;"></div><div class="radar-north">N</div><div class="radar-player"></div>
+              <!-- LZ marker — green -->
+              <div style="position:absolute;left:50%;top:20%;width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;transform:translate(-50%,-50%);"></div>
+              <div class="radar-blip" style="left:30%;top:65%;"></div>
+            </div>
+            <div style="display:flex;gap:8px;"><div class="radar-compass">W</div><div class="radar-range">25m</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════ WEAPON SHOWCASE ═══════ -->
+  <div class="section-title">// WEAPON ARSENAL — 6 WEAPONS</div>
+
+  <div class="weapons-row" style="margin-bottom:48px;">
+    <!-- M16 -->
+    <div class="weapon-card">
+      <img class="weapon-card-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/224020662_generated_image.png" alt="M16">
+      <div class="weapon-type-badge badge-auto">AUTO</div>
+      <div class="weapon-card-overlay">
+        <div class="weapon-card-num">01.</div>
+        <div class="weapon-card-name">M16A1 RIFLE</div>
+        <div class="weapon-card-desc">Balanced. Reliable. Primary weapon.</div>
+        <div class="weapon-card-stats">
+          <div class="weapon-stat">30 / 180</div>
+          <div class="weapon-stat">DMG 18</div>
+        </div>
+        <div class="weapon-pips"><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-empty"></div><div class="wpip-empty"></div><div class="wpip-empty"></div><div class="wpip-empty"></div></div>
+      </div>
+    </div>
+    <!-- M60 -->
+    <div class="weapon-card">
+      <img class="weapon-card-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/7baae389c_generated_image.png" alt="M60">
+      <div class="weapon-type-badge badge-heavy">HEAVY</div>
+      <div class="weapon-card-overlay">
+        <div class="weapon-card-num">02.</div>
+        <div class="weapon-card-name">M60 MACHINE GUN</div>
+        <div class="weapon-card-desc">High volume. Lay down suppression.</div>
+        <div class="weapon-card-stats">
+          <div class="weapon-stat">100 / 400</div>
+          <div class="weapon-stat">DMG 30</div>
+        </div>
+        <div class="weapon-pips"><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-empty"></div><div class="wpip-empty"></div></div>
+      </div>
+    </div>
+    <!-- M79 -->
+    <div class="weapon-card">
+      <img class="weapon-card-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/f5b46831b_generated_image.png" alt="M79">
+      <div class="weapon-type-badge badge-launch">LAUNCHER</div>
+      <div class="weapon-card-overlay">
+        <div class="weapon-card-num">03.</div>
+        <div class="weapon-card-name">M79 GRENADE LAUNCHER</div>
+        <div class="weapon-card-desc">Lob grenades over cover.</div>
+        <div class="weapon-card-stats">
+          <div class="weapon-stat">1 / 12</div>
+          <div class="weapon-stat">DMG 120</div>
+        </div>
+        <div class="weapon-pips"><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-empty"></div></div>
+      </div>
+    </div>
+    <!-- LAW -->
+    <div class="weapon-card">
+      <img class="weapon-card-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/72b3b178b_generated_image.png" alt="LAW">
+      <div class="weapon-type-badge badge-launch">ROCKET</div>
+      <div class="weapon-card-overlay">
+        <div class="weapon-card-num">04.</div>
+        <div class="weapon-card-name">M72 LAW ROCKET</div>
+        <div class="weapon-card-desc">One shot. Big impact. Use wisely.</div>
+        <div class="weapon-card-stats">
+          <div class="weapon-stat">1 / 1</div>
+          <div class="weapon-stat">DMG 200</div>
+        </div>
+        <div class="weapon-pips"><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div></div>
+      </div>
+    </div>
+    <!-- Knife -->
+    <div class="weapon-card">
+      <img class="weapon-card-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/75e103d75_generated_image.png" alt="Knife">
+      <div class="weapon-type-badge badge-melee">MELEE</div>
+      <div class="weapon-card-overlay">
+        <div class="weapon-card-num">05.</div>
+        <div class="weapon-card-name">COMBAT KNIFE</div>
+        <div class="weapon-card-desc">Silent. Fast. Deadly up close.</div>
+        <div class="weapon-card-stats">
+          <div class="weapon-stat">∞ / ∞</div>
+          <div class="weapon-stat">DMG 50</div>
+        </div>
+        <div class="weapon-pips"><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-full"></div><div class="wpip-empty"></div><div class="wpip-empty"></div><div class="wpip-empty"></div><div class="wpip-empty"></div><div class="wpip-empty"></div></div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════ ENEMY ROSTER ═══════ -->
+  <div class="section-title">// ENEMY ROSTER — 5 TYPES</div>
+
+  <div class="enemies-grid">
+    <div class="enemy-card">
+      <div class="enemy-card-header" style="border-color:rgba(250,204,21,0.2);">
+        <div class="enemy-type-name">VC RIFLEMAN</div>
+        <div class="enemy-role">STANDARD INFANTRY</div>
+      </div>
+      <div class="enemy-stats">
+        <div class="enemy-stat-row"><span class="enemy-stat-k">HEALTH</span><span class="enemy-stat-v">40</span></div>
+        <div class="enemy-bar-wrap"><div class="enemy-bar-fill" style="width:40%;background:#4ade80;"></div></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">SPEED</span><span class="enemy-stat-v">3.0</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">FIRE RATE</span><span class="enemy-stat-v">1.2s</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">ALERT RANGE</span><span class="enemy-stat-v">28u</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">DAMAGE</span><span class="enemy-stat-v">8/hit</span></div>
+      </div>
+      <div class="enemy-threat threat-low">LOW THREAT</div>
+    </div>
+    <div class="enemy-card">
+      <div class="enemy-card-header" style="border-color:rgba(250,204,21,0.2);">
+        <div class="enemy-type-name">VC AMBUSHER</div>
+        <div class="enemy-role">SMG FLANKER</div>
+      </div>
+      <div class="enemy-stats">
+        <div class="enemy-stat-row"><span class="enemy-stat-k">HEALTH</span><span class="enemy-stat-v">30</span></div>
+        <div class="enemy-bar-wrap"><div class="enemy-bar-fill" style="width:30%;background:#facc15;"></div></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">SPEED</span><span class="enemy-stat-v">5.0</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">FIRE RATE</span><span class="enemy-stat-v">0.6s</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">ALERT RANGE</span><span class="enemy-stat-v">35u</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">DAMAGE</span><span class="enemy-stat-v">6/hit</span></div>
+      </div>
+      <div class="enemy-threat threat-med">MED THREAT</div>
+    </div>
+    <div class="enemy-card">
+      <div class="enemy-card-header" style="border-color:rgba(239,68,68,0.2);">
+        <div class="enemy-type-name">VC GUNNER</div>
+        <div class="enemy-role">HEAVY MG EMPLACEMENT</div>
+      </div>
+      <div class="enemy-stats">
+        <div class="enemy-stat-row"><span class="enemy-stat-k">HEALTH</span><span class="enemy-stat-v">70</span></div>
+        <div class="enemy-bar-wrap"><div class="enemy-bar-fill" style="width:70%;background:var(--red);"></div></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">SPEED</span><span class="enemy-stat-v">1.5</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">FIRE RATE</span><span class="enemy-stat-v">0.2s</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">ALERT RANGE</span><span class="enemy-stat-v">55u</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">DAMAGE</span><span class="enemy-stat-v">10/hit</span></div>
+      </div>
+      <div class="enemy-threat threat-high">HIGH THREAT</div>
+    </div>
+    <div class="enemy-card">
+      <div class="enemy-card-header" style="border-color:rgba(239,68,68,0.2);">
+        <div class="enemy-type-name">VC GRENADIER</div>
+        <div class="enemy-role">AREA DENIAL</div>
+      </div>
+      <div class="enemy-stats">
+        <div class="enemy-stat-row"><span class="enemy-stat-k">HEALTH</span><span class="enemy-stat-v">45</span></div>
+        <div class="enemy-bar-wrap"><div class="enemy-bar-fill" style="width:45%;background:#f97316;"></div></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">SPEED</span><span class="enemy-stat-v">2.5</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">FIRE RATE</span><span class="enemy-stat-v">3.0s</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">ALERT RANGE</span><span class="enemy-stat-v">30u</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">DAMAGE</span><span class="enemy-stat-v">35 SPLASH</span></div>
+      </div>
+      <div class="enemy-threat threat-high">HIGH THREAT</div>
+    </div>
+    <div class="enemy-card">
+      <div class="enemy-card-header" style="border-color:rgba(255,0,0,0.3);">
+        <div class="enemy-type-name">TUNNEL FIGHTER</div>
+        <div class="enemy-role">CQB ASSASSIN</div>
+      </div>
+      <div class="enemy-stats">
+        <div class="enemy-stat-row"><span class="enemy-stat-k">HEALTH</span><span class="enemy-stat-v">35</span></div>
+        <div class="enemy-bar-wrap"><div class="enemy-bar-fill" style="width:35%;background:#ff4040;"></div></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">SPEED</span><span class="enemy-stat-v" style="color:#ff4040;">7.0 ⚠</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">FIRE RATE</span><span class="enemy-stat-v">0.8s</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">ALERT RANGE</span><span class="enemy-stat-v">6u ← NEARLY BLIND</span></div>
+        <div class="enemy-stat-row"><span class="enemy-stat-k">DAMAGE</span><span class="enemy-stat-v" style="color:#ff4040;">30/hit</span></div>
+      </div>
+      <div class="enemy-threat threat-extreme">EXTREME CQB</div>
+    </div>
+  </div>
+
+
+  <!-- ═══════ SYSTEMS OVERVIEW ═══════ -->
+  <div class="section-title">// SYSTEMS ARCHITECTURE</div>
+
+  <div class="systems-grid">
+    <div class="system-card">
+      <div class="system-card-title">🎮 PLAYER SYSTEM</div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Movement:</strong> WASD, sprint (Shift), crouch (Ctrl), jump (Space)</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Physics:</strong> Gravity 48, jump 14 — 0.58s airtime, tight feel</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Mouse look:</strong> Pointer lock, full 360° yaw, ±82° pitch clamp</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Health:</strong> 100 max, damage flash vignette, death screen</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Grenades:</strong> G key, 4 frags per mission, arc trajectory</div></div>
+    </div>
+    <div class="system-card">
+      <div class="system-card-title">🔫 WEAPON SYSTEM</div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>6 weapons:</strong> Knife, M1911, M16, M60, M79, LAW — number keys 1-6</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Types:</strong> Melee / Semi-auto / Full-auto / Grenade / Rocket</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Reload:</strong> R key, per-weapon timer (1.2s–3.5s), animation bob</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Spread:</strong> Per-weapon accuracy, M60 worst, M1911 sharpest</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Pickups:</strong> Dead enemies drop ammo / health (30% chance)</div></div>
+    </div>
+    <div class="system-card">
+      <div class="system-card-title">🎯 ENEMY AI SYSTEM</div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>States:</strong> Idle → Chase → Attack → Pain → Dead</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Alert range:</strong> Per-type (6–55 units). Tunnel Fighter nearly blind.</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Billboard rendering:</strong> Sprites always face camera (Doom-style)</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Hitscan:</strong> Raycast from player → enemy proximity check</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Pain stun:</strong> Hit enemies stagger briefly before resuming chase</div></div>
+    </div>
+    <div class="system-card">
+      <div class="system-card-title">🗺️ LEVEL SYSTEM</div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Environments:</strong> Jungle / Village / Tunnel / Firebase</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Procedural:</strong> Trees (50), huts (8), sandbags (16-ring), tunnel walls</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Fog:</strong> Per-environment exponential fog (jungle green / tunnel black)</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Extraction:</strong> Glowing green cylinder marker, activates post-kill-all</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Lighting:</strong> Ambient + directional sun + hemisphere sky/ground</div></div>
+    </div>
+    <div class="system-card">
+      <div class="system-card-title">📡 HUD SYSTEM</div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Live radar:</strong> Real enemy positions, rotated to player facing</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Health:</strong> Soldier portrait + large number + depleting bar</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Ammo:</strong> Clip / reserve numbers + visual pip strips</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Objectives:</strong> Live progress markers, checkmark on complete</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Radio:</strong> Dynamic battlefield chatter top-right</div></div>
+    </div>
+    <div class="system-card">
+      <div class="system-card-title">🎬 MISSION SYSTEM</div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>5 missions:</strong> Jungle / Village / Tunnel / Firebase / Helicopter</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Objectives:</strong> kill_all + reach extraction, sequential unlock</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Post-mission:</strong> Stats screen (kills, accuracy %, time, objectives)</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Headlines:</strong> Newspaper-style mission result cards</div></div>
+      <div class="system-item"><div class="system-dot"></div><div class="system-text"><strong>Radio:</strong> RadioManager queues contextual battlefield chatter</div></div>
+    </div>
+  </div>
+
+
+  <!-- ═══════ FOOTER ═══════ -->
+  <div class="doc-footer">
+    <div class="footer-brand">DRIFTGATE STUDIOS — OPERATION THUNDER — TOUR OF DUTY</div>
+    <div class="footer-doc">VISUAL NORTHSTAR v1.0 — GENERATED BY VULCAN — JUNE 2026</div>
+  </div>
+
+</div>
+</body>
+</html>
