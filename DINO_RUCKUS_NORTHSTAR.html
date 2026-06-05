@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DINOSAUR RUCKUS — Visual Northstar & God Prompt</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --dino-orange: #f97316;
+    --dino-red:    #dc2626;
+    --dino-green:  #16a34a;
+    --lava:        #ff4500;
+    --bone:        #d4c89a;
+    --dark:        #0a0a06;
+    --panel:       rgba(0,0,0,0.85);
+    --border:      rgba(249,115,22,0.35);
+    --font:        'Oswald', sans-serif;
+    --mono:        'Share Tech Mono', monospace;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--dark);
+    color: #e5e7eb;
+    font-family: var(--font);
+    overflow-x: hidden;
+  }
+  body::before {
+    content:'';
+    position:fixed; inset:0; pointer-events:none; z-index:9999;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px);
+  }
+
+  .page { max-width:1440px; margin:0 auto; padding:28px 20px; }
+
+  .sec {
+    font-size:9px; letter-spacing:6px; color:rgba(249,115,22,0.5);
+    text-align:center; padding:5px 0;
+    border-top:1px solid rgba(249,115,22,0.2);
+    border-bottom:1px solid rgba(249,115,22,0.2);
+    margin:36px 0 22px; font-family:var(--mono);
+  }
+
+  /* ── COVER ── */
+  .cover {
+    position:relative; width:100%; height:520px; overflow:hidden;
+    margin-bottom:44px; border:1px solid rgba(249,115,22,0.3);
+  }
+  .cover-bg {
+    position:absolute; inset:0;
+    background-image:url('https://media.base44.com/images/public/6a07d557e104123d6d54764f/d1818e6e8_generated_image.png');
+    background-size:cover; background-position:center;
+    filter:brightness(0.38) saturate(1.2);
+  }
+  .cover-v {
+    position:absolute; inset:0;
+    background:radial-gradient(ellipse 110% 90% at 50% 100%, transparent 20%, rgba(0,0,0,0.9) 80%);
+  }
+  .cover-c {
+    position:relative; z-index:2;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    height:100%; text-align:center; gap:6px;
+  }
+  .cover-studio { font-size:9px; letter-spacing:6px; color:rgba(249,115,22,0.55); font-family:var(--mono); }
+  .cover-t1 {
+    font-size:88px; font-weight:900; letter-spacing:4px; line-height:1;
+    color:var(--dino-orange);
+    text-shadow:0 0 60px rgba(249,115,22,0.5), 0 0 120px rgba(220,38,38,0.3), 0 6px 24px rgba(0,0,0,0.9);
+  }
+  .cover-t2 {
+    font-size:22px; font-weight:700; color:#fff; letter-spacing:14px;
+    text-shadow:0 0 16px rgba(255,255,255,0.3);
+  }
+  .cover-tag { margin-top:14px; font-size:11px; color:rgba(255,255,255,0.35); letter-spacing:3px; font-family:var(--mono); }
+  .pillbar { margin-top:16px; display:flex; gap:9px; flex-wrap:wrap; justify-content:center; }
+  .pill {
+    font-size:8px; letter-spacing:2px; color:rgba(249,115,22,0.7);
+    border:1px solid rgba(249,115,22,0.3); padding:4px 10px; font-family:var(--mono);
+  }
+
+  /* ── 10 VISION SHOTS ── */
+  .grid10 { display:grid; grid-template-columns:repeat(5,1fr); gap:3px; margin-bottom:3px; }
+  .grid10b { display:grid; grid-template-columns:repeat(5,1fr); gap:3px; margin-bottom:48px; }
+  .vshot { position:relative; overflow:hidden; border:1px solid rgba(249,115,22,0.18); }
+  .vshot img { width:100%; height:200px; object-fit:cover; display:block; filter:brightness(0.75); transition:filter 0.3s; }
+  .vshot:hover img { filter:brightness(1.0); }
+  .vshot-ov {
+    position:absolute; bottom:0; left:0; right:0;
+    background:linear-gradient(transparent, rgba(0,0,0,0.96));
+    padding:24px 10px 10px;
+  }
+  .vshot-num { font-size:9px; color:rgba(249,115,22,0.6); letter-spacing:2px; font-family:var(--mono); }
+  .vshot-name { font-size:12px; font-weight:700; color:#fff; letter-spacing:1px; margin:2px 0; }
+  .vshot-tags { display:flex; gap:3px; flex-wrap:wrap; margin-top:4px; }
+  .vtag {
+    font-size:6px; letter-spacing:1px; font-family:var(--mono);
+    border:1px solid rgba(249,115,22,0.35); color:rgba(249,115,22,0.7);
+    padding:1px 5px;
+  }
+  .vtag-r { border-color:rgba(220,38,38,0.4); color:rgba(220,38,38,0.75); }
+  .vtag-g { border-color:rgba(22,163,74,0.4); color:rgba(22,163,74,0.75); }
+
+  /* ── GOD PROMPT ── */
+  .god-block {
+    background:rgba(0,0,0,0.9);
+    border:2px solid rgba(249,115,22,0.45);
+    padding:28px 32px;
+    margin-bottom:48px;
+    position:relative;
+  }
+  .god-block::before {
+    content:'⚡ THE GOD PROMPT';
+    position:absolute; top:-12px; left:24px;
+    background:var(--dark); padding:0 12px;
+    font-size:9px; color:rgba(249,115,22,0.8); letter-spacing:4px; font-family:var(--mono);
+  }
+  .god-title { font-size:16px; font-weight:700; color:var(--dino-orange); letter-spacing:3px; margin-bottom:16px; }
+  .god-text {
+    font-size:12px; line-height:1.8; color:rgba(255,255,255,0.75); font-family:var(--mono);
+    border-left:3px solid rgba(249,115,22,0.4); padding-left:16px;
+  }
+  .god-text em { color:var(--dino-orange); font-style:normal; }
+  .god-text strong { color:#fff; }
+
+  /* ── DESIGN PILLARS ── */
+  .pillars { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:48px; }
+  .pillar {
+    background:rgba(0,0,0,0.7); border:1px solid rgba(249,115,22,0.22);
+    padding:16px;
+  }
+  .pillar-t {
+    font-size:10px; font-weight:700; color:var(--dino-orange); letter-spacing:3px;
+    border-bottom:1px solid rgba(249,115,22,0.18); padding-bottom:6px; margin-bottom:10px;
+  }
+  .pillar-item { display:flex; gap:7px; align-items:flex-start; margin-bottom:5px; }
+  .pdot { width:4px; height:4px; border-radius:50%; background:rgba(249,115,22,0.7); margin-top:6px; flex-shrink:0; }
+  .ptext { font-size:9px; color:rgba(255,255,255,0.55); font-family:var(--mono); line-height:1.5; }
+  .ptext strong { color:rgba(255,255,255,0.85); }
+
+  /* ── ENEMY ROSTER ── */
+  .enemies { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin-bottom:48px; }
+  .ecard { background:rgba(0,0,0,0.7); border:1px solid rgba(249,115,22,0.2); overflow:hidden; }
+  .ecard-h { padding:10px 12px; border-bottom:1px solid rgba(249,115,22,0.15); }
+  .ename { font-size:12px; font-weight:700; color:#fff; letter-spacing:1px; }
+  .erole { font-size:7px; color:rgba(249,115,22,0.6); letter-spacing:2px; font-family:var(--mono); margin-top:2px; }
+  .estats { padding:10px 12px; }
+  .estat { display:flex; justify-content:space-between; margin-bottom:3px; }
+  .esk { font-size:7px; color:rgba(255,255,255,0.3); letter-spacing:1px; font-family:var(--mono); }
+  .esv { font-size:8px; color:rgba(255,255,255,0.75); font-family:var(--mono); font-weight:700; }
+  .ebar { height:3px; background:rgba(255,255,255,0.1); margin-bottom:6px; }
+  .ebarfill { height:100%; background:var(--dino-red); }
+  .ethreat {
+    margin:6px 12px 10px; font-size:6px; letter-spacing:2px; font-family:var(--mono);
+    text-align:center; padding:3px 5px;
+  }
+  .t-low  { border:1px solid rgba(22,163,74,0.4); color:rgba(22,163,74,0.9); }
+  .t-med  { border:1px solid rgba(249,115,22,0.4); color:var(--dino-orange); }
+  .t-high { border:1px solid rgba(220,38,38,0.5); color:var(--dino-red); }
+  .t-boss { border:1px solid rgba(255,0,0,0.6); color:#ff3030; background:rgba(180,0,0,0.15); }
+
+  /* ── WEAPON LOADOUT ── */
+  .weapons { display:grid; grid-template-columns:repeat(5,1fr); gap:3px; margin-bottom:48px; }
+  .wcard { position:relative; overflow:hidden; border:1px solid rgba(249,115,22,0.2); background:#000; }
+  .wcard-img { width:100%; height:180px; object-fit:cover; display:block; filter:brightness(0.68); }
+  .wcard:hover .wcard-img { filter:brightness(0.88); }
+  .wcard-ov {
+    position:absolute; inset:0;
+    background:linear-gradient(transparent 28%, rgba(0,0,0,0.97));
+    padding:10px 10px 12px;
+    display:flex; flex-direction:column; justify-content:flex-end;
+  }
+  .wnum { font-size:9px; color:rgba(249,115,22,0.55); letter-spacing:2px; font-family:var(--mono); }
+  .wname { font-size:13px; font-weight:700; color:#fff; letter-spacing:1px; margin:2px 0 2px; }
+  .wdesc { font-size:7px; color:rgba(255,255,255,0.45); font-family:var(--mono); margin-bottom:5px; }
+  .wpips { display:flex; gap:2px; }
+  .wpp  { width:6px; height:9px; border-radius:1px; background:rgba(249,115,22,0.65); }
+  .wpe  { width:6px; height:9px; border-radius:1px; background:rgba(255,255,255,0.1); }
+  .wbadge {
+    position:absolute; top:8px; right:8px;
+    font-size:7px; letter-spacing:2px; font-family:var(--mono); padding:2px 6px;
+  }
+  .b-heavy { background:rgba(220,38,38,0.25); border:1px solid rgba(220,38,38,0.5); color:var(--dino-red); }
+  .b-rapid { background:rgba(249,115,22,0.2); border:1px solid rgba(249,115,22,0.5); color:var(--dino-orange); }
+  .b-boom  { background:rgba(255,165,0,0.2); border:1px solid rgba(255,165,0,0.5); color:#ffa500; }
+  .b-flame { background:rgba(255,60,0,0.2); border:1px solid rgba(255,80,0,0.55); color:#ff5020; }
+  .b-melee { background:rgba(150,150,150,0.2); border:1px solid rgba(180,180,180,0.4); color:#ccc; }
+
+  /* ── LEVEL BIOMES ── */
+  .biomes { display:grid; grid-template-columns:repeat(5,1fr); gap:3px; margin-bottom:48px; }
+  .bcard { position:relative; overflow:hidden; border:1px solid rgba(249,115,22,0.2); }
+  .bcard-img { width:100%; height:160px; object-fit:cover; display:block; filter:brightness(0.65) saturate(1.1); }
+  .bcard-ov {
+    position:absolute; bottom:0; left:0; right:0;
+    background:linear-gradient(transparent, rgba(0,0,0,0.96));
+    padding:20px 10px 10px;
+  }
+  .bname { font-size:12px; font-weight:700; color:#fff; letter-spacing:1px; margin-bottom:3px; }
+  .bdesc { font-size:7px; color:rgba(255,255,255,0.45); font-family:var(--mono); }
+  .bhazard {
+    position:absolute; top:8px; left:8px;
+    font-size:7px; letter-spacing:1px; font-family:var(--mono);
+    background:rgba(0,0,0,0.75); border:1px solid rgba(249,115,22,0.4);
+    color:var(--dino-orange); padding:2px 6px;
+  }
+
+  /* ── HUD MOCKUP ── */
+  .hud-mockup {
+    position:relative; overflow:hidden;
+    border:1px solid rgba(249,115,22,0.25);
+    margin-bottom:48px; height:460px;
+  }
+  .hud-mockup-bg {
+    position:absolute; inset:0;
+    background-image:url('https://media.base44.com/images/public/6a07d557e104123d6d54764f/8a54bfef8_generated_image.png');
+    background-size:cover; background-position:center;
+  }
+  .hud-mockup-v { position:absolute; inset:0; background:rgba(0,0,0,0.15); }
+
+  /* HUD bottom bar — matches reference style */
+  .hud-bottom {
+    position:absolute; bottom:0; left:0; right:0;
+    display:flex; align-items:flex-end; justify-content:space-between;
+    padding:0 16px 14px; gap:8px;
+    background:linear-gradient(transparent, rgba(0,0,0,0.5));
+  }
+  .hud-panel {
+    background:rgba(0,0,0,0.82);
+    border:1px solid rgba(249,115,22,0.4);
+    padding:8px 12px;
+  }
+  .hud-hp-num { font-size:38px; font-weight:900; color:#4ade80; line-height:1; font-family:var(--font); text-shadow:0 0 14px rgba(74,222,128,0.5); }
+  .hud-hp-lbl { font-size:7px; color:rgba(255,255,255,0.35); letter-spacing:2px; font-family:var(--mono); }
+  .hud-ammo-num { display:flex; align-items:baseline; gap:7px; }
+  .hud-clip { font-size:34px; font-weight:900; color:#fff; line-height:1; font-family:var(--font); }
+  .hud-res  { font-size:15px; color:rgba(255,255,255,0.4); font-family:var(--font); }
+  .hud-wpn  { font-size:8px; color:rgba(249,115,22,0.75); letter-spacing:3px; font-family:var(--mono); margin-bottom:4px; }
+  .hud-pips { display:flex; gap:2px; margin-top:4px; }
+  .hud-pp { width:5px; height:9px; border-radius:1px; background:rgba(249,115,22,0.65); }
+  .hud-pe { width:5px; height:9px; border-radius:1px; background:rgba(255,255,255,0.1); }
+
+  /* Radar */
+  .hud-radar {
+    width:80px; height:80px; border-radius:50%;
+    background:radial-gradient(circle, rgba(0,15,0,0.95) 55%, rgba(0,30,0,0.9) 100%);
+    border:2px solid rgba(249,115,22,0.6);
+    box-shadow:0 0 12px rgba(249,115,22,0.2);
+    position:relative; overflow:hidden;
+  }
+
+  /* Crosshair */
+  .hud-xhair { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); }
+
+  /* HUD top labels */
+  .hud-top { position:absolute; top:0; left:0; right:0; padding:12px 16px; display:flex; justify-content:space-between; align-items:flex-start; background:linear-gradient(rgba(0,0,0,0.5),transparent); }
+  .hud-mission-name { font-size:14px; font-weight:700; color:#fff; letter-spacing:2px; }
+  .hud-mission-sub  { font-size:8px; color:rgba(255,255,255,0.45); font-family:var(--mono); margin-top:2px; }
+  .hud-env-badge    { font-size:7px; letter-spacing:2px; color:var(--dino-orange); padding:3px 8px; border:1px solid rgba(249,115,22,0.4); font-family:var(--mono); }
+
+  /* Wave counter */
+  .hud-wave {
+    position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,0.82); border:1px solid rgba(249,115,22,0.5);
+    padding:5px 16px; text-align:center;
+  }
+
+  /* footer */
+  .doc-footer { border-top:1px solid rgba(249,115,22,0.18); padding:18px 0 36px; display:flex; justify-content:space-between; align-items:center; margin-top:16px; }
+  .foot-l { font-size:8px; color:rgba(249,115,22,0.4); letter-spacing:3px; font-family:var(--mono); }
+  .foot-r { font-size:7px; color:rgba(255,255,255,0.18); font-family:var(--mono); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ═══ COVER ═══ -->
+<div class="cover">
+  <div class="cover-bg"></div>
+  <div class="cover-v"></div>
+  <div class="cover-c">
+    <div class="cover-studio">● DRIFTGATE STUDIOS — SIDE SCROLLER DIVISION</div>
+    <div class="cover-t1">DINOSAUR RUCKUS</div>
+    <div class="cover-t2">2D DOOM-STYLE DINO CARNAGE</div>
+    <div class="cover-tag">VISUAL NORTHSTAR + GOD PROMPT — v1.0 — JUNE 2026</div>
+    <div class="pillbar">
+      <div class="pill">2D SIDE-SCROLLER</div>
+      <div class="pill">DOOM-STYLE COMBAT</div>
+      <div class="pill">PREHISTORIC WORLD</div>
+      <div class="pill">6 ENEMY TYPES</div>
+      <div class="pill">5 WEAPONS</div>
+      <div class="pill">5 BIOMES</div>
+      <div class="pill">BOSS BATTLES</div>
+      <div class="pill">WAVE SURVIVAL</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ THE GOD PROMPT ═══ -->
+<div class="sec">// ⚡ THE GOD PROMPT</div>
+
+<div class="god-block">
+  <div class="god-title">DINOSAUR RUCKUS — MASTER GENERATION PROMPT</div>
+  <div class="god-text">
+<em>2D side-scrolling Doom-style action game.</em> <strong>Genre DNA:</strong> Doom (1993) movement and weapon feel + Broforce chaos + Huntdown visual clarity + Terraria world density + Dead Cells enemy aggression. <em>But with dinosaurs instead of demons.</em><br><br>
+
+<strong>Core aesthetic:</strong> Dark, oppressive prehistoric world. Volcanic orange and deep jungle green as dominant palette. <em>Glowing eyes in the darkness.</em> Bone-littered ground. Ancient ruins swallowed by jungle. Lava rivers cutting through stone. Bioluminescent caves. Every environment feels like it wants to kill you.<br><br>
+
+<strong>Player character:</strong> Lone space marine / scientist / mercenary who crash-landed on a prehistoric planet or survived a time rift. <em>Outgunned. Outnumbered. Still winning.</em> Movement: fast Doom-style strafe, no jump arcs — horizontal momentum king. Weapons feel HEAVY. Muzzle flashes light up the scene.<br><br>
+
+<strong>Enemy design:</strong> Dinosaurs as Doom monsters. <em>Compys = imps (fast, weak, swarm).</em> Raptors = shotgun zombies (medium threat, pack hunters). <em>Dilophosaurus = acid cacodemon (projectile spitter).</em> T-Rex = Baron of Hell equivalent (massive, charging, screen-filling). <em>Pterodactyls = lost souls (airborne, dive-bomb).</em> Ankylosaurus = tank (slow, massive armor, tail-sweep AOE). <strong>Every enemy has a Doom-equivalent role but feels prehistoric.</strong><br><br>
+
+<strong>Environments:</strong> 5 biomes — <em>Jungle Hell</em> (green doom, dense canopy, ambushes), <em>Volcanic Badlands</em> (lava, fire, explosions), <em>Bioluminescent Caves</em> (darkness, glowing crystals, tunnel terror), <em>Ancient Ruins</em> (multi-level platforming, traps), <em>Prehistoric Swamp</em> (murky water, fog, ambush predators).<br><br>
+
+<strong>Weapons:</strong> Pistol → Shotgun → Chaingun → Rocket Launcher → <em>BFG-equivalent "Extinction Event" cannon</em>. Each weapon has a prehistoric flavour: rocket launcher fires fossilised bone shells, BFG fires a plasma sphere that grows to screen-filling size.<br><br>
+
+<strong>Feel targets:</strong> Movement speed = Doom (fast, momentum-based, no stopping). Enemy aggression = overwhelming hordes. Boss scale = screen-filling terror. <em>Destruction = everything explodes satisfyingly.</em> Pickups = dinosaur teeth (ammo), glowing amber (health), ancient tech (power-ups).<br><br>
+
+<strong>Visual identity:</strong> NOT cute. NOT cartoon. <em>Gritty. Atmospheric. Dark.</em> Dinosaurs rendered with weight and threat. Lighting driven by muzzle flashes, lava glow, bioluminescence, and explosions. Think <em>Doom eternal's art direction but prehistoric</em>. The world is hostile. The dinosaurs are terrifying. The player is the only thing more terrifying.<br><br>
+
+<strong>The tagline:</strong> <em>"You are not the prey."</em>
+  </div>
+</div>
+
+
+<!-- ═══ 10 VISION SHOTS ═══ -->
+<div class="sec">// 10 GENERATED VISION SHOTS</div>
+
+<div class="grid10">
+
+  <div class="vshot">
+    <img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/f8c5ee8ea_generated_image.png" alt="">
+    <div class="vshot-ov">
+      <div class="vshot-num">01.</div>
+      <div class="vshot-name">TRICERATOPS BOSS</div>
+      <div class="vshot-tags"><div class="vtag-r vtag">BOSS</div><div class="vtag">RUINS</div></div>
+    </div>
+  </div>
+
+  <div class="vshot">
+    <img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/8a54bfef8_generated_image.png" alt="">
+    <div class="vshot-ov">
+      <div class="vshot-num">02.</div>
+      <div class="vshot-name">DINO PLANET ARRIVAL</div>
+      <div class="vshot-tags"><div class="vtag-g vtag">INTRO</div><div class="vtag">HORDE</div></div>
+    </div>
+  </div>
+
+  <div class="vshot">
+    <img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/e5e5eae5b_generated_image.png" alt="">
+    <div class="vshot-ov">
+      <div class="vshot-num">03.</div>
+      <div class="vshot-name">JUNGLE AMBUSH</div>
+      <div class="vshot-tags"><div class="vtag">JUNGLE</div><div class="vtag">T-REX</div></div>
+    </div>
+  </div>
+
+  <div class="vshot">
+    <img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/ef09e8b3d_generated_image.png" alt="">
+    <div class="vshot-ov">
+      <div class="vshot-num">04.</div>
+      <div class="vshot-name">RAPTOR PACK RUSH</div>
+      <div class="vshot-tags"><div class="vtag-r vtag">HORDE</div><div class="vtag">LAVA</div></div>
+    </div>
+  </div>
+
+  <div class="vshot">
+    <img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/ee5ae9a91_generated_image.png" alt="">
+    <div class="vshot-ov">
+      <div class="vshot-num">05.</div>
+      <div class="vshot-name">BOSS ROCKET FIGHT</div>
+      <div class="vshot-tags"><div class="vtag-r vtag">BOSS</div><div class="vtag-r vtag">EXPLOSIONS</div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="grid10b">
+
+  <div class="vshot">
+    <img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/a02d0c908_generated_image.png" alt="">
+    <div class="vshot-ov">
+      <div class="vshot-num">06.</div>
+      <div class="vshot-name">BIOLUM CAVE</div>
+      <div class="vshot-tags"><div class="vtag">CAVES</div><div class="vtag">PTERODACTYL</div></div>
+    </div>
+  </div>
+
+  <div class="vshot">
+    <img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/64314e9f8_generated_image.png" alt="">
+    <div class="vshot-ov">
+      <div class="vshot-num">07.</div>
+      <div class="vshot-name">CRASH SITE</div>
+      <div class="vshot-tags"><div class="vtag-g vtag">INTRO</div><div class="vtag">ALIEN SKY</div></div>
+    </div>
+  </div>
+
+  <div class="vshot">
+    <img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/86f3dbc1b_generated_image.png" alt="">
+    <div class="vshot-ov">
+      <div class="vshot-num">08.</div>
+      <div class="vshot-name">SWAMP AMBUSH</div>
+      <div class="vshot-tags"><div class="vtag">SWAMP</div><div class="vtag-r vtag">AMBUSH</div></div>
+    </div>
+  </div>
+
+  <div class="vshot">
+    <img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/a73b90edb_generated_image.png" alt="">
+    <div class="vshot-ov">
+      <div class="vshot-num">09.</div>
+      <div class="vshot-name">VOLCANIC BADLANDS</div>
+      <div class="vshot-tags"><div class="vtag-r vtag">FIRE</div><div class="vtag">STEGOSAURUS</div></div>
+    </div>
+  </div>
+
+  <div class="vshot">
+    <img src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/79ff057ba_generated_image.png" alt="">
+    <div class="vshot-ov">
+      <div class="vshot-num">10.</div>
+      <div class="vshot-name">MOONRISE SILHOUETTE</div>
+      <div class="vshot-tags"><div class="vtag">NIGHT</div><div class="vtag-g vtag">CINEMATIC</div></div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══ IN-GAME HUD MOCKUP ═══ -->
+<div class="sec">// IN-GAME HUD MOCKUP</div>
+
+<div class="hud-mockup">
+  <div class="hud-mockup-bg"></div>
+  <div class="hud-mockup-v"></div>
+
+  <!-- Top bar -->
+  <div class="hud-top">
+    <div>
+      <div class="hud-mission-name">01. JUNGLE HELL</div>
+      <div class="hud-mission-sub">Survive the Green Inferno</div>
+    </div>
+    <div class="hud-env-badge">JUNGLE</div>
+  </div>
+
+  <!-- Wave counter -->
+  <div class="hud-wave">
+    <div style="font-size:7px;color:rgba(249,115,22,0.65);letter-spacing:3px;font-family:var(--mono);">DINOS REMAINING</div>
+    <div style="font-size:26px;font-weight:900;color:#ef4444;line-height:1;text-shadow:0 0 10px rgba(239,68,68,0.6);">14</div>
+  </div>
+
+  <!-- Objectives top-left -->
+  <div style="position:absolute;top:60px;left:16px;">
+    <div style="font-size:7px;color:rgba(249,115,22,0.7);letter-spacing:3px;font-family:var(--mono);margin-bottom:4px;">OBJECTIVE</div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:#fff;font-family:var(--font);margin-bottom:3px;">
+      <span style="color:#facc15;">▸</span> Survive all waves
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:#4ade80;opacity:0.6;text-decoration:line-through;font-family:var(--font);">
+      <span>✓</span> Reach the ruins
+    </div>
+  </div>
+
+  <!-- Radio top-right -->
+  <div style="position:absolute;top:16px;right:16px;background:rgba(0,0,0,0.82);border:1px solid rgba(249,115,22,0.4);padding:6px 12px;max-width:190px;">
+    <div style="font-size:7px;color:rgba(249,115,22,0.65);letter-spacing:3px;font-family:var(--mono);margin-bottom:2px;">INCOMING</div>
+    <div style="font-size:10px;color:#fff;font-family:var(--font);font-style:italic;">"They're everywhere!"</div>
+  </div>
+
+  <!-- Crosshair -->
+  <div class="hud-xhair">
+    <svg width="34" height="34" viewBox="0 0 34 34">
+      <line x1="17" y1="2" x2="17" y2="12" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"/>
+      <line x1="17" y1="22" x2="17" y2="32" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"/>
+      <line x1="2" y1="17" x2="12" y2="17" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"/>
+      <line x1="22" y1="17" x2="32" y2="17" stroke="rgba(255,255,255,0.75)" stroke-width="1.5"/>
+      <circle cx="17" cy="17" r="1.5" fill="rgba(255,255,255,0.5)"/>
+    </svg>
+  </div>
+
+  <!-- Bottom HUD -->
+  <div class="hud-bottom">
+    <!-- Health -->
+    <div class="hud-panel" style="display:flex;align-items:center;gap:10px;">
+      <div style="width:44px;height:44px;background:rgba(249,115,22,0.15);border:2px solid #4ade80;
+        display:flex;align-items:center;justify-content:center;font-size:20px;">🪖</div>
+      <div>
+        <div class="hud-hp-lbl">HEALTH</div>
+        <div class="hud-hp-num">87</div>
+      </div>
+    </div>
+
+    <!-- Ammo -->
+    <div class="hud-panel">
+      <div class="hud-wpn">CHAINGUN</div>
+      <div class="hud-ammo-num">
+        <span class="hud-clip">180</span>
+        <span class="hud-res">400</span>
+      </div>
+      <div class="hud-pips">
+        <div class="hud-pp"></div><div class="hud-pp"></div><div class="hud-pp"></div>
+        <div class="hud-pp"></div><div class="hud-pp"></div><div class="hud-pp"></div>
+        <div class="hud-pp"></div><div class="hud-pp"></div>
+        <div class="hud-pe"></div><div class="hud-pe"></div>
+      </div>
+    </div>
+
+    <!-- Grenades -->
+    <div class="hud-panel" style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+      <div style="display:flex;gap:3px;">
+        <div style="width:8px;height:14px;border-radius:2px;background:linear-gradient(180deg,#8b4513,#5a2d0c);border:1px solid rgba(200,100,40,0.5);"></div>
+        <div style="width:8px;height:14px;border-radius:2px;background:linear-gradient(180deg,#8b4513,#5a2d0c);border:1px solid rgba(200,100,40,0.5);"></div>
+        <div style="width:8px;height:14px;border-radius:2px;background:linear-gradient(180deg,#8b4513,#5a2d0c);border:1px solid rgba(200,100,40,0.5);"></div>
+      </div>
+      <div style="font-size:7px;color:rgba(249,115,22,0.7);letter-spacing:1px;font-family:var(--mono);">BOOM ×3</div>
+    </div>
+
+    <!-- Radar -->
+    <div class="hud-panel">
+      <div class="hud-radar">
+        <div style="position:absolute;border-radius:50%;border:1px solid rgba(249,115,22,0.18);width:65%;height:65%;top:50%;left:50%;transform:translate(-50%,-50%);"></div>
+        <div style="position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(249,115,22,0.15);"></div>
+        <div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(249,115,22,0.15);"></div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-62%);width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:9px solid #00ff60;filter:drop-shadow(0 0 3px #00ff60);"></div>
+        <div style="position:absolute;left:62%;top:25%;width:5px;height:5px;border-radius:50%;background:#ef4444;box-shadow:0 0 4px #ef4444;transform:translate(-50%,-50%);"></div>
+        <div style="position:absolute;left:35%;top:32%;width:5px;height:5px;border-radius:50%;background:#ef4444;box-shadow:0 0 4px #ef4444;transform:translate(-50%,-50%);"></div>
+        <div style="position:absolute;left:72%;top:60%;width:5px;height:5px;border-radius:50%;background:#ef4444;box-shadow:0 0 4px #ef4444;transform:translate(-50%,-50%);"></div>
+        <div style="position:absolute;left:28%;top:68%;width:4px;height:4px;border-radius:50%;background:rgba(239,68,68,0.5);transform:translate(-50%,-50%);"></div>
+      </div>
+      <div style="display:flex;justify-content:center;gap:10px;margin-top:4px;">
+        <div style="font-size:8px;color:rgba(249,115,22,0.75);font-family:var(--mono);">25m</div>
+        <div style="font-size:9px;color:rgba(249,115,22,0.9);font-family:var(--mono);letter-spacing:1px;">NE</div>
+        <div style="font-size:8px;color:rgba(249,115,22,0.75);font-family:var(--mono);">25m</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ ENEMY ROSTER ═══ -->
+<div class="sec">// ENEMY ROSTER — DOOM EQUIVALENTS</div>
+
+<div class="enemies">
+
+  <div class="ecard">
+    <div class="ecard-h"><div class="ename">COMPSOGNATHUS</div><div class="erole">IMP EQUIVALENT — SWARM</div></div>
+    <div class="estats">
+      <div class="estat"><span class="esk">HEALTH</span><span class="esv">15</span></div>
+      <div class="ebar"><div class="ebarfill" style="width:15%;background:#4ade80;"></div></div>
+      <div class="estat"><span class="esk">SPEED</span><span class="esv">7.5</span></div>
+      <div class="estat"><span class="esk">ATTACK</span><span class="esv">BITE RUSH</span></div>
+      <div class="estat"><span class="esk">THREAT</span><span class="esv">IN NUMBERS</span></div>
+    </div>
+    <div class="ethreat t-low">LOW / SWARM</div>
+  </div>
+
+  <div class="ecard">
+    <div class="ecard-h"><div class="ename">VELOCIRAPTOR</div><div class="erole">SHOTGUN ZOMBIE — PACK</div></div>
+    <div class="estats">
+      <div class="estat"><span class="esk">HEALTH</span><span class="esv">45</span></div>
+      <div class="ebar"><div class="ebarfill" style="width:45%;"></div></div>
+      <div class="estat"><span class="esk">SPEED</span><span class="esv">6.0</span></div>
+      <div class="estat"><span class="esk">ATTACK</span><span class="esv">SLASH + LEAP</span></div>
+      <div class="estat"><span class="esk">SPECIAL</span><span class="esv">FLANKS PLAYER</span></div>
+    </div>
+    <div class="ethreat t-med">MEDIUM</div>
+  </div>
+
+  <div class="ecard">
+    <div class="ecard-h" style="border-color:rgba(249,115,22,0.2);"><div class="ename">DILOPHOSAURUS</div><div class="erole">CACODEMON — ACID SPITTER</div></div>
+    <div class="estats">
+      <div class="estat"><span class="esk">HEALTH</span><span class="esv">60</span></div>
+      <div class="ebar"><div class="ebarfill" style="width:60%;background:#a3e635;"></div></div>
+      <div class="estat"><span class="esk">SPEED</span><span class="esv">3.5</span></div>
+      <div class="estat"><span class="esk">ATTACK</span><span class="esv">ACID PROJECTILE</span></div>
+      <div class="estat"><span class="esk">SPECIAL</span><span class="esv">TRACKS PLAYER ARC</span></div>
+    </div>
+    <div class="ethreat t-med">MED / RANGED</div>
+  </div>
+
+  <div class="ecard">
+    <div class="ecard-h" style="border-color:rgba(249,115,22,0.3);"><div class="ename">PTERODACTYL</div><div class="erole">LOST SOUL — AIRBORNE</div></div>
+    <div class="estats">
+      <div class="estat"><span class="esk">HEALTH</span><span class="esv">30</span></div>
+      <div class="ebar"><div class="ebarfill" style="width:30%;background:#60a5fa;"></div></div>
+      <div class="estat"><span class="esk">SPEED</span><span class="esv">9.0</span></div>
+      <div class="estat"><span class="esk">ATTACK</span><span class="esv">DIVE BOMB</span></div>
+      <div class="estat"><span class="esk">SPECIAL</span><span class="esv">FLIES ABOVE COVER</span></div>
+    </div>
+    <div class="ethreat t-high">HIGH / AIR</div>
+  </div>
+
+  <div class="ecard">
+    <div class="ecard-h" style="border-color:rgba(220,38,38,0.3);"><div class="ename">ANKYLOSAURUS</div><div class="erole">BARON OF HELL — ARMOURED</div></div>
+    <div class="estats">
+      <div class="estat"><span class="esk">HEALTH</span><span class="esv">200</span></div>
+      <div class="ebar"><div class="ebarfill" style="width:100%;"></div></div>
+      <div class="estat"><span class="esk">SPEED</span><span class="esv">1.8</span></div>
+      <div class="estat"><span class="esk">ATTACK</span><span class="esv">TAIL SWEEP AOE</span></div>
+      <div class="estat"><span class="esk">SPECIAL</span><span class="esv">FRONT ARMOR 75%</span></div>
+    </div>
+    <div class="ethreat t-high">HIGH / TANK</div>
+  </div>
+
+  <div class="ecard">
+    <div class="ecard-h" style="border-color:rgba(255,0,0,0.35);"><div class="ename">T-REX</div><div class="erole">CYBERDEMON — BOSS</div></div>
+    <div class="estats">
+      <div class="estat"><span class="esk">HEALTH</span><span class="esv">800</span></div>
+      <div class="ebar"><div class="ebarfill" style="width:100%;background:#ff2020;"></div></div>
+      <div class="estat"><span class="esk">SPEED</span><span class="esv">4.0 ⚠</span></div>
+      <div class="estat"><span class="esk">ATTACK</span><span class="esv">STOMP + BITE + ROAR</span></div>
+      <div class="estat"><span class="esk">SPECIAL</span><span class="esv">SCREEN-FILLING</span></div>
+    </div>
+    <div class="ethreat t-boss">⚠ BOSS</div>
+  </div>
+
+</div>
+
+
+<!-- ═══ WEAPON LOADOUT ═══ -->
+<div class="sec">// WEAPON LOADOUT</div>
+
+<div class="weapons">
+
+  <div class="wcard">
+    <img class="wcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/f34027f54_generated_image.png" alt="">
+    <div class="wbadge b-melee">MELEE</div>
+    <div class="wcard-ov">
+      <div class="wnum">01.</div>
+      <div class="wname">BONE MACHETE</div>
+      <div class="wdesc">Silent. Fast. Fossilised edge.</div>
+      <div class="wpips">
+        <div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div>
+        <div class="wpe"></div><div class="wpe"></div><div class="wpe"></div><div class="wpe"></div><div class="wpe"></div><div class="wpe"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wcard">
+    <img class="wcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/8f444d5c4_generated_image.png" alt="">
+    <div class="wbadge b-rapid">RAPID</div>
+    <div class="wcard-ov">
+      <div class="wnum">02.</div>
+      <div class="wname">PULSE RIFLE</div>
+      <div class="wdesc">Standard issue. Reliable burst.</div>
+      <div class="wpips">
+        <div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div>
+        <div class="wpe"></div><div class="wpe"></div><div class="wpe"></div><div class="wpe"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wcard">
+    <img class="wcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/32659ecf8_generated_image.png" alt="">
+    <div class="wbadge b-heavy">HEAVY</div>
+    <div class="wcard-ov">
+      <div class="wnum">03.</div>
+      <div class="wname">CHAINGUN</div>
+      <div class="wdesc">Spin up. Shred everything.</div>
+      <div class="wpips">
+        <div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div>
+        <div class="wpe"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wcard">
+    <img class="wcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/d45361377_generated_image.png" alt="">
+    <div class="wbadge b-boom">LAUNCHER</div>
+    <div class="wcard-ov">
+      <div class="wnum">04.</div>
+      <div class="wname">DINO BUSTER</div>
+      <div class="wdesc">Fossilised shell rockets. Big splash.</div>
+      <div class="wpips">
+        <div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wcard">
+    <img class="wcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/bb20a6912_generated_image.png" alt="">
+    <div class="wbadge b-flame">BFG</div>
+    <div class="wcard-ov">
+      <div class="wnum">05.</div>
+      <div class="wname">EXTINCTION EVENT</div>
+      <div class="wdesc">One shot. Everything dies.</div>
+      <div class="wpips">
+        <div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div><div class="wpp"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══ LEVEL BIOMES ═══ -->
+<div class="sec">// 5 LEVEL BIOMES</div>
+
+<div class="biomes">
+
+  <div class="bcard">
+    <img class="bcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/88d9a020b_generated_image.png" alt="">
+    <div class="bhazard">JUNGLE HELL</div>
+    <div class="bcard-ov">
+      <div class="bname">JUNGLE HELL</div>
+      <div class="bdesc">Dense canopy. Zero visibility. Ambushes everywhere.</div>
+    </div>
+  </div>
+
+  <div class="bcard">
+    <img class="bcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/a73b90edb_generated_image.png" alt="">
+    <div class="bhazard">VOLCANIC</div>
+    <div class="bcard-ov">
+      <div class="bname">VOLCANIC BADLANDS</div>
+      <div class="bdesc">Lava rivers. Ash storms. Ground that burns.</div>
+    </div>
+  </div>
+
+  <div class="bcard">
+    <img class="bcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/a02d0c908_generated_image.png" alt="">
+    <div class="bhazard">CAVES</div>
+    <div class="bcard-ov">
+      <div class="bname">BIOLUM CAVES</div>
+      <div class="bdesc">Dark tunnels. Glowing crystals. Pterodactyl nests.</div>
+    </div>
+  </div>
+
+  <div class="bcard">
+    <img class="bcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/31a3f651b_generated_image.png" alt="">
+    <div class="bhazard">RUINS</div>
+    <div class="bcard-ov">
+      <div class="bname">ANCIENT RUINS</div>
+      <div class="bdesc">Multi-level platforms. Traps. Lost civilisation.</div>
+    </div>
+  </div>
+
+  <div class="bcard">
+    <img class="bcard-img" src="https://media.base44.com/images/public/6a07d557e104123d6d54764f/86f3dbc1b_generated_image.png" alt="">
+    <div class="bhazard">SWAMP</div>
+    <div class="bcard-ov">
+      <div class="bname">PREHISTORIC SWAMP</div>
+      <div class="bdesc">Murky water. Fog. Things that wait below.</div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══ DESIGN PILLARS ═══ -->
+<div class="sec">// DESIGN PILLARS</div>
+
+<div class="pillars">
+
+  <div class="pillar">
+    <div class="pillar-t">🦖 FEEL FIRST</div>
+    <div class="pillar-item"><div class="pdot"></div><div class="ptext"><strong>Movement:</strong> Doom-speed horizontal momentum. No floatiness. Instant direction change.</div></div>
+    <div class="pillar-item"><div class="pdot"></div><div class="ptext"><strong>Weapons:</strong> Heavy, impactful, screen-shaking. Each shot communicates power.</div></div>
+    <div class="pillar-item"><div class="pdot"></div><div class="ptext"><strong>Enemies:</strong> Weight and mass. Raptors are fast and scary. T-Rex is terror.</div></div>
+    <div class="pillar-item"><div class="pdot"></div><div class="ptext"><strong>Destruction:</strong> Explosions light up the scene. Lava splashes. Bones fly.</div></div>
+  </div>
+
+  <div class="pillar">
+    <div class="pillar-t">🌋 WORLD DESIGN</div>
+    <div class="pillar-item"><div class="pdot"></div><div class="ptext"><strong>Lighting:</strong> Driven by muzzle flashes, lava, bioluminescence. Dynamic and dramatic.</div></div>
+    <div class="pillar-item"><div class="pdot"></div><div class="ptext"><strong>Atmosphere:</strong> NOT cute. Dark, threatening, oppressive. Doom energy.</div></div>
+    <div class="pillar-item"><div class="pdot"></div><div class="ptext"><strong>Density:</strong> Terraria-level world detail. Bones, plants, ruins, fossils everywhere.</div></div>
+    <div class="pillar-item"><div class="pdot"></div><div class="ptext"><strong>Layers:</strong> Background / midground / foreground parallax. Deep world.</div></div>
+  </div>
+
+  <div class="pillar">
+    <div class="pillar-t">⚡ SYSTEMS</div>
+    <div class="pillar-item"><div class="pdot"></div><div class="ptext"><strong>Enemy AI:</strong> Each dinosaur has a Doom-equivalent role. Predictable but threatening.</div></div>
+    <div class="pillar-item"><div class="pdot"></div><div class="ptext"><strong>Progression:</strong> Weapon upgrades, health upgrades, speed upgrades from loot.</div></div>
+    <div class="pillar-item"><div class="pdot"></div><div class="ptext"><strong>Boss phases:</strong> T-Rex has 3 phases, gets faster and more aggressive.</div></div>
+    <div class="pillar-item"><div class="pdot"></div><div class="ptext"><strong>Pickups:</strong> Dino teeth = ammo. Amber = health. Ancient tech = power-ups.</div></div>
+  </div>
+
+</div>
+
+
+<!-- ═══ TAGLINE ═══ -->
+<div style="text-align:center;padding:28px 0 0;">
+  <div style="font-size:9px;color:rgba(249,115,22,0.4);letter-spacing:4px;font-family:var(--mono);margin-bottom:6px;">THE TAGLINE</div>
+  <div style="font-size:48px;font-weight:900;color:var(--dino-orange);letter-spacing:4px;text-shadow:0 0 40px rgba(249,115,22,0.4);">YOU ARE NOT THE PREY.</div>
+</div>
+
+
+<!-- ═══ FOOTER ═══ -->
+<div class="doc-footer">
+  <div class="foot-l">DRIFTGATE STUDIOS — DINOSAUR RUCKUS — SIDE SCROLLER DIVISION</div>
+  <div class="foot-r">VISUAL NORTHSTAR v1.0 — VULCAN — JUNE 2026</div>
+</div>
+
+</div>
+</body>
+</html>
