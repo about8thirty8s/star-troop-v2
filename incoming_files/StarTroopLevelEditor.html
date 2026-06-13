@@ -673,19 +673,19 @@ function draw(ts){
       }
     });
 
-    // Haze band at horizon — thin atmospheric glow
-    if(bgVis['clouds_far']) {
-      const hazeY  = skyH * 0.78;
-      const hazeH  = skyH * 0.12;
-      const hr2 = (180*(1-nightT) + 40*nightT)|0;
-      const hg2 = (95*(1-nightT)  + 15*nightT)|0;
-      const hb2 = (30*(1-nightT)  + 50*nightT)|0;
-      const hazeGrad = ctx.createLinearGradient(0, hazeY-hazeH*0.3, 0, hazeY+hazeH);
-      hazeGrad.addColorStop(0, `rgba(${hr2},${hg2},${hb2},0)`);
-      hazeGrad.addColorStop(0.4,`rgba(${hr2},${hg2},${hb2},${0.18*(1-nightT*0.5)})`);
-      hazeGrad.addColorStop(1, `rgba(${hr2},${hg2},${hb2},0)`);
-      ctx.fillStyle = hazeGrad;
-      ctx.fillRect(0, hazeY-hazeH*0.3, W, hazeH*1.3);
+    // Haze band at horizon — day only, fully invisible at night
+    if(bgVis['clouds_far'] && !isNight) {
+      const dayFrac = Math.max(0, 1 - nightT * 2.5);  // fades out fast as night approaches
+      if(dayFrac > 0.01) {
+        const hazeY  = skyH * 0.78;
+        const hazeH  = skyH * 0.12;
+        const hazeGrad = ctx.createLinearGradient(0, hazeY-hazeH*0.3, 0, hazeY+hazeH);
+        hazeGrad.addColorStop(0,   `rgba(180,95,30,0)`);
+        hazeGrad.addColorStop(0.4, `rgba(180,95,30,${(0.18*dayFrac).toFixed(3)})`);
+        hazeGrad.addColorStop(1,   `rgba(180,95,30,0)`);
+        ctx.fillStyle = hazeGrad;
+        ctx.fillRect(0, hazeY-hazeH*0.3, W, hazeH*1.3);
+      }
     }
   }
 
