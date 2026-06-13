@@ -376,6 +376,9 @@ const SHOOTING_STARS = Array.from({length:3}, (_,i) => ({
 
 
 function draw(ts){
+  try{
+  // Guard: ensure canvas has real dimensions
+  if(canvas.width < 10 || canvas.height < 10){ resizeCanvas(); requestAnimationFrame(draw); return; }
   if(lastTime===null)lastTime=ts;
   const dt=Math.min((ts-lastTime)/1000,.05);lastTime=ts;
   if(cycleActive)dayT=(dayT+dt*cycleSpeed/DAY_DURATION)%1;
@@ -721,10 +724,18 @@ function draw(ts){
       }
     }
   }
+  }catch(e){console.error("DRAW ERROR:",e);}
+  requestAnimationFrame(draw);
 }
 // Auto-populate terrain on first load
 autoFill();
-requestAnimationFrame(draw);
+// Kick off render after layout is settled
+window.addEventListener('load', function(){
+  resizeCanvas();
+  requestAnimationFrame(draw);
+});
+// Also start immediately in case load already fired
+if(document.readyState==='complete'){ resizeCanvas(); requestAnimationFrame(draw); }
 
 function getCellFromXY(mx,my){
   const ts2=TILE_BASE*zoom,ty=canvas.height*(1-TERRAIN_RATIO);
