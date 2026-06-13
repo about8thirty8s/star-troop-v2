@@ -41,9 +41,8 @@
   #hud img{width:32px;height:32px;image-rendering:pixelated;border-radius:3px;}
   .hud-name{color:#f97316;font-size:11px;font-weight:bold;}
   .hud-mode{color:#666;font-size:10px;}
-  #hint-bar{position:absolute;top:8px;right:12px;color:#555;font-size:10px;text-align:right;line-height:1.7;}
-  .hints{padding:8px 10px;border-top:1px solid #3a1800;color:#444;font-size:10px;line-height:1.9;margin-top:auto;}
   #zoom-label{color:#555;font-size:11px;}
+  .hints{padding:8px 10px;border-top:1px solid #3a1800;color:#444;font-size:10px;line-height:1.9;margin-top:auto;}
 </style>
 </head>
 <body>
@@ -61,22 +60,21 @@
   <div class="spacer"></div>
   <span id="zoom-label">100%</span>
 </div>
-
 <div id="main">
   <div id="sidebar">
     <div class="section-title">BACKGROUND</div>
     <div id="bg-toggles"></div>
     <hr class="divider"/>
     <div id="tile-palette"></div>
-    <div class="hints">LClick → Paint<br>RClick → Delete<br>Drag → Paint/Delete<br>Scroll → Pan<br>Ctrl+Scroll → Zoom</div>
+    <div class="hints">LClick/Drag → Paint<br>RClick/Drag → Delete<br>A / D → Pan camera<br>Scroll → Zoom in/out<br>Ctrl+Scroll → Fine zoom</div>
   </div>
   <div id="canvas-wrap">
     <canvas id="main-canvas"></canvas>
     <div id="loading">LOADING ASSETS...</div>
     <div id="zoom-controls">
-      <button class="zoom-btn" onclick="changeZoom(0.15)">+</button>
+      <button class="zoom-btn" onclick="addZoom(0.15)">+</button>
       <button class="zoom-btn" style="font-size:10px" onclick="resetZoom()">1:1</button>
-      <button class="zoom-btn" onclick="changeZoom(-0.15)">−</button>
+      <button class="zoom-btn" onclick="addZoom(-0.15)">−</button>
     </div>
     <div id="hud">
       <img id="hud-img" src="" alt=""/>
@@ -105,12 +103,12 @@ const ASSETS = {
 };
 
 const BG_LAYERS = [
-  { id:"sky_planet",  label:"Sky",          parallax:0     },
-  { id:"gas_giant",   label:"Gas Giant",    parallax:0.01  },
-  { id:"mountains",   label:"Mountains",    parallax:0.03  },
-  { id:"clouds_far",  label:"Clouds Far",   parallax:0.05  },
-  { id:"clouds_mid",  label:"Clouds Mid",   parallax:0.09  },
-  { id:"clouds_near", label:"Clouds Near",  parallax:0.14  },
+  { id:"sky_planet",  label:"Sky",         parallax: 0     },
+  { id:"gas_giant",   label:"Gas Giant",   parallax: 0.008 },
+  { id:"mountains",   label:"Mountains",   parallax: 0.025 },
+  { id:"clouds_far",  label:"Clouds Far",  parallax: 0.04  },
+  { id:"clouds_mid",  label:"Clouds Mid",  parallax: 0.08  },
+  { id:"clouds_near", label:"Clouds Near", parallax: 0.13  },
 ];
 
 const TILE_GROUPS = [
@@ -132,19 +130,32 @@ const TILE_GROUPS = [
 ];
 const ALL_TILES = TILE_GROUPS.flatMap(g => g.tiles);
 
+// ── LAYOUT CONSTANTS ──────────────────────────────────────────────────────────
+// terrainY is FIXED at 62% from top — independent of zoom
+// zoom only scales tile SIZE and affects cameraX pan speed
+// BG layers always fill sky zone at 1:1 screen ratio — tiny parallax offset only
+const TERRAIN_RATIO = 0.40;  // terrain = bottom 40% of screen
 const GRID_COLS     = 60;
 const GRID_ROWS     = 10;
-const TERRAIN_RATIO = 0.38;
+const TILE_BASE     = 48;    // base tile px at zoom=1
+const PAN_SPEED     = 6;     // px per frame for A/D keys
 
-let activeTool = "paint", activeTile = ALL_TILES[0];
-let bgVis      = Object.fromEntries(BG_LAYERS.map(l=>[l.id,true]));
-let cameraX    = 0, scrollOff = 0, zoom = 1;
-let showGrid   = true, tilesMap = {}, hoverCell = null;
-// Drag state: null | 'paint' | 'erase'
-let dragMode   = null;
-let images     = {}, loadCount = 0;
-const total    = Object.keys(ASSETS).length;
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let zoom      = 1.0;
+let cameraX   = 0;    // world pixels scrolled (affects tiles + parallax)
+let dragMode  = null; // null | 'paint' | 'erase'
+let hoverCell = null;
+let activeTool = "paint";
+let activeTile = ALL_TILES[0];
+let bgVis     = Object.fromEntries(BG_LAYERS.map(l=>[l.id,true]));
+let showGrid  = true;
+let tilesMap  = {};
+let images    = {};
+let loadCount = 0;
+const keysDown = {};
 
+// ── LOAD IMAGES ───────────────────────────────────────────────────────────────
+const totalAssets = Object.keys(ASSETS).length;
 for (const [key,src] of Object.entries(ASSETS)) {
   if (!src) { loadCount++; checkReady(); continue; }
   const img = new Image();
@@ -153,12 +164,11 @@ for (const [key,src] of Object.entries(ASSETS)) {
   images[key] = img;
 }
 function checkReady() {
-  if (loadCount >= total)
+  if (loadCount >= totalAssets)
     document.getElementById('loading').style.display = 'none';
 }
 
-// ── UI ────────────────────────────────────────────────────────────────────────
-const bgWrap = document.getElementById('bg-toggles');
+// ── BUILD UI ──────────────────────────────────────────────────────────────────
 BG_LAYERS.forEach(layer => {
   const div = document.createElement('div');
   div.className = 'bg-layer';
@@ -167,10 +177,10 @@ BG_LAYERS.forEach(layer => {
   div.onclick = () => {
     bgVis[layer.id] = !bgVis[layer.id];
     const c = document.getElementById('chk-'+layer.id);
-    c.className = 'check' + (bgVis[layer.id]?' on':'');
+    c.className = 'check'+(bgVis[layer.id]?' on':'');
     c.textContent = bgVis[layer.id]?'✓':'';
   };
-  bgWrap.appendChild(div);
+  document.getElementById('bg-toggles').appendChild(div);
 });
 
 TILE_GROUPS.forEach(group => {
@@ -205,109 +215,141 @@ function resizeCanvas() { canvas.width=canvas.offsetWidth; canvas.height=canvas.
 resizeCanvas();
 new ResizeObserver(resizeCanvas).observe(document.getElementById('canvas-wrap'));
 
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function getTileSize()  { return TILE_BASE * zoom; }
+function getTerrainY()  { return canvas.height * (1 - TERRAIN_RATIO); }
+
 // ── DRAW ──────────────────────────────────────────────────────────────────────
 function draw() {
-  const W=canvas.width, H=canvas.height;
-  const terrainZoneH = H * TERRAIN_RATIO;
-  const ts           = (terrainZoneH / GRID_ROWS) * zoom;
-  const terrainY     = H - terrainZoneH;
-  const skyH         = terrainY;
+  const W = canvas.width, H = canvas.height;
+  const terrainY = getTerrainY();   // fixed screen position — does NOT change with zoom
+  const skyH     = terrainY;        // sky always fills top portion
+  const ts       = getTileSize();   // tile size scales with zoom
 
   ctx.clearRect(0,0,W,H);
-  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingEnabled = true;
 
-  // Sky gradient
-  const sg=ctx.createLinearGradient(0,0,0,skyH);
+  // ── SKY GRADIENT ────────────────────────────────────────────────────────────
+  const sg = ctx.createLinearGradient(0,0,0,skyH);
   sg.addColorStop(0,   '#3A0A00');
   sg.addColorStop(0.5, '#220600');
   sg.addColorStop(1,   '#160300');
   ctx.fillStyle=sg; ctx.fillRect(0,0,W,skyH);
   ctx.fillStyle='#0c0200'; ctx.fillRect(0,terrainY,W,H-terrainY);
 
-  // ── BG LAYERS ──────────────────────────────────────────────────────────────
+  // ── BG LAYERS ───────────────────────────────────────────────────────────────
+  // Rule: BG elements do NOT zoom with the camera.
+  // They only shift slightly with parallax (fraction of cameraX).
+  // This keeps the world feeling grounded — sky always fills sky.
+
   BG_LAYERS.forEach(layer => {
     if (!bgVis[layer.id]) return;
     const img = images[layer.id];
     if (!img||!img.complete||!img.naturalWidth) return;
-    const px = scrollOff * layer.parallax;
 
-    if (layer.id==='sky_planet') {
-      const dH=skyH, dW=(img.naturalWidth/img.naturalHeight)*dH;
-      const ox=-(px%dW);
-      [-1,0,1].forEach(i=>ctx.drawImage(img,ox+i*dW,0,dW,dH));
+    // Parallax offset — tiny fraction of cameraX, NOT zoom-dependent
+    const shift = cameraX * layer.parallax;
 
-    } else if (layer.id==='gas_giant') {
-      // Big planet — upper right, no tiling, just positioned
-      const planetSize = skyH * 0.72;  // large — 72% of sky height
-      const px2 = scrollOff * 0.01;
-      const planetX = W * 0.72 - px2 - planetSize/2;
-      const planetY = skyH * 0.08;    // sits high in sky
-      ctx.drawImage(img, planetX, planetY, planetSize, planetSize);
+    if (layer.id === 'sky_planet') {
+      // Fills entire sky zone — tiles horizontally only for parallax pan
+      const dH = skyH;
+      const dW = (img.naturalWidth / img.naturalHeight) * dH;
+      const ox  = -(shift % dW);
+      ctx.drawImage(img, ox - dW, 0, dW, dH);
+      ctx.drawImage(img, ox,      0, dW, dH);
+      ctx.drawImage(img, ox + dW, 0, dW, dH);
 
-    } else if (layer.id==='mountains') {
-      const dH=skyH*0.60, dY=skyH-dH, dW=W*1.1;
-      const ox=-(px%dW);
-      [-1,0,1].forEach(i=>ctx.drawImage(img,ox+i*dW,dY,dW,dH));
+    } else if (layer.id === 'gas_giant') {
+      // Single planet — NO tiling, positioned in upper sky
+      // Size is a fixed fraction of skyH so it looks correct at any screen size
+      const pSize = skyH * 0.65;
+      const pX    = W * 0.74 - shift - pSize * 0.5;
+      const pY    = skyH * 0.06;
+      ctx.drawImage(img, pX, pY, pSize, pSize);
 
-    } else if (layer.id==='clouds_far') {
-      const dH=skyH*0.30, dY=0, dW=W*1.05;
-      const ox=-(px%dW);
-      [-1,0,1].forEach(i=>ctx.drawImage(img,ox+i*dW,dY,dW,dH));
+    } else if (layer.id === 'mountains') {
+      const dH = skyH * 0.62;
+      const dY = skyH - dH;
+      const dW = W * 1.1;
+      const ox  = -(shift % dW);
+      ctx.drawImage(img, ox - dW, dY, dW, dH);
+      ctx.drawImage(img, ox,      dY, dW, dH);
+      ctx.drawImage(img, ox + dW, dY, dW, dH);
 
-    } else if (layer.id==='clouds_mid') {
-      const dH=skyH*0.38, dY=skyH*0.12, dW=W*1.05;
-      const ox=-(px%dW);
-      [-1,0,1].forEach(i=>ctx.drawImage(img,ox+i*dW,dY,dW,dH));
+    } else if (layer.id === 'clouds_far') {
+      const dH = skyH * 0.30, dY = 0, dW = W * 1.05;
+      const ox  = -(shift % dW);
+      ctx.drawImage(img, ox-dW, dY, dW, dH);
+      ctx.drawImage(img, ox,    dY, dW, dH);
+      ctx.drawImage(img, ox+dW, dY, dW, dH);
 
-    } else if (layer.id==='clouds_near') {
-      const dH=skyH*0.46, dY=skyH*0.32, dW=W*1.05;
-      const ox=-(px%dW);
-      [-1,0,1].forEach(i=>ctx.drawImage(img,ox+i*dW,dY,dW,dH));
+    } else if (layer.id === 'clouds_mid') {
+      const dH = skyH * 0.38, dY = skyH*0.10, dW = W * 1.05;
+      const ox  = -(shift % dW);
+      ctx.drawImage(img, ox-dW, dY, dW, dH);
+      ctx.drawImage(img, ox,    dY, dW, dH);
+      ctx.drawImage(img, ox+dW, dY, dW, dH);
+
+    } else if (layer.id === 'clouds_near') {
+      const dH = skyH * 0.46, dY = skyH*0.30, dW = W * 1.05;
+      const ox  = -(shift % dW);
+      ctx.drawImage(img, ox-dW, dY, dW, dH);
+      ctx.drawImage(img, ox,    dY, dW, dH);
+      ctx.drawImage(img, ox+dW, dY, dW, dH);
     }
   });
 
-  // ── TERRAIN ────────────────────────────────────────────────────────────────
+  // ── TERRAIN TILES ───────────────────────────────────────────────────────────
+  // Tiles DO zoom — ts = TILE_BASE * zoom
+  // cameraX is in world-tile-units * TILE_BASE
   for (const [key,tileId] of Object.entries(tilesMap)) {
-    const [col,row]=key.split(',').map(Number);
-    const tile=ALL_TILES.find(t=>t.id===tileId); if(!tile) continue;
-    const img=images[tile.src]; if(!img||!img.complete||!img.naturalWidth) continue;
-    const x=col*ts-cameraX, y=terrainY+row*ts;
-    if(x+ts<0||x>W||y>H) continue;
-    ctx.drawImage(img,x,y,ts,ts);
+    const [col,row] = key.split(',').map(Number);
+    const tile = ALL_TILES.find(t=>t.id===tileId); if(!tile) continue;
+    const img  = images[tile.src]; if(!img||!img.complete||!img.naturalWidth) continue;
+    const x = col * ts - cameraX;
+    const y = terrainY + row * ts;
+    if (x+ts<0 || x>W || y>H) continue;
+    ctx.drawImage(img, x, y, ts, ts);
   }
 
-  // ── GRID ───────────────────────────────────────────────────────────────────
-  if(showGrid) {
+  // ── GRID ────────────────────────────────────────────────────────────────────
+  if (showGrid) {
     ctx.strokeStyle='rgba(255,110,30,0.13)'; ctx.lineWidth=0.5;
     const sc=Math.floor(cameraX/ts), ec=sc+Math.ceil(W/ts)+2;
-    for(let c=sc;c<=ec;c++) { const x=c*ts-cameraX; ctx.beginPath();ctx.moveTo(x,terrainY);ctx.lineTo(x,H);ctx.stroke(); }
-    for(let r=0;r<=GRID_ROWS;r++) { const y=terrainY+r*ts; ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
-    ctx.strokeStyle='rgba(255,140,40,0.4)'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]);
+    for(let c=sc;c<=ec;c++) {
+      const x=c*ts-cameraX;
+      ctx.beginPath();ctx.moveTo(x,terrainY);ctx.lineTo(x,H);ctx.stroke();
+    }
+    for(let r=0;r<=GRID_ROWS;r++) {
+      const y=terrainY+r*ts;
+      ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+    }
+    ctx.strokeStyle='rgba(255,140,40,0.45)'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]);
     ctx.beginPath();ctx.moveTo(0,terrainY);ctx.lineTo(W,terrainY);ctx.stroke();
     ctx.setLineDash([]);
   }
 
-  // ── HOVER ──────────────────────────────────────────────────────────────────
-  if(hoverCell) {
-    const ts2=(H*TERRAIN_RATIO/GRID_ROWS)*zoom;
-    const ty=H-H*TERRAIN_RATIO;
-    const x=hoverCell.col*ts2-cameraX, y=ty+hoverCell.row*ts2;
+  // ── HOVER ───────────────────────────────────────────────────────────────────
+  if (hoverCell) {
+    const x = hoverCell.col*ts - cameraX;
+    const y = terrainY + hoverCell.row*ts;
     const er = dragMode==='erase' || (dragMode===null && activeTool==='erase');
     ctx.fillStyle   = er?'rgba(255,40,40,0.2)':'rgba(255,180,50,0.18)';
     ctx.strokeStyle = er?'rgba(255,70,70,0.9)':'rgba(255,210,70,0.9)';
     ctx.lineWidth=1.5;
-    ctx.fillRect(x,y,ts2,ts2);
-    ctx.strokeRect(x+.5,y+.5,ts2-1,ts2-1);
+    ctx.fillRect(x,y,ts,ts);
+    ctx.strokeRect(x+.5,y+.5,ts-1,ts-1);
   }
+
+  // ── A/D PAN ─────────────────────────────────────────────────────────────────
+  if (keysDown['a'] || keysDown['ArrowLeft'])  cameraX = Math.max(0, cameraX - PAN_SPEED);
+  if (keysDown['d'] || keysDown['ArrowRight']) cameraX += PAN_SPEED;
 
   requestAnimationFrame(draw);
 }
 requestAnimationFrame(draw);
 
-// ── INPUT ─────────────────────────────────────────────────────────────────────
-function getTileSize() { return (canvas.height*TERRAIN_RATIO/GRID_ROWS)*zoom; }
-function getTerrainY() { return canvas.height - canvas.height*TERRAIN_RATIO; }
-
+// ── MOUSE INPUT ───────────────────────────────────────────────────────────────
 function getCellFromXY(mx,my) {
   const ts=getTileSize(), ty=getTerrainY();
   if(my<ty) return null;
@@ -320,61 +362,62 @@ function getCellFromXY(mx,my) {
 function applyDrag(cell, mode) {
   if(!cell) return;
   const key=`${cell.col},${cell.row}`;
-  if(mode==='erase') {
-    delete tilesMap[key];
-  } else if(mode==='paint' && activeTile) {
-    tilesMap[key]=activeTile.id;
-  } else if(mode==='fill' && activeTile) {
+  if      (mode==='erase')               delete tilesMap[key];
+  else if (mode==='paint' && activeTile) tilesMap[key]=activeTile.id;
+  else if (mode==='fill'  && activeTile)
     for(let c=0;c<GRID_COLS;c++) tilesMap[`${c},${cell.row}`]=activeTile.id;
-  }
 }
 
 canvas.addEventListener('contextmenu', e=>e.preventDefault());
 
-canvas.addEventListener('mousedown', e => {
-  const r=canvas.getBoundingClientRect();
-  const cell=getCellFromXY(e.clientX-r.left, e.clientY-r.top);
-  if(e.button===2) {
-    // Right click = erase
-    dragMode='erase';
-    applyDrag(cell,'erase');
-  } else if(e.button===0) {
-    if(activeTool==='erase') {
-      dragMode='erase';
-      applyDrag(cell,'erase');
-    } else if(activeTool==='fill') {
-      applyDrag(cell,'fill');
-      dragMode=null;
-    } else {
-      dragMode='paint';
-      applyDrag(cell,'paint');
-    }
-  }
-});
-
-canvas.addEventListener('mousemove', e => {
+canvas.addEventListener('mousedown', e=>{
   const r=canvas.getBoundingClientRect();
   const cell=getCellFromXY(e.clientX-r.left,e.clientY-r.top);
-  hoverCell=cell;
-  if(dragMode && cell) applyDrag(cell, dragMode);
+  if(e.button===2) {
+    dragMode='erase'; applyDrag(cell,'erase');
+  } else if(e.button===0) {
+    if(activeTool==='erase')       { dragMode='erase'; applyDrag(cell,'erase'); }
+    else if(activeTool==='fill')   { applyDrag(cell,'fill'); dragMode=null; }
+    else                           { dragMode='paint'; applyDrag(cell,'paint'); }
+  }
 });
+canvas.addEventListener('mousemove', e=>{
+  const r=canvas.getBoundingClientRect();
+  hoverCell=getCellFromXY(e.clientX-r.left,e.clientY-r.top);
+  if(dragMode) applyDrag(hoverCell,dragMode);
+});
+canvas.addEventListener('mouseup',    ()=>dragMode=null);
+canvas.addEventListener('mouseleave', ()=>{hoverCell=null;dragMode=null;});
 
-canvas.addEventListener('mouseup',    () => dragMode=null);
-canvas.addEventListener('mouseleave', () => { hoverCell=null; dragMode=null; });
-
+// ── SCROLL ZOOM ───────────────────────────────────────────────────────────────
+// Scroll = zoom in/out centred on mouse position
+// Ctrl+Scroll = fine zoom
 canvas.addEventListener('wheel', e=>{
   e.preventDefault();
-  if(e.ctrlKey||e.metaKey) {
-    zoom=Math.max(0.3,Math.min(5,zoom*(1-e.deltaY*0.002)));
-    document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%';
-  } else {
-    const dx=(e.shiftKey?e.deltaY:e.deltaX)||e.deltaY*0.5;
-    cameraX=Math.max(0,cameraX+dx*1.5);
-    scrollOff+=dx*1.5;
-  }
+  const r    = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - r.left;  // mouse X in canvas coords
+
+  const zoomFactor = e.ctrlKey ? 0.001 : 0.004;
+  const oldZoom = zoom;
+  zoom = Math.max(0.3, Math.min(6, zoom * (1 - e.deltaY * zoomFactor)));
+
+  // Keep the tile under the mouse cursor fixed during zoom
+  // worldX = (mouseX + cameraX) / oldZoom  →  same worldX at new zoom
+  // newCameraX = worldX * zoom - mouseX
+  const worldX  = (mouseX + cameraX) / (oldZoom * TILE_BASE);
+  cameraX = Math.max(0, worldX * zoom * TILE_BASE - mouseX);
+
+  document.getElementById('zoom-label').textContent = Math.round(zoom*100)+'%';
 },{passive:false});
 
-// ── CONTROLS ──────────────────────────────────────────────────────────────────
+// ── KEYBOARD ──────────────────────────────────────────────────────────────────
+window.addEventListener('keydown', e=>{
+  keysDown[e.key] = true;
+  if(e.key==='a'||e.key==='d'||e.key==='ArrowLeft'||e.key==='ArrowRight') e.preventDefault();
+});
+window.addEventListener('keyup', e=>{ delete keysDown[e.key]; });
+
+// ── TOOL / ZOOM CONTROLS ─────────────────────────────────────────────────────
 function setTool(t) {
   activeTool=t;
   ['paint','erase','fill'].forEach(id=>document.getElementById('tool-'+id)?.classList.toggle('active',id===t));
@@ -384,11 +427,19 @@ function toggleGrid() {
   showGrid=!showGrid;
   document.getElementById('btn-grid').classList.toggle('active',showGrid);
 }
-function changeZoom(d) {
-  zoom=Math.max(0.3,Math.min(5,zoom+d));
+function addZoom(d) {
+  const oldZoom=zoom;
+  zoom=Math.max(0.3,Math.min(6,zoom+d));
+  // Zoom toward canvas center
+  const cx2=canvas.width/2;
+  const worldX=(cx2+cameraX)/(oldZoom*TILE_BASE);
+  cameraX=Math.max(0,worldX*zoom*TILE_BASE-cx2);
   document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%';
 }
-function resetZoom() { zoom=1; document.getElementById('zoom-label').textContent='100%'; }
+function resetZoom() {
+  zoom=1; cameraX=0;
+  document.getElementById('zoom-label').textContent='100%';
+}
 
 function autoFill() {
   const s=["v1_top","v2_top","v3_top"],m=["v1_mid","v2_mid","v3_mid"],d=["v1_deep","v2_deep","v3_deep"];
