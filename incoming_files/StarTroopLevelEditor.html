@@ -596,7 +596,34 @@ function draw(ts){
     }
   }
 
-  // ── CLOUDS — PROCEDURAL VOLUMETRIC DUST SYSTEM ──────────────────────────────
+  // ── TERRAIN TILES ───────────────────────────────────────────────────────────
+  {
+    const ts2 = TILE_BASE * zoom;
+    const startCol = Math.max(0, Math.floor(cameraX / ts2) - 1);
+    const endCol   = Math.min(GRID_COLS - 1, Math.ceil((cameraX + W) / ts2) + 1);
+
+    for(let c = startCol; c <= endCol; c++){
+      for(let r = 0; r < GRID_ROWS; r++){
+        const tileKey = tilesMap[`${c},${r}`];
+        if(!tileKey) continue;
+        const img = images[tileKey];
+        const tx = c * ts2 - cameraX;
+        const ty = terrainY + r * ts2;
+        if(img && img.complete && img.naturalWidth){
+          ctx.drawImage(img, tx, ty, ts2, ts2);
+        } else {
+          // Fallback solid colour per depth
+          const t = r / Math.max(1, GRID_ROWS - 1);
+          const rc = Math.round(195 - t*153) |0;
+          const gc = Math.round(95  - t*79)  |0;
+          const bc = Math.round(28  - t*24)  |0;
+          ctx.fillStyle = `rgb(${rc},${gc},${bc})`;
+          ctx.fillRect(tx, ty, ts2 + 0.5, ts2 + 0.5);
+        }
+      }
+    }
+  }
+
   // ── DEAD TREES — clusters, scrubs, solitaries ───────────────────────────────
   {
     const ts2 = TILE_BASE * zoom;
