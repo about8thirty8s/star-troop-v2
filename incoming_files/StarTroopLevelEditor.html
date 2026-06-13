@@ -459,7 +459,7 @@ function draw(ts){
     const img=images['gas_giant'];
     if(img?.complete&&img.naturalWidth){
       const yOff=layerOffsets['gas_giant']||0;
-      const shift=cameraX*BG_LAYERS.find(l=>l.id==='gas_giant').parallaxFrac;
+      const shift=(cameraX/zoom)*BG_LAYERS.find(l=>l.id==='gas_giant').parallaxFrac*0.18;
       // Gas giant size is zoom-independent — fixed fraction of sky height
       const pSize=skyH*.58;
       const pX=W*.72-pSize*.5-shift*.3;
@@ -512,19 +512,17 @@ function draw(ts){
     if(img?.complete&&img.naturalWidth){
       const yOff=layerOffsets['mountains']||0;
 
-      // BG layers are ZOOM-INDEPENDENT — they are world scenery, not tiles.
-      // Width always fills the viewport. Height is a fixed fraction of skyH.
-      // Parallax shift uses raw cameraX / TILE_BASE (world units), not zoom-scaled pixels.
-      const dW = W * 1.4;   // slightly wider than viewport for seamless tiling
-      const dH = skyH * 0.82;
+      // BG layers are ZOOM-INDEPENDENT — fixed size, no zoom scaling.
+      // cameraX is in zoomed-pixel space; convert to true world pixels first.
+      const worldPx = cameraX / zoom;   // true world pixel position
 
-      // Anchor bottom to terrainY, yOff pushes it up or down
+      const dW = W * 1.4;
+      const dH = skyH * 0.82;
       const dY = terrainY - dH + (skyH * yOff * 0.6);
 
-      // Parallax: slow scroll based on world position (camera in tile units)
-      const worldX = cameraX / (TILE_BASE);   // world tile position
-      const shift = (worldX * 0.25 * TILE_BASE) % dW;
-      const ox = -(shift < 0 ? shift + dW : shift);
+      // Parallax: slow drift based on true world position only
+      const rawShift = (worldPx * 0.18) % dW;
+      const ox = -(rawShift < 0 ? rawShift + dW : rawShift);
 
       // Overflow top edge to hide any transparent seam in the PNG
       const overflow = dH * 0.06;
@@ -560,12 +558,12 @@ function draw(ts){
     if(!bgVis[cl.id])return;
     const img=images[cl.id];if(!img?.complete||!img.naturalWidth)return;
     const yOff=layerOffsets[cl.id]||0;
-    // Clouds are zoom-independent — fixed size relative to sky
+    // Clouds zoom-independent — use true world pixels
     const dH=skyH*cl.dHf;
     const dY=skyH*(cl.dYf+yOff*.4);
     const dW=W*1.4;
-    const worldX2=cameraX/TILE_BASE;
-    const shift2=(worldX2*cl.pf*TILE_BASE)%dW;
+    const worldPxC=cameraX/zoom;
+    const shift2=(worldPxC*cl.pf*0.18)%dW;
     const ox=-(shift2<0?shift2+dW:shift2);
     ctx.globalAlpha=isNight?0.5:1;
     ctx.drawImage(img,ox-dW,dY,dW,dH);ctx.drawImage(img,ox,dY,dW,dH);ctx.drawImage(img,ox+dW,dY,dW,dH);
