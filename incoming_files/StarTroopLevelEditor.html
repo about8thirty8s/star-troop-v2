@@ -460,7 +460,8 @@ function draw(ts){
     if(img?.complete&&img.naturalWidth){
       const yOff=layerOffsets['gas_giant']||0;
       const shift=cameraX*BG_LAYERS.find(l=>l.id==='gas_giant').parallaxFrac;
-      const pSize=skyH*.60*Math.pow(zoom,.4);
+      // Gas giant size is zoom-independent — fixed fraction of sky height
+      const pSize=skyH*.58;
       const pX=W*.72-pSize*.5-shift*.3;
       const pY=skyH*(.06+yOff);
       // Always draw planet at full opacity — gas giants don't go transparent
@@ -510,29 +511,41 @@ function draw(ts){
     const img=images['mountains'];
     if(img?.complete&&img.naturalWidth){
       const yOff=layerOffsets['mountains']||0;
-      const shift=cameraX*.25;
-      const zs=Math.pow(zoom,.7);
-      const dH=skyH*0.78*zs;
-      // yOff shifts the bottom anchor point — positive = lower
-      const dY=terrainY - dH*(1-yOff*0.8) + 2;
-      const dW=Math.max(W*1.2,W*zoom);
-      const ox=-(shift%dW);
-      ctx.globalAlpha=1;
-      // Draw mountains 8% taller upward so any transparent top edge of the PNG
-      // is pushed above the canvas top — eliminates the seam line
-      const mtnOverflow = dH * 0.08;
-      const dYx = dY - mtnOverflow;
-      const dHx = dH + mtnOverflow;
-      ctx.drawImage(img,ox-dW,dYx,dW,dHx);ctx.drawImage(img,ox,dYx,dW,dHx);ctx.drawImage(img,ox+dW,dYx,dW,dHx);
-      // Night tint on mountains
+
+      // BG layers are ZOOM-INDEPENDENT — they are world scenery, not tiles.
+      // Width always fills the viewport. Height is a fixed fraction of skyH.
+      // Parallax shift uses raw cameraX / TILE_BASE (world units), not zoom-scaled pixels.
+      const dW = W * 1.4;   // slightly wider than viewport for seamless tiling
+      const dH = skyH * 0.82;
+
+      // Anchor bottom to terrainY, yOff pushes it up or down
+      const dY = terrainY - dH + (skyH * yOff * 0.6);
+
+      // Parallax: slow scroll based on world position (camera in tile units)
+      const worldX = cameraX / (TILE_BASE);   // world tile position
+      const shift = (worldX * 0.25 * TILE_BASE) % dW;
+      const ox = -(shift < 0 ? shift + dW : shift);
+
+      // Overflow top edge to hide any transparent seam in the PNG
+      const overflow = dH * 0.06;
+      const dYx = dY - overflow;
+      const dHx = dH + overflow;
+
+      ctx.globalAlpha = 1;
+      ctx.drawImage(img, ox - dW, dYx, dW, dHx);
+      ctx.drawImage(img, ox,      dYx, dW, dHx);
+      ctx.drawImage(img, ox + dW, dYx, dW, dHx);
+
+      // Night tint — dark overlay clipped to mountain strip
       if(isNight){
-        const nf=Math.min(1,(dayT-0.58)/0.12);
-        ctx.globalAlpha=nf*0.45;ctx.fillStyle='rgba(5,3,20,1)';
-        const ox2=-(cameraX*.25%dW);
-        ctx.save();ctx.beginPath();
-        ctx.rect(ox2-dW,dYx,dW*3,dHx);ctx.clip();
-        ctx.fillRect(ox2-dW,dYx,dW*3,dHx);
-        ctx.restore();ctx.globalAlpha=1;
+        const nf = Math.min(1, (dayT - 0.58) / 0.12);
+        ctx.save();
+        ctx.beginPath(); ctx.rect(0, dYx, W, dHx); ctx.clip();
+        ctx.globalAlpha = nf * 0.45;
+        ctx.fillStyle = 'rgba(5,3,20,1)';
+        ctx.fillRect(0, dYx, W, dHx);
+        ctx.restore();
+        ctx.globalAlpha = 1;
       }
     }
   }
@@ -547,12 +560,13 @@ function draw(ts){
     if(!bgVis[cl.id])return;
     const img=images[cl.id];if(!img?.complete||!img.naturalWidth)return;
     const yOff=layerOffsets[cl.id]||0;
-    const shift=cameraX*cl.pf;
-    const zs=Math.pow(zoom,.5);
-    const dH=skyH*cl.dHf*zs;
+    // Clouds are zoom-independent — fixed size relative to sky
+    const dH=skyH*cl.dHf;
     const dY=skyH*(cl.dYf+yOff*.4);
-    const dW=Math.max(W*1.1,W*zoom*.9);
-    const ox=-(shift%dW);
+    const dW=W*1.4;
+    const worldX2=cameraX/TILE_BASE;
+    const shift2=(worldX2*cl.pf*TILE_BASE)%dW;
+    const ox=-(shift2<0?shift2+dW:shift2);
     ctx.globalAlpha=isNight?0.5:1;
     ctx.drawImage(img,ox-dW,dY,dW,dH);ctx.drawImage(img,ox,dY,dW,dH);ctx.drawImage(img,ox+dW,dY,dW,dH);
     ctx.globalAlpha=1;
