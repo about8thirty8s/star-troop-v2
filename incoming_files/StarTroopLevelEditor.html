@@ -463,9 +463,17 @@ function draw(ts){
       const pSize=skyH*.60*Math.pow(zoom,.4);
       const pX=W*.72-pSize*.5-shift*.3;
       const pY=skyH*(.06+yOff);
-      ctx.globalAlpha=isNight?.5:1;
-      ctx.drawImage(img,pX,pY,pSize,pSize);
+      // Always draw planet at full opacity — gas giants don't go transparent
       ctx.globalAlpha=1;
+      ctx.drawImage(img,pX,pY,pSize,pSize);
+      // At night: overlay a dark blue-purple tint to simulate reduced sunlight
+      if(isNight){
+        const nightFade = Math.min(1,(dayT-0.58)/0.12);
+        ctx.globalAlpha = nightFade * 0.38;
+        ctx.fillStyle='rgba(15,8,40,1)';
+        ctx.beginPath();ctx.arc(pX+pSize/2,pY+pSize/2,pSize/2,0,Math.PI*2);ctx.fill();
+        ctx.globalAlpha=1;
+      }
     }
   }
 
@@ -509,9 +517,18 @@ function draw(ts){
       const dY=terrainY - dH*(1-yOff*0.8) + 2;
       const dW=Math.max(W*1.2,W*zoom);
       const ox=-(shift%dW);
-      ctx.globalAlpha=isNight?.55:1;
-      ctx.drawImage(img,ox-dW,dY,dW,dH);ctx.drawImage(img,ox,dY,dW,dH);ctx.drawImage(img,ox+dW,dY,dW,dH);
       ctx.globalAlpha=1;
+      ctx.drawImage(img,ox-dW,dY,dW,dH);ctx.drawImage(img,ox,dY,dW,dH);ctx.drawImage(img,ox+dW,dY,dW,dH);
+      // Night tint on mountains
+      if(isNight){
+        const nf=Math.min(1,(dayT-0.58)/0.12);
+        ctx.globalAlpha=nf*0.45;ctx.fillStyle='rgba(5,3,20,1)';
+        const ox2=-(cameraX*.25%dW);
+        ctx.save();ctx.beginPath();
+        ctx.rect(ox2-dW,dY,dW*3,dH);ctx.clip();
+        ctx.fillRect(ox2-dW,dY,dW*3,dH);
+        ctx.restore();ctx.globalAlpha=1;
+      }
     }
   }
 
@@ -531,13 +548,13 @@ function draw(ts){
     const dY=skyH*(cl.dYf+yOff*.4);
     const dW=Math.max(W*1.1,W*zoom*.9);
     const ox=-(shift%dW);
-    ctx.globalAlpha=isNight?.4:1;
+    ctx.globalAlpha=isNight?0.5:1;
     ctx.drawImage(img,ox-dW,dY,dW,dH);ctx.drawImage(img,ox,dY,dW,dH);ctx.drawImage(img,ox+dW,dY,dW,dH);
     ctx.globalAlpha=1;
   });
 
   // ── TERRAIN ────────────────────────────────────────────────────────────────
-  ctx.globalAlpha=isNight?.65:1;
+  ctx.globalAlpha=1;
   for(const[key,tileId]of Object.entries(tilesMap)){
     const[col,row]=key.split(',').map(Number);
     const tile=ALL_TILES.find(t=>t.id===tileId);if(!tile)continue;
