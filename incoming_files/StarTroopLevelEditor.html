@@ -192,7 +192,7 @@ const TILE_GROUPS=[
 ];
 const ALL_TILES=TILE_GROUPS.flatMap(g=>g.tiles);
 
-const TERRAIN_RATIO=0.40,GRID_COLS=60,GRID_ROWS=10,TILE_BASE=48,PAN_SPEED=5,DAY_DURATION=60;
+const TERRAIN_RATIO=0.40,GRID_COLS=60,GRID_ROWS=20,TILE_BASE=48,PAN_SPEED=5,DAY_DURATION=60;
 let zoom=1,cameraX=0,dragMode=null,hoverCell=null,activeTool="paint",activeTile=ALL_TILES[0];
 let bgVis=Object.fromEntries(BG_LAYERS.map(l=>[l.id,true]));
 let showGrid=true,tilesMap={},images={},loadCount=0,keysDown={};
@@ -676,12 +676,14 @@ function addZoom(d){
 function resetZoom(){zoom=1;cameraX=0;document.getElementById('zoom-label').textContent='100%';}
 function autoFill(){
   tilesMap={};
+  const depthRows=GRID_ROWS-1; // rows below surface
   for(let c=0;c<GRID_COLS;c++){
-    // Single surface row
+    // Row 0 = surface crust
     tilesMap[`${c},0`]='surface';
-    // Depth rows: each row gets its own depth tile, graduating darker
+    // Remaining rows: map evenly to depth_0..depth_8 (light→dark)
     for(let r=1;r<GRID_ROWS;r++){
-      const depthIdx=Math.min(r-1,8);
+      const t=(r-1)/(depthRows-1);          // 0.0 at top, 1.0 at bottom
+      const depthIdx=Math.min(8,Math.floor(t*9));
       tilesMap[`${c},${r}`]=`depth_${depthIdx}`;
     }
   }
