@@ -114,93 +114,47 @@ const ASSETS = {
 };
 
 const BG_LAYERS = [
-  { id:"gas_giant",   label:"Gas Giant",   parallaxFrac: 0.08 },
-  { id:"mountains",   label:"Mountains",   parallaxFrac: 0.25 },
-  { id:"clouds_far",  label:"Clouds Far",  parallaxFrac: 0.35 },
-  { id:"clouds_mid",  label:"Clouds Mid",  parallaxFrac: 0.55 },
-  { id:"clouds_near", label:"Clouds Near", parallaxFrac: 0.75 },
+  { id:"gas_giant",   label:"Gas Giant",   parallaxFrac:0.08 },
+  { id:"mountains",   label:"Mountains",   parallaxFrac:0.25 },
+  { id:"clouds_far",  label:"Clouds Far",  parallaxFrac:0.35 },
+  { id:"clouds_mid",  label:"Clouds Mid",  parallaxFrac:0.55 },
+  { id:"clouds_near", label:"Clouds Near", parallaxFrac:0.75 },
 ];
-
-const TILE_GROUPS = [
-  { label:"SURFACE CRUST", tiles:[
-    { id:"v1_top",  label:"Crust A", src:"terrain_v1_top"  },
-    { id:"v2_top",  label:"Crust B", src:"terrain_v2_top"  },
-    { id:"v3_top",  label:"Crust C", src:"terrain_v3_top"  },
-  ]},
-  { label:"PACKED EARTH", tiles:[
-    { id:"v1_mid",  label:"Earth A", src:"terrain_v1_mid"  },
-    { id:"v2_mid",  label:"Earth B", src:"terrain_v2_mid"  },
-    { id:"v3_mid",  label:"Earth C", src:"terrain_v3_mid"  },
-  ]},
-  { label:"DEEP EARTH", tiles:[
-    { id:"v1_deep", label:"Deep A",  src:"terrain_v1_deep" },
-    { id:"v2_deep", label:"Deep B",  src:"terrain_v2_deep" },
-    { id:"v3_deep", label:"Deep C",  src:"terrain_v3_deep" },
-  ]},
+const TILE_GROUPS=[
+  {label:"SURFACE CRUST",tiles:[{id:"v1_top",label:"Crust A",src:"terrain_v1_top"},{id:"v2_top",label:"Crust B",src:"terrain_v2_top"},{id:"v3_top",label:"Crust C",src:"terrain_v3_top"}]},
+  {label:"PACKED EARTH", tiles:[{id:"v1_mid",label:"Earth A",src:"terrain_v1_mid"},{id:"v2_mid",label:"Earth B",src:"terrain_v2_mid"},{id:"v3_mid",label:"Earth C",src:"terrain_v3_mid"}]},
+  {label:"DEEP EARTH",   tiles:[{id:"v1_deep",label:"Deep A",src:"terrain_v1_deep"},{id:"v2_deep",label:"Deep B",src:"terrain_v2_deep"},{id:"v3_deep",label:"Deep C",src:"terrain_v3_deep"}]},
 ];
-const ALL_TILES = TILE_GROUPS.flatMap(g => g.tiles);
+const ALL_TILES=TILE_GROUPS.flatMap(g=>g.tiles);
 
-// ── CONSTANTS ─────────────────────────────────────────────────────────────────
-const TERRAIN_RATIO = 0.40;   // bottom 40% = terrain
-const GRID_COLS     = 60;
-const GRID_ROWS     = 10;
-const TILE_BASE     = 48;     // tile px at zoom=1
-const PAN_SPEED     = 5;
-const DAY_DURATION  = 60;     // seconds per full cycle at speed=1
+const TERRAIN_RATIO=0.40, GRID_COLS=60, GRID_ROWS=10, TILE_BASE=48, PAN_SPEED=5, DAY_DURATION=60;
+let zoom=1,cameraX=0,dragMode=null,hoverCell=null,activeTool="paint",activeTile=ALL_TILES[0];
+let bgVis=Object.fromEntries(BG_LAYERS.map(l=>[l.id,true]));
+let showGrid=true,tilesMap={},images={},loadCount=0,keysDown={};
+let dayT=0.08,cycleActive=true,cycleSpeed=1,lastTime=null;
 
-// ── STATE ─────────────────────────────────────────────────────────────────────
-let zoom       = 1.0;
-let cameraX    = 0;       // world px offset (tiles scroll 1:1 with this)
-let dragMode   = null;
-let hoverCell  = null;
-let activeTool = "paint";
-let activeTile = ALL_TILES[0];
-let bgVis      = Object.fromEntries(BG_LAYERS.map(l=>[l.id,true]));
-let showGrid   = true;
-let tilesMap   = {};
-let images     = {};
-let loadCount  = 0;
-const keysDown = {};
-let dayT       = 0.08;
-let cycleActive= true;
-let cycleSpeed = 1.0;
-let lastTime   = null;
-
-// ── LOAD ──────────────────────────────────────────────────────────────────────
-const totalAssets = Object.keys(ASSETS).length;
-for (const [key,src] of Object.entries(ASSETS)) {
-  if (!src) { loadCount++; checkReady(); continue; }
-  const img = new Image();
-  img.onload = img.onerror = () => { loadCount++; checkReady(); };
-  img.src = src; images[key] = img;
+const totalAssets=Object.keys(ASSETS).length;
+for(const[key,src]of Object.entries(ASSETS)){
+  if(!src){loadCount++;checkReady();continue;}
+  const img=new Image();
+  img.onload=img.onerror=()=>{loadCount++;checkReady();};
+  img.src=src;images[key]=img;
 }
-function checkReady() {
-  if (loadCount >= totalAssets)
-    document.getElementById('loading').style.display='none';
-}
+function checkReady(){if(loadCount>=totalAssets)document.getElementById('loading').style.display='none';}
 
-// ── UI ────────────────────────────────────────────────────────────────────────
-BG_LAYERS.forEach(layer => {
-  const div = document.createElement('div'); div.className='bg-layer';
+BG_LAYERS.forEach(layer=>{
+  const div=document.createElement('div');div.className='bg-layer';
   div.innerHTML=`<div class="check on" id="chk-${layer.id}">✓</div><span class="layer-label">${layer.label}</span>`;
-  div.onclick=()=>{
-    bgVis[layer.id]=!bgVis[layer.id];
-    const c=document.getElementById('chk-'+layer.id);
-    c.className='check'+(bgVis[layer.id]?' on':'');
-    c.textContent=bgVis[layer.id]?'✓':'';
-  };
+  div.onclick=()=>{bgVis[layer.id]=!bgVis[layer.id];const c=document.getElementById('chk-'+layer.id);c.className='check'+(bgVis[layer.id]?' on':'');c.textContent=bgVis[layer.id]?'✓':'';};
   document.getElementById('bg-toggles').appendChild(div);
 });
 TILE_GROUPS.forEach(group=>{
-  const t=document.createElement('div'); t.className='tile-group-title'; t.textContent=group.label;
+  const t=document.createElement('div');t.className='tile-group-title';t.textContent=group.label;
   document.getElementById('tile-palette').appendChild(t);
-  const g=document.createElement('div'); g.className='tile-grid';
+  const g=document.createElement('div');g.className='tile-grid';
   group.tiles.forEach(tile=>{
-    const b=document.createElement('div');
-    b.className='tile-btn'+(tile.id===activeTile.id?' active':'');
-    b.id='tile-'+tile.id; b.title=tile.label;
-    b.innerHTML=`<img src="${ASSETS[tile.src]||''}" alt="${tile.label}"/>`;
-    b.onclick=()=>selectTile(tile); g.appendChild(b);
+    const b=document.createElement('div');b.className='tile-btn'+(tile.id===activeTile.id?' active':'');b.id='tile-'+tile.id;b.title=tile.label;
+    b.innerHTML=`<img src="${ASSETS[tile.src]||''}" alt="${tile.label}"/>`;b.onclick=()=>selectTile(tile);g.appendChild(b);
   });
   document.getElementById('tile-palette').appendChild(g);
 });
@@ -208,186 +162,144 @@ document.getElementById('day-speed').addEventListener('input',e=>cycleSpeed=pars
 function selectTile(tile){
   document.querySelectorAll('.tile-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tile-'+tile.id)?.classList.add('active');
-  activeTile=tile; setTool('paint');
+  activeTile=tile;setTool('paint');
   document.getElementById('hud-img').src=ASSETS[tile.src]||'';
   document.getElementById('hud-name').textContent=tile.label;
 }
 selectTile(activeTile);
 
-// ── CANVAS ────────────────────────────────────────────────────────────────────
 const canvas=document.getElementById('main-canvas');
 const ctx=canvas.getContext('2d');
 function resizeCanvas(){canvas.width=canvas.offsetWidth;canvas.height=canvas.offsetHeight;}
 resizeCanvas();
 new ResizeObserver(resizeCanvas).observe(document.getElementById('canvas-wrap'));
 
-// ── SKY KEYFRAMES ─────────────────────────────────────────────────────────────
-const SKY_KEYS=[
-  [0.00, 80,25,5],[0.08,170,60,15],[0.18,220,110,30],
-  [0.30,140,60,8],[0.45,100,35,5],[0.50,160,55,12],
-  [0.58,60,15,5],[0.65,10,5,15],[0.85,8,4,12],
-  [0.95,30,10,3],[1.00,80,25,5],
-];
-function lerpSky(t){
-  for(let i=0;i<SKY_KEYS.length-1;i++){
-    const[t0,r0,g0,b0]=SKY_KEYS[i],[t1,r1,g1,b1]=SKY_KEYS[i+1];
-    if(t>=t0&&t<=t1){const f=(t-t0)/(t1-t0);return[r0+(r1-r0)*f|0,g0+(g1-g0)*f|0,b0+(b1-b0)*f|0];}
-  }
-  return[80,25,5];
-}
-
-function arcPos(t,W,skyH,sz){
-  const arcR=W*0.52,arcCx=W*0.5,arcCy=skyH+sz*0.3;
-  const angle=Math.PI*t;
-  return{
-    x: arcCx - arcR*Math.cos(angle) - sz/2,
-    y: arcCy - arcR*Math.sin(angle)*0.55 - sz/2
-  };
-}
-
-// ── DRAW ──────────────────────────────────────────────────────────────────────
-// KEY PRINCIPLE:
-// - terrainY is FIXED at 60% from top (does not change with zoom)
-// - BG layers scale with zoom and pan with cameraX (same as tiles)
-//   but with reduced parallax fraction so they move slower = depth illusion
-// - The "world width" at zoom=1 is GRID_COLS * TILE_BASE = 2880px
-//   BG layers conceptually exist in this same world space
+const SKY_KEYS=[[0,80,25,5],[.08,170,60,15],[.18,220,110,30],[.30,140,60,8],[.45,100,35,5],[.50,160,55,12],[.58,60,15,5],[.65,10,5,15],[.85,8,4,12],[.95,30,10,3],[1,80,25,5]];
+function lerpSky(t){for(let i=0;i<SKY_KEYS.length-1;i++){const[t0,r0,g0,b0]=SKY_KEYS[i],[t1,r1,g1,b1]=SKY_KEYS[i+1];if(t>=t0&&t<=t1){const f=(t-t0)/(t1-t0);return[r0+(r1-r0)*f|0,g0+(g1-g0)*f|0,b0+(b1-b0)*f|0];}}return[80,25,5];}
+function arcPos(t,W,skyH,sz){const arcR=W*.52,arcCx=W*.5,arcCy=skyH+sz*.3,angle=Math.PI*t;return{x:arcCx-arcR*Math.cos(angle)-sz/2,y:arcCy-arcR*Math.sin(angle)*.55-sz/2};}
 
 function draw(ts){
   if(lastTime===null)lastTime=ts;
-  const dt=Math.min((ts-lastTime)/1000,0.05); lastTime=ts;
-  if(cycleActive) dayT=(dayT+dt*cycleSpeed/DAY_DURATION)%1.0;
+  const dt=Math.min((ts-lastTime)/1000,.05);lastTime=ts;
+  if(cycleActive)dayT=(dayT+dt*cycleSpeed/DAY_DURATION)%1;
 
-  const W=canvas.width, H=canvas.height;
-  const terrainY = H*(1-TERRAIN_RATIO);   // fixed horizon line
-  const skyH     = terrainY;
-  const ts2      = TILE_BASE*zoom;         // actual tile size on screen
-  const isNight  = dayT>=0.58;
-
-  // World width at current zoom
-  const worldW   = GRID_COLS * ts2;
+  const W=canvas.width,H=canvas.height;
+  const terrainY=H*(1-TERRAIN_RATIO);  // fixed horizon
+  const skyH=terrainY;
+  const ts2=TILE_BASE*zoom;
+  const isNight=dayT>=.58;
+  const[sr,sg,sb]=lerpSky(dayT);
 
   ctx.clearRect(0,0,W,H);
   ctx.imageSmoothingEnabled=true;
 
-  // ── SKY ────────────────────────────────────────────────────────────────────
-  const[sr,sg,sb]=lerpSky(dayT);
+  // ── SKY — fills from top all the way to terrainY ───────────────────────────
   const skyGrad=ctx.createLinearGradient(0,0,0,skyH);
-  skyGrad.addColorStop(0,  `rgb(${sr*.55|0},${sg*.55|0},${sb*.55|0})`);
-  skyGrad.addColorStop(0.6,`rgb(${sr},${sg},${sb})`);
-  skyGrad.addColorStop(1,  `rgb(${sr*1.2|0},${sg*1.15|0},${sb*1.1|0})`);
-  ctx.fillStyle=skyGrad; ctx.fillRect(0,0,W,skyH);
+  skyGrad.addColorStop(0,`rgb(${sr*.55|0},${sg*.55|0},${sb*.55|0})`);
+  skyGrad.addColorStop(.7,`rgb(${sr},${sg},${sb})`);
+  skyGrad.addColorStop(1,`rgb(${Math.min(255,sr*1.3|0)},${Math.min(255,sg*1.2|0)},${Math.min(255,sb*1.1|0)})`);
+  ctx.fillStyle=skyGrad;
+  ctx.fillRect(0,0,W,H);  // fill entire canvas with sky (terrain rendered on top)
 
   // Stars
-  if(dayT>0.55){
-    const sa=Math.min(1,(dayT-0.55)/0.08);
-    ctx.save();
+  if(dayT>.55){
+    const sa=Math.min(1,(dayT-.55)/.08);ctx.save();
     for(let i=0;i<120;i++){
-      const sx=((i*137.5)%1)*W, sy=((i*97.3+i*i*0.003)%1)*skyH*0.85;
-      const twinkle=0.5+0.5*Math.sin(ts*0.001*(1+i%7)+i);
-      ctx.globalAlpha=sa*(0.4+twinkle*0.6);
-      ctx.fillStyle='#fff';
+      const sx=((i*137.5)%1)*W,sy=((i*97.3+i*i*.003)%1)*skyH*.85;
+      const tw=.5+.5*Math.sin(ts*.001*(1+i%7)+i);
+      ctx.globalAlpha=sa*(.4+tw*.6);ctx.fillStyle='#fff';
       ctx.fillRect(sx|0,sy|0,i%5?1:1.5,i%5?1:1.5);
     }
     ctx.restore();
   }
 
-  // Ground fill
-  ctx.fillStyle=`rgb(${sr*.12|0},${sg*.06|0},${sb*.04|0})`;
-  ctx.fillRect(0,terrainY,W,H-terrainY);
-
-  // ── SUN / MOON ─────────────────────────────────────────────────────────────
-  if(dayT<0.55){
-    const sunT=dayT/0.5;
-    const sunImg=images['sun'];
+  // ── SUN ────────────────────────────────────────────────────────────────────
+  if(dayT<.55){
+    const sunT=dayT/.5,sunImg=images['sun'];
     if(sunImg?.complete&&sunImg.naturalWidth){
-      // Sun size scales with zoom
-      const sunSize=skyH*0.10*Math.max(0.6,zoom*0.8);
-      const pos=arcPos(sunT,W,skyH,sunSize);
-      // Horizon glow
+      const sz=skyH*.10*Math.max(.6,zoom*.8),pos=arcPos(sunT,W,skyH,sz);
       const hg=Math.max(0,1-Math.abs(sunT)*8,1-Math.abs(sunT-1)*8);
-      if(hg>0){
-        const grd=ctx.createRadialGradient(pos.x+sunSize/2,skyH,0,pos.x+sunSize/2,skyH,W*0.45);
-        grd.addColorStop(0,`rgba(255,140,20,${hg*.5})`);grd.addColorStop(1,'rgba(255,80,0,0)');
-        ctx.fillStyle=grd;ctx.fillRect(0,0,W,skyH);
-      }
-      const grd2=ctx.createRadialGradient(pos.x+sunSize/2,pos.y+sunSize/2,sunSize*.4,pos.x+sunSize/2,pos.y+sunSize/2,sunSize*2);
-      grd2.addColorStop(0,'rgba(255,220,80,.35)');grd2.addColorStop(1,'rgba(255,150,30,0)');
-      ctx.fillStyle=grd2;ctx.fillRect(pos.x-sunSize,pos.y-sunSize,sunSize*4,sunSize*4);
-      ctx.drawImage(sunImg,pos.x,pos.y,sunSize,sunSize);
+      if(hg>0){const g=ctx.createRadialGradient(pos.x+sz/2,skyH,0,pos.x+sz/2,skyH,W*.45);g.addColorStop(0,`rgba(255,140,20,${hg*.5})`);g.addColorStop(1,'rgba(255,80,0,0)');ctx.fillStyle=g;ctx.fillRect(0,0,W,skyH);}
+      const g2=ctx.createRadialGradient(pos.x+sz/2,pos.y+sz/2,sz*.4,pos.x+sz/2,pos.y+sz/2,sz*2);g2.addColorStop(0,'rgba(255,220,80,.35)');g2.addColorStop(1,'rgba(255,150,30,0)');ctx.fillStyle=g2;ctx.fillRect(pos.x-sz,pos.y-sz,sz*4,sz*4);
+      ctx.drawImage(sunImg,pos.x,pos.y,sz,sz);
     }
   }
-  if(dayT>=0.5){
-    const moonT=(dayT-0.5)/0.5;
-    const moonImg=images['moon'];
+
+  // ── MOON ───────────────────────────────────────────────────────────────────
+  if(dayT>=.5){
+    const moonT=(dayT-.5)/.5,moonImg=images['moon'];
     if(moonImg?.complete&&moonImg.naturalWidth){
-      const moonSize=skyH*0.075*Math.max(0.6,zoom*0.8);
-      const pos=arcPos(moonT,W,skyH,moonSize);
-      const grd=ctx.createRadialGradient(pos.x+moonSize/2,pos.y+moonSize/2,moonSize*.3,pos.x+moonSize/2,pos.y+moonSize/2,moonSize*2.5);
-      grd.addColorStop(0,'rgba(180,190,220,.22)');grd.addColorStop(1,'rgba(120,130,180,0)');
-      ctx.fillStyle=grd;ctx.fillRect(pos.x-moonSize,pos.y-moonSize,moonSize*5,moonSize*5);
-      ctx.drawImage(moonImg,pos.x,pos.y,moonSize,moonSize);
+      const sz=skyH*.075*Math.max(.6,zoom*.8),pos=arcPos(moonT,W,skyH,sz);
+      const g=ctx.createRadialGradient(pos.x+sz/2,pos.y+sz/2,sz*.3,pos.x+sz/2,pos.y+sz/2,sz*2.5);g.addColorStop(0,'rgba(180,190,220,.22)');g.addColorStop(1,'rgba(120,130,180,0)');
+      ctx.fillStyle=g;ctx.fillRect(pos.x-sz,pos.y-sz,sz*5,sz*5);
+      ctx.drawImage(moonImg,pos.x,pos.y,sz,sz);
     }
   }
 
-  // ── BG LAYERS — zoom-aware parallax ───────────────────────────────────────
-  // Each BG layer lives in world space.
-  // Its effective camera offset = cameraX * parallaxFrac  (less than tiles = appears further away)
-  // Its drawn size scales with zoom so zooming in makes mountains bigger too.
-
-  BG_LAYERS.forEach(layer=>{
-    if(!bgVis[layer.id])return;
-    const img=images[layer.id];
-    if(!img?.complete||!img.naturalWidth)return;
-
-    // Effective scroll for this layer (parallax fraction of tile scroll)
-    const layerCamX = cameraX * layer.parallaxFrac;
-    const nightDim  = isNight ? (layer.id==='mountains'?0.55:0.40) : 1.0;
-
-    ctx.globalAlpha=nightDim;
-
-    if(layer.id==='gas_giant'){
-      // Planet: fixed sky position, just slow parallax drift, no tiling
-      // Size grows with zoom slightly (distant object — scales less than tiles)
-      const pSize = skyH * 0.60 * Math.pow(zoom, 0.4); // zoom^0.4 = subtle scale
-      const baseX = W*0.72 - pSize*0.5;
-      const pX    = baseX - layerCamX * 0.3;  // very slow pan
-      const pY    = skyH*0.06;
-      ctx.drawImage(img, pX, pY, pSize, pSize);
-
-    } else if(layer.id==='mountains'){
-      // Mountains scale more with zoom — they're closer
-      const dH   = skyH * 0.62 * Math.pow(zoom, 0.7);
-      const dY   = skyH - dH;
-      // Width: tile a strip that's wider than screen so it can scroll
-      const dW   = Math.max(W * 1.2, W * zoom);
-      const ox   = -(layerCamX % dW);
-      ctx.drawImage(img, ox-dW, dY, dW, dH);
-      ctx.drawImage(img, ox,    dY, dW, dH);
-      ctx.drawImage(img, ox+dW, dY, dW, dH);
-
-    } else {
-      // Clouds — scale mildly with zoom
-      const zScale = Math.pow(zoom, 0.5);
-      let dH, dY, dW = Math.max(W*1.1, W*zoom*0.9);
-      if(layer.id==='clouds_far')  { dH=skyH*0.30*zScale; dY=0; }
-      if(layer.id==='clouds_mid')  { dH=skyH*0.38*zScale; dY=skyH*0.10; }
-      if(layer.id==='clouds_near') { dH=skyH*0.46*zScale; dY=skyH*0.28; }
-      const ox = -(layerCamX % dW);
-      ctx.drawImage(img, ox-dW, dY, dW, dH);
-      ctx.drawImage(img, ox,    dY, dW, dH);
-      ctx.drawImage(img, ox+dW, dY, dW, dH);
+  // ── GAS GIANT ──────────────────────────────────────────────────────────────
+  if(bgVis['gas_giant']){
+    const img=images['gas_giant'];
+    if(img?.complete&&img.naturalWidth){
+      const shift=cameraX*BG_LAYERS.find(l=>l.id==='gas_giant').parallaxFrac;
+      const pSize=skyH*.60*Math.pow(zoom,.4);
+      const pX=W*.72-pSize*.5-shift*.3;
+      const pY=skyH*.06;
+      ctx.globalAlpha=isNight?.5:1;
+      ctx.drawImage(img,pX,pY,pSize,pSize);
+      ctx.globalAlpha=1;
     }
+  }
+
+  // ── MOUNTAINS — key fix: drawn from bottom of sky UP, with overlap ─────────
+  if(bgVis['mountains']){
+    const img=images['mountains'];
+    if(img?.complete&&img.naturalWidth){
+      const shift=cameraX*.25;
+      const zs=Math.pow(zoom,.7);
+      // Mountains height = 75% of skyH — tall enough to fill horizon properly
+      const dH=skyH*0.78*zs;
+      // Pin to terrainY — bottom of mountains sits AT the terrain line (with slight overlap below)
+      const dY=terrainY-dH+2;   // +2px overlap into terrain to kill the gap
+      const dW=Math.max(W*1.2,W*zoom);
+      const ox=-(shift%dW);
+      ctx.globalAlpha=isNight?.55:1;
+      ctx.drawImage(img,ox-dW,dY,dW,dH);
+      ctx.drawImage(img,ox,   dY,dW,dH);
+      ctx.drawImage(img,ox+dW,dY,dW,dH);
+      ctx.globalAlpha=1;
+    }
+  }
+
+  // ── CLOUDS ─────────────────────────────────────────────────────────────────
+  const cloudLayers=[
+    {id:'clouds_far', dHf:.32, dYf:0,   pf:.35},
+    {id:'clouds_mid', dHf:.42, dYf:.08, pf:.55},
+    {id:'clouds_near',dHf:.55, dYf:.25, pf:.75},
+  ];
+  cloudLayers.forEach(cl=>{
+    if(!bgVis[cl.id])return;
+    const img=images[cl.id];if(!img?.complete||!img.naturalWidth)return;
+    const shift=cameraX*cl.pf;
+    const zs=Math.pow(zoom,.5);
+    const dH=skyH*cl.dHf*zs;
+    // Cloud Y anchored relative to sky — but extend further down toward horizon
+    const dY=skyH*cl.dYf;
+    const dW=Math.max(W*1.1,W*zoom*.9);
+    const ox=-(shift%dW);
+    ctx.globalAlpha=isNight?.4:1;
+    ctx.drawImage(img,ox-dW,dY,dW,dH);
+    ctx.drawImage(img,ox,   dY,dW,dH);
+    ctx.drawImage(img,ox+dW,dY,dW,dH);
     ctx.globalAlpha=1;
   });
 
   // ── TERRAIN TILES ──────────────────────────────────────────────────────────
-  ctx.globalAlpha = isNight ? 0.65 : 1.0;
+  ctx.globalAlpha=isNight?.65:1;
   for(const[key,tileId]of Object.entries(tilesMap)){
     const[col,row]=key.split(',').map(Number);
-    const tile=ALL_TILES.find(t=>t.id===tileId); if(!tile)continue;
-    const img=images[tile.src]; if(!img?.complete||!img.naturalWidth)continue;
-    const x=col*ts2-cameraX, y=terrainY+row*ts2;
+    const tile=ALL_TILES.find(t=>t.id===tileId);if(!tile)continue;
+    const img=images[tile.src];if(!img?.complete||!img.naturalWidth)continue;
+    const x=col*ts2-cameraX,y=terrainY+row*ts2;
     if(x+ts2<0||x>W||y>H)continue;
     ctx.drawImage(img,x,y,ts2,ts2);
   }
@@ -395,45 +307,42 @@ function draw(ts){
 
   // ── GRID ───────────────────────────────────────────────────────────────────
   if(showGrid){
-    ctx.strokeStyle='rgba(255,110,30,0.13)'; ctx.lineWidth=0.5;
-    const sc=Math.floor(cameraX/ts2), ec=sc+Math.ceil(W/ts2)+2;
+    ctx.strokeStyle='rgba(255,110,30,0.13)';ctx.lineWidth=.5;
+    const sc=Math.floor(cameraX/ts2),ec=sc+Math.ceil(W/ts2)+2;
     for(let c=sc;c<=ec;c++){const x=c*ts2-cameraX;ctx.beginPath();ctx.moveTo(x,terrainY);ctx.lineTo(x,H);ctx.stroke();}
     for(let r=0;r<=GRID_ROWS;r++){const y=terrainY+r*ts2;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-    ctx.strokeStyle='rgba(255,140,40,0.4)'; ctx.lineWidth=1.5; ctx.setLineDash([6,4]);
+    ctx.strokeStyle='rgba(255,140,40,0.4)';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
     ctx.beginPath();ctx.moveTo(0,terrainY);ctx.lineTo(W,terrainY);ctx.stroke();
     ctx.setLineDash([]);
   }
 
   // ── HOVER ──────────────────────────────────────────────────────────────────
   if(hoverCell){
-    const x=hoverCell.col*ts2-cameraX, y=terrainY+hoverCell.row*ts2;
+    const x=hoverCell.col*ts2-cameraX,y=terrainY+hoverCell.row*ts2;
     const er=dragMode==='erase'||(dragMode===null&&activeTool==='erase');
-    ctx.fillStyle  =er?'rgba(255,40,40,.20)':'rgba(255,180,50,.18)';
+    ctx.fillStyle=er?'rgba(255,40,40,.2)':'rgba(255,180,50,.18)';
     ctx.strokeStyle=er?'rgba(255,70,70,.9)':'rgba(255,210,70,.9)';
-    ctx.lineWidth=1.5; ctx.fillRect(x,y,ts2,ts2); ctx.strokeRect(x+.5,y+.5,ts2-1,ts2-1);
+    ctx.lineWidth=1.5;ctx.fillRect(x,y,ts2,ts2);ctx.strokeRect(x+.5,y+.5,ts2-1,ts2-1);
   }
 
-  // ── TIME HUD ───────────────────────────────────────────────────────────────
-  const TL=[[0,'🌅 DAWN'],[0.15,'☀️ MORNING'],[0.28,'☀️ MIDDAY'],
-            [0.42,'🌇 AFTERNOON'],[0.50,'🌆 DUSK'],[0.60,'🌙 NIGHT'],
-            [0.85,'🌙 DEEP NIGHT'],[0.95,'🌌 PRE-DAWN']];
-  let lbl=''; for(let i=TL.length-1;i>=0;i--){if(dayT>=TL[i][0]){lbl=TL[i][1];break;}}
+  // Time HUD
+  const TL=[[0,'🌅 DAWN'],[.15,'☀️ MORNING'],[.28,'☀️ MIDDAY'],[.42,'🌇 AFTERNOON'],[.50,'🌆 DUSK'],[.60,'🌙 NIGHT'],[.85,'🌙 DEEP NIGHT'],[.95,'🌌 PRE-DAWN']];
+  let lbl='';for(let i=TL.length-1;i>=0;i--){if(dayT>=TL[i][0]){lbl=TL[i][1];break;}}
   document.getElementById('time-hud').textContent=lbl;
 
-  // ── A/D PAN ────────────────────────────────────────────────────────────────
-  const panStep = PAN_SPEED * Math.max(0.5, zoom);
-  if(keysDown['a']||keysDown['ArrowLeft'])  cameraX=Math.max(0,cameraX-panStep);
-  if(keysDown['d']||keysDown['ArrowRight']) cameraX+=panStep;
+  // A/D pan
+  const panStep=PAN_SPEED*Math.max(.5,zoom);
+  if(keysDown['a']||keysDown['ArrowLeft'])cameraX=Math.max(0,cameraX-panStep);
+  if(keysDown['d']||keysDown['ArrowRight'])cameraX+=panStep;
 
   requestAnimationFrame(draw);
 }
 requestAnimationFrame(draw);
 
-// ── INPUT ─────────────────────────────────────────────────────────────────────
 function getCellFromXY(mx,my){
-  const ts2=TILE_BASE*zoom, ty=canvas.height*(1-TERRAIN_RATIO);
+  const ts2=TILE_BASE*zoom,ty=canvas.height*(1-TERRAIN_RATIO);
   if(my<ty)return null;
-  const col=Math.floor((mx+cameraX)/ts2), row=Math.floor((my-ty)/ts2);
+  const col=Math.floor((mx+cameraX)/ts2),row=Math.floor((my-ty)/ts2);
   if(col<0||col>=GRID_COLS||row<0||row>=GRID_ROWS)return null;
   return{col,row};
 }
@@ -446,53 +355,30 @@ function applyDrag(cell,mode){
 }
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 canvas.addEventListener('mousedown',e=>{
-  const r=canvas.getBoundingClientRect(), cell=getCellFromXY(e.clientX-r.left,e.clientY-r.top);
+  const r=canvas.getBoundingClientRect(),cell=getCellFromXY(e.clientX-r.left,e.clientY-r.top);
   if(e.button===2){dragMode='erase';applyDrag(cell,'erase');}
-  else if(e.button===0){
-    if(activeTool==='erase'){dragMode='erase';applyDrag(cell,'erase');}
-    else if(activeTool==='fill'){applyDrag(cell,'fill');dragMode=null;}
-    else{dragMode='paint';applyDrag(cell,'paint');}
-  }
+  else if(e.button===0){if(activeTool==='erase'){dragMode='erase';applyDrag(cell,'erase');}else if(activeTool==='fill'){applyDrag(cell,'fill');dragMode=null;}else{dragMode='paint';applyDrag(cell,'paint');}}
 });
-canvas.addEventListener('mousemove',e=>{
-  const r=canvas.getBoundingClientRect();
-  hoverCell=getCellFromXY(e.clientX-r.left,e.clientY-r.top);
-  if(dragMode)applyDrag(hoverCell,dragMode);
-});
+canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();hoverCell=getCellFromXY(e.clientX-r.left,e.clientY-r.top);if(dragMode)applyDrag(hoverCell,dragMode);});
 canvas.addEventListener('mouseup',()=>dragMode=null);
 canvas.addEventListener('mouseleave',()=>{hoverCell=null;dragMode=null;});
-
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();
-  const r=canvas.getBoundingClientRect(), mouseX=e.clientX-r.left;
-  const oldZoom=zoom;
-  zoom=Math.max(0.25,Math.min(8,zoom*(1-e.deltaY*(e.ctrlKey?.0008:.003))));
-  // Zoom centred on mouse: keep world point under cursor fixed
+  const r=canvas.getBoundingClientRect(),mouseX=e.clientX-r.left,oldZoom=zoom;
+  zoom=Math.max(.25,Math.min(8,zoom*(1-e.deltaY*(e.ctrlKey?.0008:.003))));
   const worldX=(mouseX+cameraX)/(oldZoom*TILE_BASE);
   cameraX=Math.max(0,worldX*zoom*TILE_BASE-mouseX);
   document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%';
 },{passive:false});
-
-window.addEventListener('keydown',e=>{
-  keysDown[e.key]=true;
-  if(['a','d','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();
-});
+window.addEventListener('keydown',e=>{keysDown[e.key]=true;if(['a','d','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();});
 window.addEventListener('keyup',e=>delete keysDown[e.key]);
 
-// ── CONTROLS ─────────────────────────────────────────────────────────────────
-function setTool(t){
-  activeTool=t;
-  ['paint','erase','fill'].forEach(id=>document.getElementById('tool-'+id)?.classList.toggle('active',id===t));
-  document.getElementById('hud-mode').textContent=t;
-}
+function setTool(t){activeTool=t;['paint','erase','fill'].forEach(id=>document.getElementById('tool-'+id)?.classList.toggle('active',id===t));document.getElementById('hud-mode').textContent=t;}
 function toggleGrid(){showGrid=!showGrid;document.getElementById('btn-grid').classList.toggle('active',showGrid);}
-function toggleCycle(){
-  cycleActive=!cycleActive;
-  document.getElementById('btn-cycle').textContent=(cycleActive?'⏸':'▶')+' CYCLE';
-}
+function toggleCycle(){cycleActive=!cycleActive;document.getElementById('btn-cycle').textContent=(cycleActive?'⏸':'▶')+' CYCLE';}
 function addZoom(d){
-  const oldZoom=zoom, cx2=canvas.width/2;
-  zoom=Math.max(0.25,Math.min(8,zoom+d));
+  const oldZoom=zoom,cx2=canvas.width/2;
+  zoom=Math.max(.25,Math.min(8,zoom+d));
   const worldX=(cx2+cameraX)/(oldZoom*TILE_BASE);
   cameraX=Math.max(0,worldX*zoom*TILE_BASE-cx2);
   document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%';
@@ -502,15 +388,11 @@ function autoFill(){
   const s=["v1_top","v2_top","v3_top"],m=["v1_mid","v2_mid","v3_mid"],d=["v1_deep","v2_deep","v3_deep"];
   tilesMap={};
   for(let c=0;c<GRID_COLS;c++){
-    tilesMap[`${c},0`]=s[Math.floor(Math.random()*3)];
-    tilesMap[`${c},1`]=s[Math.floor(Math.random()*3)];
+    tilesMap[`${c},0`]=s[Math.floor(Math.random()*3)];tilesMap[`${c},1`]=s[Math.floor(Math.random()*3)];
     for(let r=2;r<5;r++)tilesMap[`${c},${r}`]=m[Math.floor(Math.random()*3)];
     for(let r=5;r<GRID_ROWS;r++)tilesMap[`${c},${r}`]=d[Math.floor(Math.random()*3)];
   }
 }
 function clearAll(){if(confirm('Clear all tiles?'))tilesMap={};}
-function exportLevel(){
-  const b=new Blob([JSON.stringify({tiles:tilesMap,cols:GRID_COLS,rows:GRID_ROWS},null,2)],{type:'application/json'});
-  Object.assign(document.createElement('a'),{href:URL.createObjectURL(b),download:'level.json'}).click();
-}
+function exportLevel(){const b=new Blob([JSON.stringify({tiles:tilesMap,cols:GRID_COLS,rows:GRID_ROWS},null,2)],{type:'application/json'});Object.assign(document.createElement('a'),{href:URL.createObjectURL(b),download:'level.json'}).click();}
 </script></body></html>
