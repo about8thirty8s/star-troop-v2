@@ -213,6 +213,20 @@ function draw(ts){
     ctx.restore();
   }
 
+  // ── GAS GIANT ──────────────────────────────────────────────────────────────
+  if(bgVis['gas_giant']){
+    const img=images['gas_giant'];
+    if(img?.complete&&img.naturalWidth){
+      const shift=cameraX*BG_LAYERS.find(l=>l.id==='gas_giant').parallaxFrac;
+      const pSize=skyH*.60*Math.pow(zoom,.4);
+      const pX=W*.72-pSize*.5-shift*.3;
+      const pY=skyH*.06;
+      ctx.globalAlpha=isNight?.5:1;
+      ctx.drawImage(img,pX,pY,pSize,pSize);
+      ctx.globalAlpha=1;
+    }
+  }
+
   // ── SUN ────────────────────────────────────────────────────────────────────
   if(dayT<.55){
     const sunT=dayT/.5,sunImg=images['sun'];
@@ -236,20 +250,6 @@ function draw(ts){
       ctx.fillStyle=g;
       ctx.beginPath();ctx.arc(mcx,mcy,sz*2.5,0,Math.PI*2);ctx.fill();
       ctx.drawImage(moonImg,pos.x,pos.y,sz,sz);
-    }
-  }
-
-  // ── GAS GIANT ──────────────────────────────────────────────────────────────
-  if(bgVis['gas_giant']){
-    const img=images['gas_giant'];
-    if(img?.complete&&img.naturalWidth){
-      const shift=cameraX*BG_LAYERS.find(l=>l.id==='gas_giant').parallaxFrac;
-      const pSize=skyH*.60*Math.pow(zoom,.4);
-      const pX=W*.72-pSize*.5-shift*.3;
-      const pY=skyH*.06;
-      ctx.globalAlpha=isNight?.5:1;
-      ctx.drawImage(img,pX,pY,pSize,pSize);
-      ctx.globalAlpha=1;
     }
   }
 
