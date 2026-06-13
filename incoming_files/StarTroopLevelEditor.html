@@ -597,178 +597,103 @@ function draw(ts){
   }
 
   // ── CLOUDS — PROCEDURAL VOLUMETRIC DUST SYSTEM ──────────────────────────────
-  {
-    const worldPx = cameraX / zoom;
-    const nowSec  = ts * 0.001;
-
-    // Day colours:   warm dusty ochre/amber
-    // Night colours: deep purple-blue, near black
-    const nightT = isNight ? Math.min(1,(dayT-0.58)/0.15) : 0;
-
-    // 3 cloud layers — far, mid, near — each with own speed, Y band, opacity, scale
-    const CLOUD_LAYERS = [
-      // { parallax, yBand(0-1 of skyH), count, alphaDay, alphaNight, scaleW, scaleH, r,g,b day, r,g,b night }
-      { pf:0.06, yB:0.08, count:5,  aDay:0.18, aNight:0.10, sw:0.38, sh:0.12, dr:180,dg:110,db:50,  nr:60,ng:30,nb:70  },
-      { pf:0.14, yB:0.22, count:7,  aDay:0.28, aNight:0.15, sw:0.30, sh:0.10, dr:210,dg:130,db:55,  nr:50,ng:25,nb:65  },
-      { pf:0.28, yB:0.42, count:6,  aDay:0.22, aNight:0.12, sw:0.22, sh:0.08, dr:230,dg:150,db:65,  nr:40,ng:20,nb:55  },
-    ];
-
-    // Visibility toggles from sidebar
-    const layerVis = [bgVis['clouds_far'], bgVis['clouds_mid'], bgVis['clouds_near']];
-
-    CLOUD_LAYERS.forEach((cl, li) => {
-      if(!layerVis[li]) return;
-
-      const yOff   = layerOffsets[li===0?'clouds_far':li===1?'clouds_mid':'clouds_near'] || 0;
-      const baseY  = skyH * (cl.yB + yOff * 0.3);
-      const alpha  = cl.aDay * (1-nightT) + cl.aNight * nightT;
-      const r = cl.dr*(1-nightT) + cl.nr*nightT;
-      const g = cl.dg*(1-nightT) + cl.ng*nightT;
-      const b = cl.db*(1-nightT) + cl.nb*nightT;
-
-      // Each cloud puff in this layer
-      for(let ci=0; ci<cl.count; ci++){
-        // Deterministic base position using hash
-        const hx = ((ci*1973 + li*4391) % 1000) / 1000;
-        const hy = ((ci*3517 + li*2719) % 1000) / 1000;
-        const hs = ((ci*7331 + li*1193) % 1000) / 1000; // size variance
-
-        // Cloud world position — drifts slowly
-        const drift  = nowSec * cl.pf * 18;
-        const cloudWorldX = hx * W * 3.5 + drift;
-        const screenX = (cloudWorldX - worldPx * cl.pf * 0.22) % (W * 3.5);
-        const sx = screenX < 0 ? screenX + W*3.5 : screenX;
-        if(sx > W + 300 || sx < -300) continue;
-
-        const cloudW = W * (cl.sw * (0.7 + hs * 0.6));
-        const cloudH = skyH * (cl.sh * (0.6 + hy * 0.8));
-        const sy = baseY + hy * skyH * 0.06;
-
-        // Each cloud = stack of 3-5 overlapping ellipses (volumetric puff)
-        const puffs = 3 + (ci % 3);
-        ctx.save();
-        for(let p=0; p<puffs; p++){
-          const pxOff = (p / puffs - 0.5) * cloudW * 0.8;
-          const pyOff = -Math.abs(p - puffs*0.5) * cloudH * 0.25;
-          const pw = cloudW * (0.55 + ((p*731+ci*197)%100)/100 * 0.45);
-          const ph = cloudH * (0.7  + ((p*531+ci*313)%100)/100 * 0.3);
-          const px2 = sx + pxOff - cloudW*0.5;
-          const py2 = sy + pyOff;
-
-          const grad = ctx.createRadialGradient(
-            px2 + pw*0.5, py2 + ph*0.4, 0,
-            px2 + pw*0.5, py2 + ph*0.5, Math.max(pw,ph)*0.55
-          );
-          // Bright core, transparent edge
-          grad.addColorStop(0,   `rgba(${r|0},${g|0},${b|0},${(alpha*0.9).toFixed(3)})`);
-          grad.addColorStop(0.5, `rgba(${(r*0.75)|0},${(g*0.7)|0},${(b*0.7)|0},${(alpha*0.55).toFixed(3)})`);
-          grad.addColorStop(1,   `rgba(${(r*0.5)|0},${(g*0.4)|0},${(b*0.4)|0},0)`);
-
-          ctx.fillStyle = grad;
-          ctx.beginPath();
-          ctx.ellipse(px2+pw*0.5, py2+ph*0.5, pw*0.5, ph*0.5, 0, 0, Math.PI*2);
-          ctx.fill();
-        }
-        ctx.restore();
-      }
-    });
-
-    // Haze band at horizon — day only, fully invisible at night
-    if(bgVis['clouds_far'] && !isNight) {
-      const dayFrac = Math.max(0, 1 - nightT * 2.5);  // fades out fast as night approaches
-      if(dayFrac > 0.01) {
-        const hazeY  = skyH * 0.78;
-        const hazeH  = skyH * 0.12;
-        const hazeGrad = ctx.createLinearGradient(0, hazeY-hazeH*0.3, 0, hazeY+hazeH);
-        hazeGrad.addColorStop(0,   `rgba(180,95,30,0)`);
-        hazeGrad.addColorStop(0.4, `rgba(180,95,30,${(0.18*dayFrac).toFixed(3)})`);
-        hazeGrad.addColorStop(1,   `rgba(180,95,30,0)`);
-        ctx.fillStyle = hazeGrad;
-        ctx.fillRect(0, hazeY-hazeH*0.3, W, hazeH*1.3);
-      }
-    }
-  }
-
-  // ── TERRAIN ────────────────────────────────────────────────────────────────
-  ctx.globalAlpha=1;
-  for(const[key,tileId]of Object.entries(tilesMap)){
-    const[col,row]=key.split(',').map(Number);
-    const tile=ALL_TILES.find(t=>t.id===tileId);if(!tile)continue;
-    const img=images[tile.src];if(!img?.complete||!img.naturalWidth)continue;
-    const x=col*ts2-cameraX,y=terrainY+row*ts2;
-    if(x+ts2<0||x>W||y>H)continue;
-    ctx.drawImage(img,x,y,ts2,ts2);
-  }
-  ctx.globalAlpha=1;
-
-  // ── DEAD TREES — alien gnarled trees on terrain surface ─────────────────────
+  // ── DEAD TREES — clusters, scrubs, solitaries ───────────────────────────────
   {
     const ts2 = TILE_BASE * zoom;
     const treeImgs = [images['dead_tree_0'], images['dead_tree_1'], images['dead_tree_2']];
     const allLoaded = treeImgs.every(t => t && t.complete && t.naturalWidth);
     if(allLoaded){
+      // Build cluster map using deterministic seeded noise
+      // Clusters: every ~25-60 columns a "forest" of 4-14 trees; sparse singles elsewhere
+      // Use column hash to decide: cluster zone or open ground
+
+      // Pre-compute cluster seeds — 8 clusters across world width
+      const CLUSTER_COUNT = Math.max(6, Math.floor(GRID_COLS / 18));
+      const clusters = [];
+      for(let ci=0; ci<CLUSTER_COUNT; ci++){
+        const hc = (ci*3571 + 1237) % 1000;
+        const centre = Math.floor((hc/1000) * GRID_COLS);
+        const size   = 3 + ((ci*2731)%1000) % 12;  // 3-14 trees wide
+        const density = 0.45 + ((ci*1973)%1000)/1000 * 0.45;  // 45-90% fill
+        clusters.push({centre, size, density});
+      }
+
       for(let c=0; c<GRID_COLS; c++){
-        if(!tilesMap[`${c},0`]) continue;
-        // ~22% of surface columns, deterministic hash
-        const h = (c*2971 + 1013) % 1000;
-        if(h > 220) continue;
+        if(!tilesMap[`${c},0`]) continue;  // no surface tile = no tree
         const tileX = c*ts2 - cameraX;
-        if(tileX + ts2 < -200 || tileX > W + 200) continue;
+        if(tileX + ts2 < -250 || tileX > W + 250) continue;
 
-        // Pick tree variant by column
-        const variant = h % 3;
-        const img = treeImgs[variant];
+        // Check if column is inside a cluster
+        let inCluster = false;
+        let clusterDensity = 0;
+        for(const cl of clusters){
+          const dist = Math.abs(c - cl.centre);
+          if(dist <= cl.size){
+            inCluster = true;
+            // Density falloff from centre
+            const falloff = 1 - (dist / cl.size) * 0.5;
+            clusterDensity = cl.density * falloff;
+            break;
+          }
+        }
 
-        // Size: tall-skinny trees are narrower, wide ones broader
-        // Tree height = 2.5–4.5 tiles, width proportional to image aspect
+        // Probability of tree at this column
+        const h = (c*2971 + 1013) % 1000;
+        const rand = h / 1000;
+
+        let spawnProb = inCluster ? clusterDensity : 0.06;  // sparse 6% outside clusters
+        if(rand > spawnProb) continue;
+
+        // Pick variant — clusters favour tall trees, open ground random
+        const variant = inCluster
+          ? (h % 3)               // all types in cluster
+          : (h % 5 < 2 ? 0 : 2); // outside: mostly tall skinny
+
+        const img = treeImgs[Math.min(variant, 2)];
+
         const aspect = img.naturalWidth / img.naturalHeight;
-        const tH = ts2 * (2.2 + (h % 100) / 100 * 2.0);  // 2.2–4.2 tiles tall
+        const tH = ts2 * (1.8 + (h % 100)/100 * 2.4);  // 1.8–4.2 tiles
         const tW = tH * aspect;
-        const tx = tileX + (ts2 - tW) * 0.5 + ((h%7)-3) * ts2*0.12; // slight random offset
-        const ty = terrainY - tH * 0.92; // sit on surface, slight overlap
+        const tx = tileX + (ts2 - tW) * 0.5 + ((h%9)-4) * ts2 * 0.10;
+        const ty = terrainY - tH * 0.94;
 
-        // Night tint — trees get darker/silhouetted
         if(isNight){
-          const nt = Math.min(1,(dayT-0.58)/0.15);
-          ctx.globalAlpha = 1 - nt*0.35;
+          const nt2 = Math.min(1,(dayT-0.58)/0.15);
+          ctx.globalAlpha = 1 - nt2*0.3;
         }
         ctx.drawImage(img, tx, ty, tW, tH);
         ctx.globalAlpha = 1;
       }
+
+      // ── SCATTERED ROCKS ─────────────────────────────────────────────────────
+      // Occasional single rocks and small rock groups on surface
+      // ~1 rock group every 30-50 columns
+      const ROCK_SEEDS = Math.max(4, Math.floor(GRID_COLS / 35));
+      for(let ri=0; ri<ROCK_SEEDS; ri++){
+        const hr = (ri*4931 + 2713) % 1000;
+        const col = Math.floor((hr/1000) * GRID_COLS);
+        if(!tilesMap[`${col},0`]) continue;
+
+        const groupSize = 1 + (ri*3117) % 3; // 1-3 rocks per group
+        for(let rk=0; rk<groupSize; rk++){
+          const hk = (ri*7331 + rk*1973) % 1000;
+          const offC = col + rk - Math.floor(groupSize/2);
+          if(offC < 0 || offC >= GRID_COLS) continue;
+          const tileX2 = offC*ts2 - cameraX;
+          if(tileX2 + ts2 < -100 || tileX2 > W + 100) continue;
+
+          const imgIdx = hk % 3;
+          const rockImg = images['rock_'+imgIdx];
+          if(!rockImg || !rockImg.complete) continue;
+
+          const rSize = ts2 * (0.5 + (hk%100)/100 * 0.5);
+          const rx = tileX2 + (ts2 - rSize)*0.5 + ((hk%5)-2)*ts2*0.15;
+          const ry = terrainY - rSize * 0.75;
+          ctx.drawImage(rockImg, rx, ry, rSize, rSize);
+        }
+      }
     }
   }
-
-    // ── GRID ───────────────────────────────────────────────────────────────────
-  if(showGrid){
-    ctx.strokeStyle='rgba(255,110,30,0.13)';ctx.lineWidth=.5;
-    const sc=Math.floor(cameraX/ts2),ec=sc+Math.ceil(W/ts2)+2;
-    for(let c=sc;c<=ec;c++){const x=c*ts2-cameraX;ctx.beginPath();ctx.moveTo(x,terrainY);ctx.lineTo(x,H);ctx.stroke();}
-    for(let r=0;r<=GRID_ROWS;r++){const y=terrainY+r*ts2;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-    // Horizon guide — very faint, only when grid is on
-    ctx.strokeStyle='rgba(255,140,40,0.12)';ctx.lineWidth=1;ctx.setLineDash([4,8]);
-    ctx.beginPath();ctx.moveTo(0,terrainY);ctx.lineTo(W,terrainY);ctx.stroke();ctx.setLineDash([]);
-  }
-
-  // Hover
-  if(hoverCell){
-    const x=hoverCell.col*ts2-cameraX,y=terrainY+hoverCell.row*ts2;
-    const er=dragMode==='erase'||(dragMode===null&&activeTool==='erase');
-    ctx.fillStyle=er?'rgba(255,40,40,.2)':'rgba(255,180,50,.18)';
-    ctx.strokeStyle=er?'rgba(255,70,70,.9)':'rgba(255,210,70,.9)';
-    ctx.lineWidth=1.5;ctx.fillRect(x,y,ts2,ts2);ctx.strokeRect(x+.5,y+.5,ts2-1,ts2-1);
-  }
-
-  // Time HUD
-  const TL=[[0,'🌅 DAWN'],[.15,'☀️ MORNING'],[.28,'☀️ MIDDAY'],[.42,'🌇 AFTERNOON'],[.50,'🌆 DUSK'],[.60,'🌙 NIGHT'],[.85,'🌙 DEEP NIGHT'],[.95,'🌌 PRE-DAWN']];
-  let lbl='';for(let i=TL.length-1;i>=0;i--){if(dayT>=TL[i][0]){lbl=TL[i][1];break;}}
-  document.getElementById('time-hud').textContent=lbl;
-
-  // Pan
-  const panStep=PAN_SPEED*Math.max(.5,zoom);
-  if(keysDown['a']||keysDown['ArrowLeft'])cameraX=Math.max(0,cameraX-panStep);
-  if(keysDown['d']||keysDown['ArrowRight'])cameraX+=panStep;
-  requestAnimationFrame(draw);
-}
 // Auto-populate terrain on first load
 autoFill();
 requestAnimationFrame(draw);
@@ -819,22 +744,12 @@ function addZoom(d){
 function resetZoom(){zoom=1;cameraX=0;document.getElementById('zoom-label').textContent='100%';}
 function autoFill(){
   tilesMap={};
-  // Surface styles — AI terrain, cycles in bands of ~10 columns
-  const surfV=['nt_surf_0','nt_surf_1','nt_surf_2','nt_surf_3','nt_surf_4'];
-
   for(let c=0;c<GRID_COLS;c++){
-    // Pick surface style — bands of ~10 columns for natural variety
-    const bandW = Math.max(1, Math.floor(GRID_COLS / 5));
-    const si = Math.floor(c / bandW) % surfV.length;
-    tilesMap[`${c},0`] = surfV[si];
-
-    // Depth rows: smooth gradient from warm (row 1) to dark bedrock (last row)
-    // depth_0..depth_8 mapped evenly across remaining rows
-    const depthRows = GRID_ROWS - 1;
-    for(let r=1; r<GRID_ROWS; r++){
-      const t = (r - 1) / Math.max(1, depthRows - 1);  // 0.0 at row 1, 1.0 at last row
-      const di = Math.min(8, Math.floor(t * 9));
-      tilesMap[`${c},${r}`] = `depth_${di}`;
+    tilesMap[`${c},0`]='nt_surf_3';
+    const depthRows=GRID_ROWS-1;
+    for(let r=1;r<GRID_ROWS;r++){
+      const t=(r-1)/Math.max(1,depthRows-1);
+      tilesMap[`${c},${r}`]='depth_'+Math.min(8,Math.floor(t*9));
     }
   }
 }
