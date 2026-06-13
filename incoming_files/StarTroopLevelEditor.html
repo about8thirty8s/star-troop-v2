@@ -8,43 +8,41 @@
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:#0a0100;color:#fff;font-family:monospace;height:100vh;display:flex;flex-direction:column;overflow:hidden;user-select:none;}
   #topbar{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#111;border-bottom:1px solid #3a1800;flex-shrink:0;flex-wrap:wrap;}
-  #topbar .title{color:#f97316;font-weight:bold;font-size:12px;letter-spacing:.15em;margin-right:6px;}
-  .btn{padding:4px 10px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer;border:1px solid #333;background:#1a1a1a;color:#999;transition:all .15s;font-family:monospace;}
+  .title{color:#f97316;font-weight:bold;font-size:12px;letter-spacing:.15em;margin-right:6px;}
+  .btn{padding:4px 10px;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer;border:1px solid #333;background:#1a1a1a;color:#999;font-family:monospace;}
   .btn:hover{border-color:#c2560a;color:#ddd;}
   .btn.active{background:#f97316;border-color:#fb923c;color:#000;}
   .btn.green{background:#064e3b;border-color:#065f46;color:#6ee7b7;}
-  .btn.green:hover{background:#065f46;}
   .btn.red{background:#450a0a;border-color:#7f1d1d;color:#fca5a5;}
   .btn.blue{background:#0c1a3a;border-color:#1e3a8a;color:#93c5fd;}
   .sep{width:1px;height:20px;background:#333;margin:0 2px;}
   .spacer{flex:1;}
-  #main{display:flex;flex:1;overflow:hidden;}
+  #main{display:flex;flex:1;overflow:hidden;min-height:0;}
   #sidebar{width:176px;background:#111;border-right:1px solid #3a1800;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
-  #sidebar .section-title{color:#f97316;font-size:10px;font-weight:bold;letter-spacing:.15em;padding:10px 10px 6px;}
-  #sidebar .bg-layer{display:flex;align-items:center;gap:8px;padding:4px 10px;cursor:pointer;}
-  .check{width:14px;height:14px;border-radius:3px;border:1px solid #555;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;transition:all .15s;cursor:pointer;}
+  .section-title{color:#f97316;font-size:10px;font-weight:bold;letter-spacing:.15em;padding:10px 10px 6px;}
+  .bg-layer{display:flex;align-items:center;gap:8px;padding:4px 10px;cursor:pointer;}
+  .check{width:14px;height:14px;border-radius:3px;border:1px solid #555;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;cursor:pointer;}
   .check.on{background:#f97316;border-color:#fb923c;color:#000;}
-  .layer-label{font-size:11px;color:#888;transition:color .15s;}
+  .layer-label{font-size:11px;color:#888;}
   .divider{border:none;border-top:1px solid #3a1800;margin:4px 0;}
   .tile-group-title{color:#f97316;font-size:10px;font-weight:bold;letter-spacing:.12em;padding:8px 10px 4px;}
   .tile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:0 8px 8px;}
-  .tile-btn{height:44px;border-radius:4px;border:1px solid #333;overflow:hidden;cursor:pointer;position:relative;background:#1a1a1a;transition:border-color .15s;}
+  .tile-btn{height:44px;border-radius:4px;border:1px solid #333;overflow:hidden;cursor:pointer;position:relative;background:#1a1a1a;}
   .tile-btn:hover{border-color:#c2560a66;}
   .tile-btn.active{border-color:#f97316;box-shadow:0 0 0 1px #f97316;}
   .tile-btn img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated;}
-  .tile-btn .dot{position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#f97316;}
   #canvas-wrap{flex:1;position:relative;overflow:hidden;background:#000;}
-  #main-canvas{width:100%;height:100%;display:block;cursor:crosshair;}
-  #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.85);color:#f97316;font-size:13px;letter-spacing:.2em;}
+  #main-canvas{width:100%;height:100%;display:block;}
+  #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.9);color:#f97316;font-size:13px;letter-spacing:.2em;}
   #zoom-controls{position:absolute;bottom:12px;right:12px;display:flex;flex-direction:column;gap:4px;}
   .zoom-btn{width:30px;height:30px;background:#111c;border:1px solid #444;border-radius:4px;color:#f97316;font-size:16px;font-weight:bold;cursor:pointer;display:flex;align-items:center;justify-content:center;}
   .zoom-btn:hover{border-color:#f97316;}
-  #active-tile{position:absolute;bottom:12px;left:12px;display:flex;align-items:center;gap:8px;background:#111c;border:1px solid #3a1800;border-radius:6px;padding:8px 12px;}
-  #active-tile img{width:32px;height:32px;image-rendering:pixelated;border-radius:3px;}
-  #active-tile .name{color:#f97316;font-size:11px;font-weight:bold;}
-  #active-tile .mode{color:#666;font-size:10px;text-transform:capitalize;}
+  #active-tile-hud{position:absolute;bottom:12px;left:12px;display:flex;align-items:center;gap:8px;background:#111c;border:1px solid #3a1800;border-radius:6px;padding:8px 12px;}
+  #active-tile-hud img{width:32px;height:32px;image-rendering:pixelated;border-radius:3px;}
+  .hud-name{color:#f97316;font-size:11px;font-weight:bold;}
+  .hud-mode{color:#666;font-size:10px;}
   #zoom-label{color:#555;font-size:11px;}
-  .hints{padding:8px 10px;border-top:1px solid #3a1800;color:#444;font-size:10px;line-height:1.8;margin-top:auto;}
+  .hints{padding:8px 10px;border-top:1px solid #3a1800;color:#444;font-size:10px;line-height:1.9;margin-top:auto;}
 </style>
 </head>
 <body>
@@ -52,8 +50,8 @@
 <div id="topbar">
   <span class="title">⚔ STAR TROOP — LEVEL EDITOR</span>
   <button class="btn active" id="tool-paint" onclick="setTool('paint')">✏ PAINT</button>
-  <button class="btn" id="tool-erase" onclick="setTool('erase')">✕ ERASE</button>
-  <button class="btn" id="tool-fill"  onclick="setTool('fill')">▦ FILL ROW</button>
+  <button class="btn"        id="tool-erase" onclick="setTool('erase')">✕ ERASE</button>
+  <button class="btn"        id="tool-fill"  onclick="setTool('fill')">▦ FILL ROW</button>
   <div class="sep"></div>
   <button class="btn active" id="btn-grid" onclick="toggleGrid()">GRID</button>
   <div class="sep"></div>
@@ -70,7 +68,7 @@
     <div id="bg-toggles"></div>
     <hr class="divider"/>
     <div id="tile-palette"></div>
-    <div class="hints">Scroll → Pan<br>Ctrl+Scroll → Zoom<br>Click+Drag → Paint</div>
+    <div class="hints">Scroll → Pan<br>Ctrl+Scroll → Zoom<br>Drag → Paint</div>
   </div>
   <div id="canvas-wrap">
     <canvas id="main-canvas"></canvas>
@@ -80,9 +78,9 @@
       <button class="zoom-btn" style="font-size:10px" onclick="resetZoom()">1:1</button>
       <button class="zoom-btn" onclick="changeZoom(-0.15)">−</button>
     </div>
-    <div id="active-tile">
-      <img id="active-tile-img" src="" alt=""/>
-      <div><div class="name" id="active-tile-name">Crust A</div><div class="mode" id="active-tool-label">paint</div></div>
+    <div id="active-tile-hud">
+      <img id="hud-img" src="" alt=""/>
+      <div><div class="hud-name" id="hud-name">Crust A</div><div class="hud-mode" id="hud-mode">paint</div></div>
     </div>
   </div>
 </div>
@@ -115,14 +113,14 @@ const BG_LAYERS = [
 
 const TILE_GROUPS = [
   { label:"SURFACE CRUST", tiles:[
-    { id:"v1_top",  label:"Crust A", src:"terrain_v1_top" },
-    { id:"v2_top",  label:"Crust B", src:"terrain_v2_top" },
-    { id:"v3_top",  label:"Crust C", src:"terrain_v3_top" },
+    { id:"v1_top",  label:"Crust A", src:"terrain_v1_top"  },
+    { id:"v2_top",  label:"Crust B", src:"terrain_v2_top"  },
+    { id:"v3_top",  label:"Crust C", src:"terrain_v3_top"  },
   ]},
   { label:"PACKED EARTH", tiles:[
-    { id:"v1_mid",  label:"Earth A", src:"terrain_v1_mid" },
-    { id:"v2_mid",  label:"Earth B", src:"terrain_v2_mid" },
-    { id:"v3_mid",  label:"Earth C", src:"terrain_v3_mid" },
+    { id:"v1_mid",  label:"Earth A", src:"terrain_v1_mid"  },
+    { id:"v2_mid",  label:"Earth B", src:"terrain_v2_mid"  },
+    { id:"v3_mid",  label:"Earth C", src:"terrain_v3_mid"  },
   ]},
   { label:"DEEP EARTH", tiles:[
     { id:"v1_deep", label:"Deep A",  src:"terrain_v1_deep" },
@@ -132,17 +130,22 @@ const TILE_GROUPS = [
 ];
 const ALL_TILES = TILE_GROUPS.flatMap(g => g.tiles);
 
-const TILE_SIZE = 48;
-const GRID_COLS = 60;
-const GRID_ROWS = 16;
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+// Terrain occupies bottom 40% of screen — sky gets top 60%
+// Tile size is computed from screen height, not fixed pixels
+const GRID_COLS      = 60;
+const GRID_ROWS      = 10;   // visible rows — feels right for a side-scroller ground
+const TERRAIN_RATIO  = 0.38; // terrain zone = 38% of canvas height
+const SKY_RATIO      = 1 - TERRAIN_RATIO;
 
+// ── STATE ─────────────────────────────────────────────────────────────────────
 let activeTool = "paint", activeTile = ALL_TILES[0];
-let bgVis = Object.fromEntries(BG_LAYERS.map(l=>[l.id,true]));
-let cameraX = 0, scrollOff = 0, zoom = 1;
-let showGrid = true, tilesMap = {}, hoverCell = null, isPainting = false;
-let images = {}, imagesReady = false, loadCount = 0;
-
+let bgVis      = Object.fromEntries(BG_LAYERS.map(l=>[l.id,true]));
+let cameraX    = 0, scrollOff = 0, zoom = 1;
+let showGrid   = true, tilesMap = {}, hoverCell = null, isPainting = false;
+let images     = {}, loadCount = 0;
 const totalAssets = Object.keys(ASSETS).length;
+
 for (const [key, src] of Object.entries(ASSETS)) {
   if (!src) { loadCount++; checkReady(); continue; }
   const img = new Image();
@@ -151,153 +154,143 @@ for (const [key, src] of Object.entries(ASSETS)) {
   images[key] = img;
 }
 function checkReady() {
-  if (loadCount >= totalAssets) {
-    imagesReady = true;
+  if (loadCount >= totalAssets)
     document.getElementById('loading').style.display = 'none';
-  }
 }
 
-// Build BG toggles
+// ── UI BUILD ──────────────────────────────────────────────────────────────────
 const bgWrap = document.getElementById('bg-toggles');
 BG_LAYERS.forEach(layer => {
   const div = document.createElement('div');
   div.className = 'bg-layer';
-  div.innerHTML = `<div class="check on" id="chk-${layer.id}">✓</div><span class="layer-label">${layer.label}</span>`;
+  div.innerHTML = `<div class="check on" id="chk-${layer.id}">✓</div>
+                   <span class="layer-label">${layer.label}</span>`;
   div.onclick = () => {
     bgVis[layer.id] = !bgVis[layer.id];
-    const chk = document.getElementById('chk-'+layer.id);
-    chk.className = 'check'+(bgVis[layer.id]?' on':'');
-    chk.textContent = bgVis[layer.id]?'✓':'';
+    const c = document.getElementById('chk-'+layer.id);
+    c.className = 'check' + (bgVis[layer.id] ? ' on' : '');
+    c.textContent = bgVis[layer.id] ? '✓' : '';
   };
   bgWrap.appendChild(div);
 });
 
-// Build tile palette
 const palette = document.getElementById('tile-palette');
 TILE_GROUPS.forEach(group => {
-  const title = document.createElement('div');
-  title.className = 'tile-group-title';
-  title.textContent = group.label;
-  palette.appendChild(title);
-  const grid = document.createElement('div');
-  grid.className = 'tile-grid';
+  const t = document.createElement('div');
+  t.className = 'tile-group-title'; t.textContent = group.label;
+  palette.appendChild(t);
+  const g = document.createElement('div'); g.className = 'tile-grid';
   group.tiles.forEach(tile => {
-    const btn = document.createElement('div');
-    btn.className = 'tile-btn'+(tile.id===activeTile.id?' active':'');
-    btn.id = 'tile-'+tile.id;
-    btn.title = tile.label;
-    btn.innerHTML = `<img src="${ASSETS[tile.src]||''}" alt="${tile.label}"/>`;
-    btn.onclick = () => selectTile(tile);
-    grid.appendChild(btn);
+    const b = document.createElement('div');
+    b.className = 'tile-btn' + (tile.id===activeTile.id?' active':'');
+    b.id = 'tile-'+tile.id; b.title = tile.label;
+    b.innerHTML = `<img src="${ASSETS[tile.src]||''}" alt="${tile.label}"/>`;
+    b.onclick = () => selectTile(tile);
+    g.appendChild(b);
   });
-  palette.appendChild(grid);
+  palette.appendChild(g);
 });
 
 function selectTile(tile) {
   document.querySelectorAll('.tile-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tile-'+tile.id)?.classList.add('active');
-  activeTile = tile;
-  setTool('paint');
-  document.getElementById('active-tile-img').src = ASSETS[tile.src]||'';
-  document.getElementById('active-tile-name').textContent = tile.label;
+  activeTile = tile; setTool('paint');
+  document.getElementById('hud-img').src  = ASSETS[tile.src]||'';
+  document.getElementById('hud-name').textContent = tile.label;
 }
 selectTile(activeTile);
 
-// Canvas
+// ── CANVAS ────────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('main-canvas');
-const ctx = canvas.getContext('2d');
+const ctx    = canvas.getContext('2d');
 
-function resizeCanvas() { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; }
+function resizeCanvas() {
+  canvas.width  = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
 resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+new ResizeObserver(resizeCanvas).observe(document.getElementById('canvas-wrap'));
 
 // ── DRAW ─────────────────────────────────────────────────────────────────────
 function draw() {
   const W = canvas.width, H = canvas.height;
-  const ts = TILE_SIZE * zoom;
-  const terrainY = H - GRID_ROWS * ts;  // top of the tile grid
 
-  ctx.clearRect(0,0,W,H);
-  ctx.imageSmoothingEnabled = false;
+  // Terrain zone = fixed pixel height based on screen, not tile count
+  // Tile size = terrain zone height / GRID_ROWS * zoom
+  const terrainZoneH = H * TERRAIN_RATIO;      // raw terrain area height
+  const ts           = (terrainZoneH / GRID_ROWS) * zoom;  // tile size in px
+  const terrainY     = H - terrainZoneH;        // Y where terrain starts (constant, zoom-independent for bg)
+  const skyH         = terrainY;                // sky fills above this line
 
-  // ── SKY GRADIENT (fallback always rendered) ────────────────────────────────
-  const sg = ctx.createLinearGradient(0,0,0,terrainY);
+  ctx.clearRect(0, 0, W, H);
+  ctx.imageSmoothingEnabled = true;
+
+  // ── SKY GRADIENT ──────────────────────────────────────────────────────────
+  const sg = ctx.createLinearGradient(0, 0, 0, skyH);
   sg.addColorStop(0,   '#3A0A00');
-  sg.addColorStop(0.5, '#220600');
-  sg.addColorStop(1,   '#120300');
+  sg.addColorStop(0.55,'#220600');
+  sg.addColorStop(1,   '#140300');
   ctx.fillStyle = sg;
-  ctx.fillRect(0, 0, W, terrainY);
+  ctx.fillRect(0, 0, W, skyH);
+
   // Dark fill for terrain zone
-  ctx.fillStyle = '#0a0100';
+  ctx.fillStyle = '#0c0200';
   ctx.fillRect(0, terrainY, W, H - terrainY);
 
-  // ── BACKGROUND LAYERS ─────────────────────────────────────────────────────
-  // Each layer is drawn to fill the sky zone correctly — NO tiny tiling
+  // ── BG LAYERS ─────────────────────────────────────────────────────────────
   BG_LAYERS.forEach(layer => {
     if (!bgVis[layer.id]) return;
     const img = images[layer.id];
     if (!img || !img.complete || !img.naturalWidth) return;
 
-    const px   = scrollOff * layer.parallax;
-    const iW   = img.naturalWidth;
-    const iH   = img.naturalHeight;
-    const skyH = terrainY;  // full sky zone height
-
-    let drawH, drawY, drawW;
+    const px = scrollOff * layer.parallax;
 
     if (layer.id === 'sky_planet') {
-      // Fill entire sky zone — no tiling needed, just draw once wide
-      drawH = skyH;
-      drawY = 0;
-      drawW = W * 1.1; // slightly wider than screen so parallax pan works
-      const offsetX = -(px % drawW);
-      ctx.drawImage(img, offsetX, drawY, drawW, drawH);
-      // second copy for seamless pan
-      ctx.drawImage(img, offsetX + drawW, drawY, drawW, drawH);
+      // One wide image filling entire sky — tiled horizontally for pan
+      const dH = skyH;
+      const dW = (img.naturalWidth / img.naturalHeight) * dH;
+      const ox = -(px % dW);
+      ctx.drawImage(img, ox,       0, dW, dH);
+      ctx.drawImage(img, ox + dW,  0, dW, dH);
+      ctx.drawImage(img, ox - dW,  0, dW, dH);
 
     } else if (layer.id === 'mountains') {
-      // Mountains sit at the horizon — bottom 55% of sky, tall enough to be chunky
-      drawH = skyH * 0.65;
-      drawY = skyH - drawH + 8; // sit right at terrain edge with slight overlap
-      drawW = W * 0.85; // one mountain strip ~85% screen width, tile just 1-2x
-      const offsetX = -(px % drawW);
-      for (let x = offsetX - drawW; x < W + drawW; x += drawW) {
-        ctx.drawImage(img, x, drawY, drawW, drawH);
-      }
+      // Mountains: tall, sit at horizon bottom
+      const dH = skyH * 0.62;
+      const dY = skyH - dH;   // pinned to horizon
+      const dW = W * 1.1;     // just wider than screen — one tile only
+      const ox = -(px % dW);
+      ctx.drawImage(img, ox,      dY, dW, dH);
+      ctx.drawImage(img, ox + dW, dY, dW, dH);
 
     } else if (layer.id === 'clouds_far') {
-      // Far clouds — upper 40% of sky, wide sparse
-      drawH = skyH * 0.40;
-      drawY = skyH * 0.05;
-      drawW = W * 0.90;
-      const offsetX = -(px % drawW);
-      for (let x = offsetX - drawW; x < W + drawW; x += drawW) {
-        ctx.drawImage(img, x, drawY, drawW, drawH);
-      }
+      const dH = skyH * 0.35;
+      const dY = 0;
+      const dW = W * 1.05;
+      const ox = -(px % dW);
+      ctx.drawImage(img, ox,      dY, dW, dH);
+      ctx.drawImage(img, ox + dW, dY, dW, dH);
 
     } else if (layer.id === 'clouds_mid') {
-      // Mid clouds — middle of sky
-      drawH = skyH * 0.45;
-      drawY = skyH * 0.15;
-      drawW = W * 0.88;
-      const offsetX = -(px % drawW);
-      for (let x = offsetX - drawW; x < W + drawW; x += drawW) {
-        ctx.drawImage(img, x, drawY, drawW, drawH);
-      }
+      const dH = skyH * 0.42;
+      const dY = skyH * 0.1;
+      const dW = W * 1.05;
+      const ox = -(px % dW);
+      ctx.drawImage(img, ox,      dY, dW, dH);
+      ctx.drawImage(img, ox + dW, dY, dW, dH);
 
     } else if (layer.id === 'clouds_near') {
-      // Near clouds — lower sky, bigger, drift faster
-      drawH = skyH * 0.50;
-      drawY = skyH * 0.35;
-      drawW = W * 0.85;
-      const offsetX = -(px % drawW);
-      for (let x = offsetX - drawW; x < W + drawW; x += drawW) {
-        ctx.drawImage(img, x, drawY, drawW, drawH);
-      }
+      const dH = skyH * 0.50;
+      const dY = skyH * 0.3;
+      const dW = W * 1.05;
+      const ox = -(px % dW);
+      ctx.drawImage(img, ox,      dY, dW, dH);
+      ctx.drawImage(img, ox + dW, dY, dW, dH);
     }
   });
 
   // ── TERRAIN TILES ─────────────────────────────────────────────────────────
+  // terrainY is fixed — tiles scroll with cameraX only
   for (const [key, tileId] of Object.entries(tilesMap)) {
     const [col, row] = key.split(',').map(Number);
     const tile = ALL_TILES.find(t => t.id === tileId);
@@ -306,13 +299,13 @@ function draw() {
     if (!img || !img.complete || !img.naturalWidth) continue;
     const x = col * ts - cameraX;
     const y = terrainY + row * ts;
-    if (x + ts < 0 || x > W) continue;
+    if (x + ts < 0 || x > W || y > H) continue;
     ctx.drawImage(img, x, y, ts, ts);
   }
 
   // ── GRID ──────────────────────────────────────────────────────────────────
   if (showGrid) {
-    ctx.strokeStyle = 'rgba(255,110,30,0.12)';
+    ctx.strokeStyle = 'rgba(255,110,30,0.13)';
     ctx.lineWidth = 0.5;
     const sc = Math.floor(cameraX / ts);
     const ec = sc + Math.ceil(W / ts) + 2;
@@ -324,7 +317,7 @@ function draw() {
       const y = terrainY + r * ts;
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     }
-    // Terrain boundary line
+    // Horizon line
     ctx.strokeStyle = 'rgba(255,140,40,0.4)';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([6,4]);
@@ -334,31 +327,35 @@ function draw() {
 
   // ── HOVER ─────────────────────────────────────────────────────────────────
   if (hoverCell) {
-    const {col,row} = hoverCell;
-    const x = col*ts - cameraX, y = terrainY + row*ts;
+    const terrainZoneH = H * TERRAIN_RATIO;
+    const ts2 = (terrainZoneH / GRID_ROWS) * zoom;
+    const x = hoverCell.col * ts2 - cameraX;
+    const y = terrainY + hoverCell.row * ts2;
     const er = activeTool === 'erase';
-    ctx.fillStyle   = er ? 'rgba(255,40,40,0.18)'  : 'rgba(255,180,50,0.16)';
-    ctx.strokeStyle = er ? 'rgba(255,70,70,0.9)'   : 'rgba(255,210,70,0.9)';
+    ctx.fillStyle   = er ? 'rgba(255,40,40,0.2)'  : 'rgba(255,180,50,0.18)';
+    ctx.strokeStyle = er ? 'rgba(255,70,70,0.9)'  : 'rgba(255,210,70,0.9)';
     ctx.lineWidth = 1.5;
-    ctx.fillRect(x, y, ts, ts);
-    ctx.strokeRect(x+.5, y+.5, ts-1, ts-1);
+    ctx.fillRect(x, y, ts2, ts2);
+    ctx.strokeRect(x+.5, y+.5, ts2-1, ts2-1);
   }
 
   requestAnimationFrame(draw);
 }
 requestAnimationFrame(draw);
 
-// ── RESIZE ────────────────────────────────────────────────────────────────────
-const ro = new ResizeObserver(resizeCanvas);
-ro.observe(document.getElementById('canvas-wrap'));
-
 // ── INPUT ─────────────────────────────────────────────────────────────────────
+function getTileSize() {
+  const terrainZoneH = canvas.height * TERRAIN_RATIO;
+  return (terrainZoneH / GRID_ROWS) * zoom;
+}
+function getTerrainY() {
+  return canvas.height - canvas.height * TERRAIN_RATIO;
+}
 function getCellFromXY(mx, my) {
-  const ts = TILE_SIZE * zoom;
-  const terrainY = canvas.height - GRID_ROWS * ts;
-  if (my < terrainY) return null;
+  const ts = getTileSize(), ty = getTerrainY();
+  if (my < ty) return null;
   const col = Math.floor((mx + cameraX) / ts);
-  const row = Math.floor((my - terrainY) / ts);
+  const row = Math.floor((my - ty) / ts);
   if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return null;
   return {col, row};
 }
@@ -366,64 +363,78 @@ function getCellFromXY(mx, my) {
 function applyTool(cell) {
   if (!cell) return;
   const key = `${cell.col},${cell.row}`;
-  if      (activeTool==='erase')                  { delete tilesMap[key]; }
-  else if (activeTool==='paint' && activeTile)    { tilesMap[key] = activeTile.id; }
-  else if (activeTool==='fill'  && activeTile)    { for(let c=0;c<GRID_COLS;c++) tilesMap[`${c},${cell.row}`]=activeTile.id; }
+  if      (activeTool==='erase')               delete tilesMap[key];
+  else if (activeTool==='paint' && activeTile) tilesMap[key] = activeTile.id;
+  else if (activeTool==='fill'  && activeTile)
+    for (let c=0; c<GRID_COLS; c++) tilesMap[`${c},${cell.row}`] = activeTile.id;
 }
 
 canvas.addEventListener('mousedown', e => {
-  if(e.button!==0) return; isPainting=true;
-  const r=canvas.getBoundingClientRect();
+  if (e.button!==0) return; isPainting=true;
+  const r = canvas.getBoundingClientRect();
   applyTool(getCellFromXY(e.clientX-r.left, e.clientY-r.top));
 });
 canvas.addEventListener('mousemove', e => {
-  const r=canvas.getBoundingClientRect();
-  const cell=getCellFromXY(e.clientX-r.left,e.clientY-r.top);
-  hoverCell=cell;
-  if(isPainting) applyTool(cell);
+  const r = canvas.getBoundingClientRect();
+  hoverCell = getCellFromXY(e.clientX-r.left, e.clientY-r.top);
+  if (isPainting) applyTool(hoverCell);
 });
-canvas.addEventListener('mouseup',    () => { isPainting=false; });
+canvas.addEventListener('mouseup',    () => isPainting = false);
 canvas.addEventListener('mouseleave', () => { hoverCell=null; isPainting=false; });
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
-  if(e.ctrlKey||e.metaKey) {
-    zoom = Math.max(0.3, Math.min(4, zoom*(1-e.deltaY*0.002)));
+  if (e.ctrlKey || e.metaKey) {
+    zoom = Math.max(0.3, Math.min(5, zoom * (1 - e.deltaY*0.002)));
     document.getElementById('zoom-label').textContent = Math.round(zoom*100)+'%';
   } else {
-    const dx = (e.shiftKey?e.deltaY:e.deltaX)||e.deltaY*0.4;
-    cameraX   = Math.max(0, cameraX+dx*1.5);
+    const dx = (e.shiftKey ? e.deltaY : e.deltaX) || e.deltaY*0.5;
+    cameraX   = Math.max(0, cameraX + dx*1.5);
     scrollOff += dx*1.5;
   }
 }, {passive:false});
 
+// ── CONTROLS ──────────────────────────────────────────────────────────────────
 function setTool(t) {
-  activeTool=t;
-  ['paint','erase','fill'].forEach(id => document.getElementById('tool-'+id)?.classList.toggle('active', id===t));
-  document.getElementById('active-tool-label').textContent = t;
+  activeTool = t;
+  ['paint','erase','fill'].forEach(id =>
+    document.getElementById('tool-'+id)?.classList.toggle('active', id===t));
+  document.getElementById('hud-mode').textContent = t;
 }
 function toggleGrid() {
-  showGrid=!showGrid;
-  document.getElementById('btn-grid').classList.toggle('active',showGrid);
+  showGrid = !showGrid;
+  document.getElementById('btn-grid').classList.toggle('active', showGrid);
 }
 function changeZoom(d) {
-  zoom=Math.max(0.3,Math.min(4,zoom+d));
-  document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%';
+  zoom = Math.max(0.3, Math.min(5, zoom+d));
+  document.getElementById('zoom-label').textContent = Math.round(zoom*100)+'%';
 }
 function resetZoom() {
-  zoom=1; document.getElementById('zoom-label').textContent='100%';
+  zoom = 1;
+  document.getElementById('zoom-label').textContent = '100%';
 }
 function autoFill() {
-  const s=["v1_top","v2_top","v3_top"], m=["v1_mid","v2_mid","v3_mid"], d=["v1_deep","v2_deep","v3_deep"];
-  for(let c=0;c<GRID_COLS;c++) {
-    for(let r=0;r<2;r++)          tilesMap[`${c},${r}`]=s[Math.floor(Math.random()*3)];
-    for(let r=2;r<7;r++)          tilesMap[`${c},${r}`]=m[Math.floor(Math.random()*3)];
-    for(let r=7;r<GRID_ROWS;r++)  tilesMap[`${c},${r}`]=d[Math.floor(Math.random()*3)];
+  const s=["v1_top","v2_top","v3_top"];
+  const m=["v1_mid","v2_mid","v3_mid"];
+  const d=["v1_deep","v2_deep","v3_deep"];
+  tilesMap = {};
+  for (let c=0; c<GRID_COLS; c++) {
+    tilesMap[`${c},0`] = s[Math.floor(Math.random()*3)];
+    tilesMap[`${c},1`] = s[Math.floor(Math.random()*3)];
+    for (let r=2; r<5; r++)          tilesMap[`${c},${r}`] = m[Math.floor(Math.random()*3)];
+    for (let r=5; r<GRID_ROWS; r++)  tilesMap[`${c},${r}`] = d[Math.floor(Math.random()*3)];
   }
 }
-function clearAll() { if(confirm('Clear all tiles?')) tilesMap={}; }
+function clearAll() {
+  if (confirm('Clear all tiles?')) tilesMap = {};
+}
 function exportLevel() {
-  const b=new Blob([JSON.stringify({tiles:tilesMap,cols:GRID_COLS,rows:GRID_ROWS},null,2)],{type:'application/json'});
-  Object.assign(document.createElement('a'),{href:URL.createObjectURL(b),download:'level.json'}).click();
+  const b = new Blob(
+    [JSON.stringify({tiles:tilesMap, cols:GRID_COLS, rows:GRID_ROWS}, null, 2)],
+    {type:'application/json'}
+  );
+  Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(b), download: 'level.json'
+  }).click();
 }
 </script>
 </body>
