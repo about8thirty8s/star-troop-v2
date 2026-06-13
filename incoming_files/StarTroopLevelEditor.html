@@ -126,7 +126,7 @@ const ASSETS = {
 // Stored as fraction of skyH (-0.5 to +0.5)
 const DEFAULT_LAYER_OFFSETS = {
   gas_giant:   -0.05,
-  mountains:    0.05,
+  mountains:    0.22,
   clouds_far:  -0.20,
   clouds_mid:  -0.10,
   clouds_near:  0.0,
@@ -612,6 +612,8 @@ function draw(ts){
   if(keysDown['d']||keysDown['ArrowRight'])cameraX+=panStep;
   requestAnimationFrame(draw);
 }
+// Auto-populate terrain on first load
+autoFill();
 requestAnimationFrame(draw);
 
 function getCellFromXY(mx,my){
