@@ -518,15 +518,20 @@ function draw(ts){
       const dW=Math.max(W*1.2,W*zoom);
       const ox=-(shift%dW);
       ctx.globalAlpha=1;
-      ctx.drawImage(img,ox-dW,dY,dW,dH);ctx.drawImage(img,ox,dY,dW,dH);ctx.drawImage(img,ox+dW,dY,dW,dH);
+      // Draw mountains 8% taller upward so any transparent top edge of the PNG
+      // is pushed above the canvas top — eliminates the seam line
+      const mtnOverflow = dH * 0.08;
+      const dYx = dY - mtnOverflow;
+      const dHx = dH + mtnOverflow;
+      ctx.drawImage(img,ox-dW,dYx,dW,dHx);ctx.drawImage(img,ox,dYx,dW,dHx);ctx.drawImage(img,ox+dW,dYx,dW,dHx);
       // Night tint on mountains
       if(isNight){
         const nf=Math.min(1,(dayT-0.58)/0.12);
         ctx.globalAlpha=nf*0.45;ctx.fillStyle='rgba(5,3,20,1)';
         const ox2=-(cameraX*.25%dW);
         ctx.save();ctx.beginPath();
-        ctx.rect(ox2-dW,dY,dW*3,dH);ctx.clip();
-        ctx.fillRect(ox2-dW,dY,dW*3,dH);
+        ctx.rect(ox2-dW,dYx,dW*3,dHx);ctx.clip();
+        ctx.fillRect(ox2-dW,dYx,dW*3,dHx);
         ctx.restore();ctx.globalAlpha=1;
       }
     }
