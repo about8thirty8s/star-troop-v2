@@ -775,19 +775,19 @@ function draw(){
     ctx.clearRect(0,0,W,H);ctx.imageSmoothingEnabled=false;
     const sg=ctx.createLinearGradient(0,0,0,tY);
     sg.addColorStop(0,'#260B00');sg.addColorStop(0.38,'#5A1E00');sg.addColorStop(0.80,'#B24808');sg.addColorStop(1,'#D06818');
-    ctx.fillStyle=sg;ctx.fillRect(0,0,W,tY+2);
+    ctx.fillStyle=sg;ctx.fillRect(0,0,W,H);
     ['FAR','MID','NEAR'].forEach(slot=>{
       const st=LS[slot];if(!st.visible||!st.img||!st.img.complete||!st.img.naturalWidth)return;
       const dH=tY*1.05,dW=dH*(st.img.naturalWidth/st.img.naturalHeight);
       const off=-(scrollX*st.speed)%dW;
       for(let x=off-dW;x<W+dW;x+=dW)ctx.drawImage(st.img,x,st.yOff,dW,dH);
     });
-    ctx.fillStyle='#000';ctx.fillRect(0,tY-2,W,H-(tY-2));
+    // no black underlay — sky gradient fills full canvas
     const s0=Math.max(0,Math.floor(camX/ts)-1),e0=Math.min(GRID_COLS-1,Math.ceil((camX+W)/ts)+1);
     for(let c=s0;c<=e0;c++){
       for(let r=0;r<GRID_ROWS;r++){
         const key=tilesMap[c+','+r];if(!key)continue;
-        const tx=c*ts-camX,ty=tY+r*ts-(r===0?2:0),img=tileImgs[key];
+        const tx=c*ts-camX,ty=tY+r*ts,img=tileImgs[key];
         if(img&&img.complete&&img.naturalWidth)ctx.drawImage(img,tx,ty,ts+0.5,ts+0.5);
         else{const t=r/Math.max(1,GRID_ROWS-1);ctx.fillStyle=`rgb(${(65-t*63)|0},${(35-t*34)|0},0)`;ctx.fillRect(tx,ty,ts+0.5,ts+0.5);}
       }
