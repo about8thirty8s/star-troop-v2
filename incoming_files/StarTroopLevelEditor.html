@@ -703,41 +703,42 @@ cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect();hover=cel
 cv.addEventListener('mouseup',()=>painting=false);
 cv.addEventListener('mouseleave',()=>{painting=false;hover=null;});
 
-// ── ZOOM VIA WHEEL — fixed: preventDefault FIRST, then detect mode ──────────
+// ── WHEEL = ZOOM (always), no modifier needed ────────────────────────────────
 cv.addEventListener('wheel',e=>{
-  e.preventDefault();  // MUST be first — stops browser page zoom & scroll
+  e.preventDefault();
   e.stopPropagation();
+  const r=cv.getBoundingClientRect();
+  const mx=e.clientX-r.left;
+  const raw=e.deltaMode===1?e.deltaY*30:e.deltaY;
+  const factor=Math.pow(0.9975,raw);
+  const newZoom=Math.max(0.15,Math.min(8,zoom*factor));
+  camX=Math.max(0,mx-(mx-camX)*(newZoom/zoom));
+  zoom=newZoom;
+  scrollX=camX;
+  updateZoomLabel();
+},{passive:false,capture:true});
 
-  const isZoom = e.ctrlKey || e.metaKey;
-
-  if(isZoom){
-    // ZOOM — pivot on mouse position
-    const r=cv.getBoundingClientRect();
-    const mx=e.clientX-r.left;
-    const raw = e.deltaMode===1 ? e.deltaY*30 : e.deltaY;
-    const factor = Math.pow(0.999, raw);   // smooth exponential
-    const newZoom = Math.max(0.15, Math.min(8, zoom*factor));
-    camX = Math.max(0, mx - (mx - camX) * (newZoom/zoom));
-    zoom = newZoom;
-    updateZoomLabel();
-  } else {
-    // PAN — horizontal
-    const raw = e.deltaMode===1 ? e.deltaY*48 : e.deltaY;
-    const pan = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : raw * 0.8;
-    camX = Math.max(0, camX + pan);
-    scrollX = camX;
-  }
-}, {passive:false, capture:true});
-
-// Keyboard shortcuts
+// ── KEYBOARD ─────────────────────────────────────────────────────────────────
+const keys={};
 window.addEventListener('keydown',e=>{
   if(e.target.tagName==='SELECT'||e.target.tagName==='INPUT') return;
-  if(e.key==='='||e.key==='+'){ e.preventDefault(); adjustZoom(0.25); }
-  if(e.key==='-'||e.key==='_'){ e.preventDefault(); adjustZoom(-0.25); }
-  if(e.key==='0'){ e.preventDefault(); resetZoom(); }
-  if(e.key==='ArrowLeft'){ camX=Math.max(0,camX-TILE_PX*zoom); scrollX=camX; }
-  if(e.key==='ArrowRight'){ camX+=TILE_PX*zoom; scrollX=camX; }
+  keys[e.key]=true;
+  if(e.key==='='||e.key==='+'){e.preventDefault();adjustZoom(0.25);}
+  if(e.key==='-'||e.key==='_'){e.preventDefault();adjustZoom(-0.25);}
+  if(e.key==='0'){e.preventDefault();resetZoom();}
 });
+window.addEventListener('keyup',e=>{delete keys[e.key];});
+
+// Smooth pan loop — runs every frame
+let lastPanTime=0;
+function panLoop(ts){
+  const dt=Math.min(ts-lastPanTime,50)/1000; lastPanTime=ts;
+  const speed=520*zoom;
+  if(keys['a']||keys['A']||keys['ArrowLeft']) {camX=Math.max(0,camX-speed*dt);scrollX=camX;}
+  if(keys['d']||keys['D']||keys['ArrowRight']){camX+=speed*dt;scrollX=camX;}
+  requestAnimationFrame(panLoop);
+}
+requestAnimationFrame(panLoop);
 
 function updateZoomLabel(){
   const pct=Math.round(zoom*100)+'%';
