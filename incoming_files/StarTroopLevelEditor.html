@@ -643,16 +643,40 @@ cv.addEventListener('mouseup',()=>{painting=false;});
 cv.addEventListener('mouseleave',()=>{painting=false;hover=null;});
 cv.addEventListener('wheel',e=>{
   e.preventDefault();
+  // Ctrl+scroll OR pinch gesture both set ctrlKey=true in browsers
   if(e.ctrlKey||e.metaKey){
-    const old=zoom; zoom=Math.max(0.25,Math.min(4,zoom*(1-e.deltaY*0.0015)));
+    // ZOOM — pivot around mouse position
+    const old=zoom;
+    const delta = e.deltaMode===1 ? e.deltaY*20 : e.deltaY; // handle line vs pixel
+    zoom=Math.max(0.20,Math.min(6,zoom*(1-delta*0.002)));
     const r=cv.getBoundingClientRect(); const mx=e.clientX-r.left;
     camX=Math.max(0,mx-(mx-camX)*(zoom/old));
-    document.getElementById('zoom-lbl').textContent=Math.round(zoom*100)+'%';
-  }else{
-    camX=Math.max(0,camX+((e.shiftKey?e.deltaY:e.deltaX)||e.deltaY*0.5)*1.8);
-    scrollX=camX;
+    updateZoomLabel();
+  } else if(e.shiftKey){
+    // Shift+scroll = horizontal pan (fast)
+    camX=Math.max(0,camX+e.deltaY*2.5); scrollX=camX;
+  } else {
+    // Plain scroll — pan horizontally (use deltaX if available, else deltaY)
+    const pan = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY*0.6;
+    camX=Math.max(0,camX+pan*2); scrollX=camX;
   }
 },{passive:false});
+
+// Also support keyboard zoom: +/- keys
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='SELECT'||e.target.tagName==='INPUT') return;
+  if(e.key==='='||e.key==='+'){e.preventDefault();adjustZoom(0.2);}
+  if(e.key==='-'||e.key==='_'){e.preventDefault();adjustZoom(-0.2);}
+  if(e.key==='0'){e.preventDefault();resetZoom();}
+  if(e.key==='ArrowLeft'){camX=Math.max(0,camX-48);scrollX=camX;}
+  if(e.key==='ArrowRight'){camX+=48;scrollX=camX;}
+});
+
+function updateZoomLabel(){
+  const pct=Math.round(zoom*100)+'%';
+  const a=document.getElementById('zoom-lbl'); if(a)a.textContent=pct;
+  const b=document.getElementById('zoom-lbl-top'); if(b)b.textContent=pct;
+}
 
 function setTool(t){
   tool=t;
@@ -660,8 +684,8 @@ function setTool(t){
   document.getElementById('hud-tool').textContent=t;
 }
 function toggleGrid(){ showGrid=!showGrid; document.getElementById('t-grid').classList.toggle('active',showGrid); }
-function adjustZoom(d){ zoom=Math.max(0.25,Math.min(4,zoom+d)); document.getElementById('zoom-lbl').textContent=Math.round(zoom*100)+'%'; }
-function resetZoom(){ zoom=1;camX=0;scrollX=0; document.getElementById('zoom-lbl').textContent='100%'; }
+function adjustZoom(d){ zoom=Math.max(0.20,Math.min(6,zoom+d)); updateZoomLabel(); }
+function resetZoom(){ zoom=1;camX=0;scrollX=0; updateZoomLabel(); }
 
 function autoFill(){
   tilesMap={};
