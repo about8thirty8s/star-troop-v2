@@ -1267,7 +1267,7 @@ function drawCelestials(ctx, W, tY, t, zoom) {
   const sunX  = W * sunT;
   const sunY  = tY * 0.85 - Math.sin(sunT * Math.PI) * tY * 0.78;
   const skyZoom = Math.max(0.3, Math.min(zoom, 3.0));
-  const sunR  = Math.max(W, tY) * 0.038 * sunScale * skyZoom;
+  const sunR  = Math.max(W, tY) * 0.038 * sunScale;  // fixed — sky element
 
   // Visibility: full during day, fade during dusk/dawn
   const sunAlpha = Math.max(0, 1 - DN.darkness * 1.2);
@@ -1375,7 +1375,7 @@ function drawMoon(ctx, W, tY, t, zoom) {
   const moonX = W * 0.05 + W * 0.90 * moonT;
   const moonY = tY * 0.85 - Math.sin(moonT * Math.PI) * tY * 0.70;
   const skyZoom = Math.max(0.3, Math.min(zoom, 3.0));
-  const mSize = Math.max(W, tY) * 0.110 * moonScale * skyZoom;  // big and cinematic
+  const mSize = Math.max(W, tY) * 0.110 * moonScale;  // fixed size — sky element
 
   if(!isFinite(moonX)||!isFinite(moonY)||!isFinite(mSize)||mSize<=0) return;
 
@@ -1622,7 +1622,7 @@ function drawPlanet(ctx, W, tY, camX, t, zoom) {
 
   // Size
   const skyZoom = Math.max(0.3, Math.min(zoom, 3.0));
-  const dh = tY * 0.36 * planetScale * skyZoom;
+  const dh = tY * 0.36 * planetScale;  // fixed size — sky element
   const dw = dh * (img.naturalWidth / img.naturalHeight);
   const R  = dh * 0.45;
 
@@ -2157,13 +2157,14 @@ function drawClouds(ctx, W, tY, camX, t, zoom) {
 
     // Height-driven: base height at zoom=1, width follows aspect (no stretching)
     const aspect = img.naturalWidth / img.naturalHeight; // ~6:1 wide sprites
-    // Reference height at zoom=1: cloud band is wFrac*W / aspect
+    // Clouds are sky-layer — size is FIXED regardless of zoom (no skyZoom multiply)
     const baseH = (W * cl.wFrac / aspect) * cloudScale;
-    const dh = baseH * skyZoom;           // scale height uniformly
+    const dh = baseH;                     // fixed size — sky elements don't zoom
     const dw = dh * aspect;               // width always = height * aspect → locked ratio
     // Centre-anchor: yFrac = middle of band, cloudYOff = per-layer nudge
     const dy = tY * cl.yFrac - dh * 0.5 + tY * (cloudYOff[li] || 0);
-    const scrollOffset = camX * cl.parallax + (t * cl.drift * cloudDrift / 1000);
+    // Scroll: clouds drift at their own parallax, independent of zoom
+    const scrollOffset = (camX / zoom) * cl.parallax + (t * cl.drift * cloudDrift / 1000);
     const tileOffset   = ((scrollOffset % dw) + dw) % dw;
 
     ctx.save();
@@ -3133,11 +3134,12 @@ function drawBattlecruisers(ctx, W, H, tY, camX, t, zoom, d){
   ctx.imageSmoothingEnabled = false;
 
   // ── Draw cruisers ────────────────────────────────────────────────────────
+  // Battlecruisers are SKY elements — fixed scale, slow parallax scroll independent of zoom
   for(const bc of BATTLECRUISERS){
-    // Convert world-x to screen-x using parallax (far layer)
-    const sx = bc.wx * zoom * BC_CFG.parallax - camX * BC_CFG.parallax;
+    const worldScrollX = camX / zoom; // convert screen camX to world offset
+    const sx = bc.wx * BC_CFG.parallax - worldScrollX * BC_CFG.parallax;
     const sy = skyH * bc.yFrac;
-    const scale = BC_CFG.scale * zoom * 0.45;
+    const scale = BC_CFG.scale * 0.45;  // fixed size — no zoom multiply
     if(sx < -300 * scale || sx > W + 300 * scale) continue;
     _drawBattlecruiser(ctx, sx, sy, scale, BC_CFG.alpha, bc.dir, bc.thrusterPhase, d);
   }
@@ -3145,10 +3147,11 @@ function drawBattlecruisers(ctx, W, H, tY, camX, t, zoom, d){
   // ── Draw dropship swarms ─────────────────────────────────────────────────
   for(const sw of DROPSHIP_SWARMS){
     if(sw.progress < 0) continue; // stagger delay
-    const sx = sw.wx * zoom * BC_CFG.parallax - camX * BC_CFG.parallax
-               + sw.progress * sw.dir * 380 * zoom * 0.3;
+    const worldScrollX2 = camX / zoom;
+    const sx = sw.wx * BC_CFG.parallax - worldScrollX2 * BC_CFG.parallax
+               + sw.progress * sw.dir * 380 * 0.3;
     const sy = skyH * sw.yFrac + sw.y;
-    const scale = BC_CFG.scale * sw.scale * zoom * 0.22;
+    const scale = BC_CFG.scale * sw.scale * 0.22;  // fixed size — no zoom multiply
     if(sx < -80 || sx > W + 80) continue;
     _drawDropshipMini(ctx, sx, sy, scale, sw.alpha, sw.dir);
   }
@@ -3235,10 +3238,12 @@ function draw(){
     // ── FAR parallax layer (gas giant sits behind MID mountains) ────────────────
     ['FAR'].forEach(slot=>{
       const st=LS[slot];if(!st.visible||!st.img||!st.img.complete||!st.img.naturalWidth)return;
-      const layZoom = Math.max(0.3, Math.min(zoom, 3.0));
-      const dH=tY*1.05*layZoom,dW=dH*(st.img.naturalWidth/st.img.naturalHeight);
+      // Parallax layers use FIXED height — no zoom scaling (they are background, not world)
+      // Scroll offset uses world-space camX (divide by zoom) for correct parallax at all zoom levels
+      const dH=tY*1.05,dW=dH*(st.img.naturalWidth/st.img.naturalHeight);
       const drawY = tY - dH + (st.yOff || 0);
-      const off=-(scrollX*st.speed)%dW;
+      const worldOff = camX / zoom;
+      const off=-(worldOff*st.speed)%dW;
       for(let x=off-dW;x<W+dW;x+=dW)ctx.drawImage(st.img,x,drawY,dW,dH);
     });
 
@@ -3250,10 +3255,11 @@ function draw(){
     // ── MID + NEAR parallax layers (in front of gas giant) ───────────────────
     ['MID','NEAR'].forEach(slot=>{
       const st=LS[slot];if(!st.visible||!st.img||!st.img.complete||!st.img.naturalWidth)return;
-      const layZoom = Math.max(0.3, Math.min(zoom, 3.0));
-      const dH=tY*1.05*layZoom,dW=dH*(st.img.naturalWidth/st.img.naturalHeight);
+      // Parallax layers use FIXED height — no zoom scaling
+      const dH=tY*1.05,dW=dH*(st.img.naturalWidth/st.img.naturalHeight);
       const drawY = tY - dH + (st.yOff || 0);
-      const off=-(scrollX*st.speed)%dW;
+      const worldOff = camX / zoom;
+      const off=-(worldOff*st.speed)%dW;
       for(let x=off-dW;x<W+dW;x+=dW)ctx.drawImage(st.img,x,drawY,dW,dH);
     });
 
