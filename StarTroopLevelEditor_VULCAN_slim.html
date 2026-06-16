@@ -2770,192 +2770,182 @@ function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip)
 
 // ── NPC TROOPER — canvas pixel art matching reference (dark armor, chunky pixel style) ──
 function _drawNPCTrooper(ctx, sx, sy, sw, sh, darkness, t, flip){
-  // Animation state — cycle through idle/shoot based on time
-  // Each unit gets a pseudo-random phase based on x position
-  const phase = (sx * 0.0137) % (Math.PI * 2);
+  // Pseudo-random phase per trooper (based on screen x)
+  const phase  = (sx * 0.0137) % (Math.PI * 2);
   const tCycle = (t * 0.001 + phase);
 
-  // Shoot cycle: fire every ~2.2 seconds, flash lasts 180ms
-  const shootInterval = 2200;
-  const flashDur = 180;
-  const shootPhaseMs = ((t + phase * 700) % shootInterval);
-  const isShooting = shootPhaseMs < flashDur;
-  const isWalking  = false; // editor units stand still; movement handled by NPC AI when added
+  // Shoot timing
+  const SHOOT_INTERVAL = 2200, FLASH_DUR = 180;
+  const shootPhaseMs = ((t + phase * 700) % SHOOT_INTERVAL);
+  const isShooting   = shootPhaseMs < FLASH_DUR;
+  const flashT       = isShooting ? shootPhaseMs / FLASH_DUR : 0;
+  const flashAlpha   = isShooting ? (flashT < 0.3 ? flashT/0.3 : 1-(flashT-0.3)/0.7) : 0;
 
-  // Idle bob — slight vertical oscillation
+  // Idle vertical bob
   const bobY = Math.sin(tCycle * 1.8) * sh * 0.02;
 
-  // Pixel grid: map 8x12 logical pixels → sw x sh screen pixels
+  // Logical pixel grid: 8 cols × 12 rows
   const PW = sw / 8;
   const PH = sh / 12;
 
-  function px(lx, ly, w, h, color){
-    ctx.fillStyle = color;
-    if(flip){
-      ctx.fillRect(sx + (8-lx-w)*PW, sy + ly*PH + bobY, w*PW + 0.5, h*PH + 0.5);
-    } else {
-      ctx.fillRect(sx + lx*PW, sy + ly*PH + bobY, w*PW + 0.5, h*PH + 0.5);
-    }
-  }
-
-  // ── Color palette (matching dark reference) ──────────────────────────────
-  const DARK    = '#1a1c22';   // near-black armor body
-  const ARMOR   = '#252830';   // armor plates
-  const ARMHL   = '#363a45';   // armor highlight edge
-  const VISOR   = '#00ccff';   // glowing visor slit
-  const SKIN    = '#c8956c';   // face/neck (barely visible behind helmet)
-  const BOOT    = '#1a1a1a';   // boots
-  const RIFLE   = '#2a2d35';   // rifle body
-  const RIFHL   = '#4a4f5a';   // rifle highlight
-  const STRP    = '#3a3d45';   // straps/gear
-  const NITE    = darkness > 0.4 ? `rgba(20,30,60,${Math.min(0.45, darkness*0.5)})` : null;
-
-  // ── BOOTS (bottom) ───────────────────────────────────────────────────────
-  px(1,10, 2,2, BOOT);   // left boot
-  px(5,10, 2,2, BOOT);   // right boot
-
-  // ── LEGS ────────────────────────────────────────────────────────────────
-  const legOff = isWalking ? Math.sin(tCycle * 6) * PH * 0.8 : 0;
-  px(1, 8, 2, 2, ARMOR);  // left leg
-  px(5, 8, 2, 2, ARMOR);  // right leg
-
-  // ── TORSO ───────────────────────────────────────────────────────────────
-  px(1, 5, 6, 3, ARMOR);   // main torso plate
-  px(1, 5, 6, 1, ARMHL);   // top edge highlight
-  px(2, 6, 1, 1, STRP);    // left chest strap detail
-  px(5, 6, 1, 1, STRP);    // right chest strap detail
-
-  // ── SHOULDER PADS (large — matching reference) ───────────────────────────
-  if(!flip){
-    px(0, 4, 2, 2, ARMHL);   // left shoulder pad
-    px(6, 4, 2, 2, ARMHL);   // right shoulder pad
-  } else {
-    px(0, 4, 2, 2, ARMHL);
-    px(6, 4, 2, 2, ARMHL);
-  }
-
-  // ── HELMET ──────────────────────────────────────────────────────────────
-  px(2, 1, 4, 4, ARMOR);   // helmet body
-  px(1, 2, 1, 2, ARMOR);   // helmet left bulge
-  px(6, 2, 1, 2, ARMOR);   // helmet right bulge
-  px(2, 1, 4, 1, ARMHL);   // helmet top highlight
-  // Visor slit — glows at night
-  const visorAlpha = darkness > 0.3 ? Math.min(1, 0.7 + darkness * 0.5) : 0.5;
-  ctx.fillStyle = VISOR;
-  ctx.globalAlpha *= visorAlpha;
-  if(flip){
-    ctx.fillRect(sx + 2*PW, sy + 2.5*PH + bobY, 3*PW, PH*0.6);
-  } else {
-    ctx.fillRect(sx + 3*PW, sy + 2.5*PH + bobY, 3*PW, PH*0.6);
-  }
-  ctx.globalAlpha = ctx.globalAlpha / visorAlpha; // restore (approximate)
-
-  // ── VISOR GLOW at night ───────────────────────────────────────────────────
-  if(darkness > 0.3){
+  // Helper — draws a rectangle in logical pixel coords, respects flip
+  function px(lx, ly, lw, lh, color, alpha){
     ctx.save();
-    ctx.globalAlpha *= Math.min(0.6, darkness * 0.7);
-    const vx = flip ? sx + 2*PW + PW*1.5 : sx + 3*PW + PW*1.5;
-    const vy = sy + 2.5*PH + bobY;
-    const vglow = ctx.createRadialGradient(vx, vy, 0, vx, vy, PW*3);
-    vglow.addColorStop(0, 'rgba(0,200,255,0.8)');
-    vglow.addColorStop(1, 'rgba(0,100,200,0)');
-    ctx.fillStyle = vglow;
-    ctx.fillRect(vx - PW*3, vy - PH, PW*6, PH*3);
+    if(alpha !== undefined) ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    const rx = flip ? sx + (8 - lx - lw) * PW : sx + lx * PW;
+    const ry = sy + ly * PH + bobY;
+    ctx.fillRect(rx, ry, lw * PW + 0.5, lh * PH + 0.5);
     ctx.restore();
   }
 
-  // ── RIFLE ────────────────────────────────────────────────────────────────
-  // In shoot pose: rifle extended horizontally from front of body
-  const rifleY = isShooting ? 5 : 5.5;
-  if(!flip){
-    // Facing right — rifle extends right from right shoulder
-    px(4, rifleY,   4, 1, RIFLE);    // barrel
-    px(7, rifleY,   1, 1, RIFHL);    // muzzle tip highlight
-    px(4, rifleY+1, 2, 1, RIFLE);    // stock body
-    px(4, rifleY-0.5, 1, 0.5, RIFHL); // top rail
-  } else {
-    // Facing left — rifle extends left
-    px(0, rifleY,   4, 1, RIFLE);
-    px(0, rifleY,   1, 1, RIFHL);
-    px(2, rifleY+1, 2, 1, RIFLE);
-    px(3, rifleY-0.5, 1, 0.5, RIFHL);
+  // ── Palette ──────────────────────────────────────────────────────────────
+  const DARK  = '#18191f';
+  const ARMOR = '#23262e';
+  const ARMHL = '#353a46';
+  const BOOT  = '#161618';
+  const RIFLE = '#28292f';
+  const RIFHL = '#484d58';
+  const STRAP = '#30333c';
+  const VISOR = '#00ddff';
+  const nightFade = Math.min(0.42, darkness * 0.5);
+
+  // ── BOOTS ────────────────────────────────────────────────────────────────
+  px(1, 10, 2, 2, BOOT);
+  px(5, 10, 2, 2, BOOT);
+
+  // ── LEGS ─────────────────────────────────────────────────────────────────
+  px(1, 8, 2, 2, ARMOR);
+  px(5, 8, 2, 2, ARMOR);
+  px(1, 8, 2, 1, ARMHL);   // leg top highlight
+  px(5, 8, 2, 1, ARMHL);
+
+  // ── TORSO ────────────────────────────────────────────────────────────────
+  px(1, 5, 6, 3, ARMOR);
+  px(1, 5, 6, 1, ARMHL);   // chest top edge
+  px(2, 6, 1, 1, STRAP);
+  px(5, 6, 1, 1, STRAP);
+
+  // ── SHOULDER PADS ────────────────────────────────────────────────────────
+  px(0, 4, 2, 2, ARMHL);
+  px(6, 4, 2, 2, ARMHL);
+
+  // ── HELMET ───────────────────────────────────────────────────────────────
+  px(2, 1, 4, 4, ARMOR);
+  px(1, 2, 1, 2, ARMOR);
+  px(6, 2, 1, 2, ARMOR);
+  px(2, 1, 4, 1, ARMHL);   // helmet top highlight
+
+  // ── VISOR SLIT ───────────────────────────────────────────────────────────
+  {
+    ctx.save();
+    const visorX = flip ? sx + 2 * PW : sx + 3 * PW;
+    const visorY = sy + 2.5 * PH + bobY;
+    ctx.fillStyle = VISOR;
+    ctx.globalAlpha = darkness > 0.3 ? Math.min(1.0, 0.7 + darkness * 0.5) : 0.55;
+    ctx.fillRect(visorX, visorY, 3 * PW, PH * 0.65);
+    ctx.restore();
+  }
+
+  // ── VISOR GLOW (night only) ───────────────────────────────────────────────
+  if(darkness > 0.3){
+    ctx.save();
+    ctx.globalAlpha = Math.min(0.55, darkness * 0.65);
+    const vx = (flip ? sx + 3.5 * PW : sx + 4.5 * PW);
+    const vy = sy + 2.8 * PH + bobY;
+    const vg = ctx.createRadialGradient(vx, vy, 0, vx, vy, PW * 2.8);
+    vg.addColorStop(0, 'rgba(0,210,255,0.9)');
+    vg.addColorStop(1, 'rgba(0,100,200,0)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(vx - PW*3, vy - PH, PW*6, PH*2.5);
+    ctx.restore();
   }
 
   // ── ARMS ─────────────────────────────────────────────────────────────────
   if(!flip){
-    px(3, 5, 1, 2, ARMOR);   // right arm (front, holding rifle)
-    px(6, 5, 1, 2, ARMOR);   // left arm (back)
+    px(3, 5, 1, 2, ARMOR);  // front arm
+    px(6, 5, 1, 2, ARMOR);  // back arm
   } else {
     px(4, 5, 1, 2, ARMOR);
     px(1, 5, 1, 2, ARMOR);
   }
 
+  // ── RIFLE ─────────────────────────────────────────────────────────────────
+  const rifleRow = isShooting ? 5.0 : 5.5;
+  if(!flip){
+    // facing right — rifle extends right
+    px(4, rifleRow,     4, 1,   RIFLE);
+    px(7, rifleRow,     1, 1,   RIFHL);   // muzzle highlight
+    px(4, rifleRow+1,   2, 0.8, RIFLE);   // stock
+    px(5, rifleRow-0.4, 2, 0.4, RIFHL);  // top rail
+  } else {
+    // facing left — rifle extends left
+    px(0, rifleRow,     4, 1,   RIFLE);
+    px(0, rifleRow,     1, 1,   RIFHL);
+    px(2, rifleRow+1,   2, 0.8, RIFLE);
+    px(1, rifleRow-0.4, 2, 0.4, RIFHL);
+  }
+
   // ── MUZZLE FLASH ─────────────────────────────────────────────────────────
-  if(isShooting){
-    const flashT = shootPhaseMs / flashDur;  // 0=start, 1=end
-    const flashAlpha = flashT < 0.3 ? flashT/0.3 : 1 - (flashT-0.3)/0.7;
+  if(isShooting && flashAlpha > 0.01){
     ctx.save();
-    ctx.globalAlpha *= Math.max(0, flashAlpha);
+    ctx.globalAlpha = flashAlpha;
 
-    // Flash origin at muzzle tip
-    const muzzleX = flip ? sx + 0.5*PW : sx + 7.5*PW;
-    const muzzleY = sy + rifleY * PH + bobY;
-    const flashDir = flip ? -1 : 1;
+    const muzzleX = flip ? sx + 0.2 * PW : sx + 7.8 * PW;
+    const muzzleY = sy + rifleRow * PH + bobY + PH * 0.5;
+    const fDir    = flip ? -1 : 1;
 
-    // ── BEAM TRACER — long thin line (the most iconic part of the reference) ──
-    const beamLen = sw * 3.5;
-    const beamGrad = ctx.createLinearGradient(
-      muzzleX, muzzleY,
-      muzzleX + flashDir * beamLen, muzzleY
-    );
-    beamGrad.addColorStop(0,   `rgba(255,255,200,${flashAlpha.toFixed(2)})`);
-    beamGrad.addColorStop(0.15, `rgba(255,220,50,${(flashAlpha*0.8).toFixed(2)})`);
-    beamGrad.addColorStop(0.5,  `rgba(255,160,10,${(flashAlpha*0.4).toFixed(2)})`);
-    beamGrad.addColorStop(1,   'rgba(255,80,0,0)');
-    ctx.fillStyle = beamGrad;
-    ctx.fillRect(
-      flashDir > 0 ? muzzleX : muzzleX - beamLen,
-      muzzleY - PH*0.4,
-      beamLen, PH*0.8
-    );
+    // Long beam tracer
+    const beamLen = sw * 3.8;
+    const beamX   = fDir > 0 ? muzzleX : muzzleX - beamLen;
+    const bg = ctx.createLinearGradient(beamX, muzzleY, beamX + beamLen, muzzleY);
+    bg.addColorStop(0,    'rgba(255,255,200,1.0)');
+    bg.addColorStop(0.12, 'rgba(255,220,60,0.9)');
+    bg.addColorStop(0.45, 'rgba(255,140,10,0.45)');
+    bg.addColorStop(1,    'rgba(255,60,0,0)');
+    ctx.fillStyle = bg;
+    ctx.fillRect(beamX, muzzleY - PH * 0.35, beamLen, PH * 0.7);
 
-    // ── BURST STAR — central flash at muzzle ──────────────────────────────
-    const burstR = PW * 2.8 * (1 + Math.sin(t * 0.08) * 0.2);
     // Outer glow
-    const burstGlow = ctx.createRadialGradient(muzzleX, muzzleY, 0, muzzleX, muzzleY, burstR*2.2);
-    burstGlow.addColorStop(0,   'rgba(255,255,180,0.9)');
-    burstGlow.addColorStop(0.2, 'rgba(255,200,50,0.7)');
-    burstGlow.addColorStop(0.5, 'rgba(255,120,10,0.3)');
-    burstGlow.addColorStop(1,   'rgba(255,60,0,0)');
-    ctx.fillStyle = burstGlow;
-    ctx.beginPath(); ctx.arc(muzzleX, muzzleY, burstR*2.2, 0, Math.PI*2); ctx.fill();
+    const outerR = PW * 2.6;
+    const og = ctx.createRadialGradient(muzzleX, muzzleY, 0, muzzleX, muzzleY, outerR * 2.0);
+    og.addColorStop(0,   'rgba(255,255,180,0.85)');
+    og.addColorStop(0.3, 'rgba(255,180,40,0.5)');
+    og.addColorStop(0.7, 'rgba(255,80,0,0.2)');
+    og.addColorStop(1,   'rgba(200,20,0,0)');
+    ctx.fillStyle = og;
+    ctx.beginPath(); ctx.arc(muzzleX, muzzleY, outerR*2.0, 0, Math.PI*2); ctx.fill();
 
-    // ── STAR SPIKES — 6 jagged spikes radiating outward ───────────────────
-    ctx.fillStyle = `rgba(255,240,150,${flashAlpha.toFixed(2)})`;
-    const spikeAngles = [0, Math.PI*0.25, Math.PI*0.5, Math.PI*0.75, Math.PI, Math.PI*1.5];
+    // Star spikes
+    ctx.fillStyle = 'rgba(255,240,130,0.95)';
+    const spikeAngles = [0, Math.PI*0.33, Math.PI*0.66, Math.PI, Math.PI*1.33, Math.PI*1.66];
     for(const ang of spikeAngles){
-      const spikeLen = burstR * (1.5 + Math.random() * 0.5);
-      const sw2 = PW * 0.5;
+      const sLen = outerR * (1.4 + (Math.sin(t * 0.05 + ang) * 0.3));
       ctx.save();
       ctx.translate(muzzleX, muzzleY);
       ctx.rotate(ang);
-      ctx.fillRect(-sw2/2, -spikeLen, sw2, spikeLen);
+      ctx.fillRect(-PW * 0.25, -sLen, PW * 0.5, sLen);
       ctx.restore();
     }
 
-    // ── HOT WHITE CORE ────────────────────────────────────────────────────
-    ctx.fillStyle = `rgba(255,255,255,${Math.min(1, flashAlpha * 1.2).toFixed(2)})`;
-    ctx.beginPath(); ctx.arc(muzzleX, muzzleY, PW*0.9, 0, Math.PI*2); ctx.fill();
+    // Hot white core
+    ctx.fillStyle = 'rgba(255,255,255,1.0)';
+    ctx.beginPath(); ctx.arc(muzzleX, muzzleY, PW * 0.85, 0, Math.PI * 2); ctx.fill();
 
     ctx.restore();
   }
 
-  // ── NIGHT DARKNESS OVERLAY ───────────────────────────────────────────────
-  if(NITE){
-    ctx.fillStyle = NITE;
+  // ── NIGHT TINT ────────────────────────────────────────────────────────────
+  if(darkness > 0.35){
+    ctx.save();
+    ctx.globalAlpha = nightFade;
+    ctx.fillStyle = 'rgba(10,15,40,1)';
+    // Tint only the body pixels, not the whole rect — approximate with full rect at low alpha
     ctx.fillRect(sx, sy + bobY, sw, sh);
+    ctx.restore();
   }
 }
+
 
 function selectUnitTool(key){
   unitTool = key;
