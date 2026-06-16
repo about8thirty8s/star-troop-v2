@@ -2642,6 +2642,78 @@ function removeUnitAt(screenX, screenY, tY){
   return false;
 }
 
+
+// ── NPC TROOPER AI ────────────────────────────────────────────────────────────
+// Each trooper has: state ('idle'|'patrol'|'alert'|'shoot'), dir, shootTimer, alertTimer
+const NPC_PATROL_SPEED = 28;   // px/sec world space
+const NPC_DETECT_RANGE = 380;  // world px — distance to detect a bug unit
+const NPC_SHOOT_RANGE  = 320;
+const NPC_SHOOT_COOLDOWN = 2200; // ms between shots
+
+function tickNPCTroopers(dt){
+  const dtS = dt / 1000;
+  const worldW = GRID_COLS * TILE_PX;
+
+  for(const u of UNITS){
+    if(u.key !== 'trooper') continue;
+
+    // Init state if missing
+    if(!u.state){
+      u.state      = 'patrol';
+      u.dir        = (Math.random() > 0.5) ? 1 : -1;
+      u.shootTimer = Math.random() * NPC_SHOOT_COOLDOWN;
+      u.alertTimer = 0;
+      u.flip       = u.dir < 0;
+    }
+
+    // ── Detect nearest bug ─────────────────────────────────────────────────
+    let nearestBug = null, nearestDist = Infinity;
+    for(const b of UNITS){
+      if(!b.key.includes('bug')) continue;
+      const dist = Math.abs(b.worldX - u.worldX);
+      if(dist < nearestDist){ nearestDist = dist; nearestBug = b; }
+    }
+
+    // ── State machine ──────────────────────────────────────────────────────
+    if(nearestBug && nearestDist < NPC_DETECT_RANGE){
+      // Face the bug
+      u.dir  = nearestBug.worldX > u.worldX ? 1 : -1;
+      u.flip = u.dir < 0;
+
+      if(nearestDist < NPC_SHOOT_RANGE){
+        u.state = 'shoot';
+        u.shootTimer += dt;
+        // shootTimer drives muzzle flash — already handled in _drawNPCTrooper via t
+      } else {
+        u.state = 'alert'; // walk toward bug
+        u.worldX += u.dir * NPC_PATROL_SPEED * 0.6 * dtS;
+      }
+      u.alertTimer = 1500; // stay alert 1.5s after losing sight
+    } else {
+      // No bug nearby
+      if(u.alertTimer > 0){
+        u.alertTimer -= dt;
+        u.state = 'alert';
+      } else {
+        u.state = 'patrol';
+        // Patrol: walk back and forth
+        u.worldX += u.dir * NPC_PATROL_SPEED * dtS;
+        u.flip    = u.dir < 0;
+        // Bounce at world edges or every ~8 seconds
+        if(u.worldX < 48 || u.worldX > worldW - 48){
+          u.dir *= -1;
+          u.flip = u.dir < 0;
+        }
+        // Random direction flip (idle variation)
+        if(Math.random() < 0.0005) { u.dir *= -1; u.flip = u.dir < 0; }
+      }
+    }
+
+    // Clamp to world
+    u.worldX = Math.max(16, Math.min(worldW - 16, u.worldX));
+  }
+}
+
 function drawUnits(ctx, W, tY, t, zoom, darkness){
   if(UNITS.length===0 && !unitTool) return;
 
@@ -2658,43 +2730,231 @@ function drawUnits(ctx, W, tY, t, zoom, darkness){
 }
 
 function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip){
-  const img = STRUCT_IMGS[def.assetKey];
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.imageSmoothingEnabled = false;
 
-  if(img && img.complete && img.naturalWidth){
-    // For sprite sheets — clip to single frame
-    const frameW = img.naturalWidth * def.frameW;
-    const frameH = img.naturalHeight;
-    const srcX   = def.frameIdx * frameW;
-
-    if(flip){
-      ctx.translate(sx+sw, sy);
-      ctx.scale(-1,1);
-      ctx.drawImage(img, srcX, 0, frameW, frameH, 0, 0, sw, sh);
-    } else {
-      ctx.drawImage(img, srcX, 0, frameW, frameH, sx, sy, sw, sh);
-    }
-
-    // Night tint
-    if(darkness > 0.3 && def.tint){
-      ctx.globalCompositeOperation='multiply';
-      ctx.globalAlpha=alpha*Math.min(0.5,darkness*0.6);
-      ctx.fillStyle=def.tint;
-      ctx.fillRect(sx,sy,sw,sh);
-      ctx.globalCompositeOperation='source-over';
-    }
+  if(key === 'trooper'){
+    _drawNPCTrooper(ctx, sx, sy, sw, sh, darkness, t, flip);
   } else {
-    // Fallback rect
-    ctx.fillStyle = key.includes('bug') ? '#2a4020' : '#2a3a50';
-    ctx.fillRect(sx, sy, sw, sh);
-    ctx.fillStyle='rgba(255,255,255,0.6)';
-    ctx.font=`${Math.max(10,sh*0.3)}px monospace`;
-    ctx.textAlign='center';
-    ctx.fillText(def.icon, sx+sw*0.5, sy+sh*0.6);
+    // Bugs + other units — try sprite image, fallback to shape
+    const img = STRUCT_IMGS[def.assetKey];
+    if(img && img.complete && img.naturalWidth){
+      const frameW = img.naturalWidth * def.frameW;
+      const frameH = img.naturalHeight;
+      const srcX   = def.frameIdx * frameW;
+      if(flip){
+        ctx.translate(sx+sw, sy); ctx.scale(-1,1);
+        ctx.drawImage(img, srcX, 0, frameW, frameH, 0, 0, sw, sh);
+      } else {
+        ctx.drawImage(img, srcX, 0, frameW, frameH, sx, sy, sw, sh);
+      }
+      if(darkness > 0.3 && def.tint){
+        ctx.globalCompositeOperation='multiply';
+        ctx.globalAlpha=alpha*Math.min(0.5,darkness*0.6);
+        ctx.fillStyle=def.tint;
+        ctx.fillRect(sx,sy,sw,sh);
+        ctx.globalCompositeOperation='source-over';
+      }
+    } else {
+      ctx.fillStyle = key.includes('bug') ? '#2a4020' : '#2a3a50';
+      ctx.fillRect(sx, sy, sw, sh);
+      ctx.fillStyle='rgba(255,255,255,0.6)';
+      ctx.font=`${Math.max(10,sh*0.3)}px monospace`;
+      ctx.textAlign='center';
+      ctx.fillText(def.icon, sx+sw*0.5, sy+sh*0.6);
+    }
   }
   ctx.restore();
+}
+
+// ── NPC TROOPER — canvas pixel art matching reference (dark armor, chunky pixel style) ──
+function _drawNPCTrooper(ctx, sx, sy, sw, sh, darkness, t, flip){
+  // Animation state — cycle through idle/shoot based on time
+  // Each unit gets a pseudo-random phase based on x position
+  const phase = (sx * 0.0137) % (Math.PI * 2);
+  const tCycle = (t * 0.001 + phase);
+
+  // Shoot cycle: fire every ~2.2 seconds, flash lasts 180ms
+  const shootInterval = 2200;
+  const flashDur = 180;
+  const shootPhaseMs = ((t + phase * 700) % shootInterval);
+  const isShooting = shootPhaseMs < flashDur;
+  const isWalking  = false; // editor units stand still; movement handled by NPC AI when added
+
+  // Idle bob — slight vertical oscillation
+  const bobY = Math.sin(tCycle * 1.8) * sh * 0.02;
+
+  // Pixel grid: map 8x12 logical pixels → sw x sh screen pixels
+  const PW = sw / 8;
+  const PH = sh / 12;
+
+  function px(lx, ly, w, h, color){
+    ctx.fillStyle = color;
+    if(flip){
+      ctx.fillRect(sx + (8-lx-w)*PW, sy + ly*PH + bobY, w*PW + 0.5, h*PH + 0.5);
+    } else {
+      ctx.fillRect(sx + lx*PW, sy + ly*PH + bobY, w*PW + 0.5, h*PH + 0.5);
+    }
+  }
+
+  // ── Color palette (matching dark reference) ──────────────────────────────
+  const DARK    = '#1a1c22';   // near-black armor body
+  const ARMOR   = '#252830';   // armor plates
+  const ARMHL   = '#363a45';   // armor highlight edge
+  const VISOR   = '#00ccff';   // glowing visor slit
+  const SKIN    = '#c8956c';   // face/neck (barely visible behind helmet)
+  const BOOT    = '#1a1a1a';   // boots
+  const RIFLE   = '#2a2d35';   // rifle body
+  const RIFHL   = '#4a4f5a';   // rifle highlight
+  const STRP    = '#3a3d45';   // straps/gear
+  const NITE    = darkness > 0.4 ? `rgba(20,30,60,${Math.min(0.45, darkness*0.5)})` : null;
+
+  // ── BOOTS (bottom) ───────────────────────────────────────────────────────
+  px(1,10, 2,2, BOOT);   // left boot
+  px(5,10, 2,2, BOOT);   // right boot
+
+  // ── LEGS ────────────────────────────────────────────────────────────────
+  const legOff = isWalking ? Math.sin(tCycle * 6) * PH * 0.8 : 0;
+  px(1, 8, 2, 2, ARMOR);  // left leg
+  px(5, 8, 2, 2, ARMOR);  // right leg
+
+  // ── TORSO ───────────────────────────────────────────────────────────────
+  px(1, 5, 6, 3, ARMOR);   // main torso plate
+  px(1, 5, 6, 1, ARMHL);   // top edge highlight
+  px(2, 6, 1, 1, STRP);    // left chest strap detail
+  px(5, 6, 1, 1, STRP);    // right chest strap detail
+
+  // ── SHOULDER PADS (large — matching reference) ───────────────────────────
+  if(!flip){
+    px(0, 4, 2, 2, ARMHL);   // left shoulder pad
+    px(6, 4, 2, 2, ARMHL);   // right shoulder pad
+  } else {
+    px(0, 4, 2, 2, ARMHL);
+    px(6, 4, 2, 2, ARMHL);
+  }
+
+  // ── HELMET ──────────────────────────────────────────────────────────────
+  px(2, 1, 4, 4, ARMOR);   // helmet body
+  px(1, 2, 1, 2, ARMOR);   // helmet left bulge
+  px(6, 2, 1, 2, ARMOR);   // helmet right bulge
+  px(2, 1, 4, 1, ARMHL);   // helmet top highlight
+  // Visor slit — glows at night
+  const visorAlpha = darkness > 0.3 ? Math.min(1, 0.7 + darkness * 0.5) : 0.5;
+  ctx.fillStyle = VISOR;
+  ctx.globalAlpha *= visorAlpha;
+  if(flip){
+    ctx.fillRect(sx + 2*PW, sy + 2.5*PH + bobY, 3*PW, PH*0.6);
+  } else {
+    ctx.fillRect(sx + 3*PW, sy + 2.5*PH + bobY, 3*PW, PH*0.6);
+  }
+  ctx.globalAlpha = ctx.globalAlpha / visorAlpha; // restore (approximate)
+
+  // ── VISOR GLOW at night ───────────────────────────────────────────────────
+  if(darkness > 0.3){
+    ctx.save();
+    ctx.globalAlpha *= Math.min(0.6, darkness * 0.7);
+    const vx = flip ? sx + 2*PW + PW*1.5 : sx + 3*PW + PW*1.5;
+    const vy = sy + 2.5*PH + bobY;
+    const vglow = ctx.createRadialGradient(vx, vy, 0, vx, vy, PW*3);
+    vglow.addColorStop(0, 'rgba(0,200,255,0.8)');
+    vglow.addColorStop(1, 'rgba(0,100,200,0)');
+    ctx.fillStyle = vglow;
+    ctx.fillRect(vx - PW*3, vy - PH, PW*6, PH*3);
+    ctx.restore();
+  }
+
+  // ── RIFLE ────────────────────────────────────────────────────────────────
+  // In shoot pose: rifle extended horizontally from front of body
+  const rifleY = isShooting ? 5 : 5.5;
+  if(!flip){
+    // Facing right — rifle extends right from right shoulder
+    px(4, rifleY,   4, 1, RIFLE);    // barrel
+    px(7, rifleY,   1, 1, RIFHL);    // muzzle tip highlight
+    px(4, rifleY+1, 2, 1, RIFLE);    // stock body
+    px(4, rifleY-0.5, 1, 0.5, RIFHL); // top rail
+  } else {
+    // Facing left — rifle extends left
+    px(0, rifleY,   4, 1, RIFLE);
+    px(0, rifleY,   1, 1, RIFHL);
+    px(2, rifleY+1, 2, 1, RIFLE);
+    px(3, rifleY-0.5, 1, 0.5, RIFHL);
+  }
+
+  // ── ARMS ─────────────────────────────────────────────────────────────────
+  if(!flip){
+    px(3, 5, 1, 2, ARMOR);   // right arm (front, holding rifle)
+    px(6, 5, 1, 2, ARMOR);   // left arm (back)
+  } else {
+    px(4, 5, 1, 2, ARMOR);
+    px(1, 5, 1, 2, ARMOR);
+  }
+
+  // ── MUZZLE FLASH ─────────────────────────────────────────────────────────
+  if(isShooting){
+    const flashT = shootPhaseMs / flashDur;  // 0=start, 1=end
+    const flashAlpha = flashT < 0.3 ? flashT/0.3 : 1 - (flashT-0.3)/0.7;
+    ctx.save();
+    ctx.globalAlpha *= Math.max(0, flashAlpha);
+
+    // Flash origin at muzzle tip
+    const muzzleX = flip ? sx + 0.5*PW : sx + 7.5*PW;
+    const muzzleY = sy + rifleY * PH + bobY;
+    const flashDir = flip ? -1 : 1;
+
+    // ── BEAM TRACER — long thin line (the most iconic part of the reference) ──
+    const beamLen = sw * 3.5;
+    const beamGrad = ctx.createLinearGradient(
+      muzzleX, muzzleY,
+      muzzleX + flashDir * beamLen, muzzleY
+    );
+    beamGrad.addColorStop(0,   `rgba(255,255,200,${flashAlpha.toFixed(2)})`);
+    beamGrad.addColorStop(0.15, `rgba(255,220,50,${(flashAlpha*0.8).toFixed(2)})`);
+    beamGrad.addColorStop(0.5,  `rgba(255,160,10,${(flashAlpha*0.4).toFixed(2)})`);
+    beamGrad.addColorStop(1,   'rgba(255,80,0,0)');
+    ctx.fillStyle = beamGrad;
+    ctx.fillRect(
+      flashDir > 0 ? muzzleX : muzzleX - beamLen,
+      muzzleY - PH*0.4,
+      beamLen, PH*0.8
+    );
+
+    // ── BURST STAR — central flash at muzzle ──────────────────────────────
+    const burstR = PW * 2.8 * (1 + Math.sin(t * 0.08) * 0.2);
+    // Outer glow
+    const burstGlow = ctx.createRadialGradient(muzzleX, muzzleY, 0, muzzleX, muzzleY, burstR*2.2);
+    burstGlow.addColorStop(0,   'rgba(255,255,180,0.9)');
+    burstGlow.addColorStop(0.2, 'rgba(255,200,50,0.7)');
+    burstGlow.addColorStop(0.5, 'rgba(255,120,10,0.3)');
+    burstGlow.addColorStop(1,   'rgba(255,60,0,0)');
+    ctx.fillStyle = burstGlow;
+    ctx.beginPath(); ctx.arc(muzzleX, muzzleY, burstR*2.2, 0, Math.PI*2); ctx.fill();
+
+    // ── STAR SPIKES — 6 jagged spikes radiating outward ───────────────────
+    ctx.fillStyle = `rgba(255,240,150,${flashAlpha.toFixed(2)})`;
+    const spikeAngles = [0, Math.PI*0.25, Math.PI*0.5, Math.PI*0.75, Math.PI, Math.PI*1.5];
+    for(const ang of spikeAngles){
+      const spikeLen = burstR * (1.5 + Math.random() * 0.5);
+      const sw2 = PW * 0.5;
+      ctx.save();
+      ctx.translate(muzzleX, muzzleY);
+      ctx.rotate(ang);
+      ctx.fillRect(-sw2/2, -spikeLen, sw2, spikeLen);
+      ctx.restore();
+    }
+
+    // ── HOT WHITE CORE ────────────────────────────────────────────────────
+    ctx.fillStyle = `rgba(255,255,255,${Math.min(1, flashAlpha * 1.2).toFixed(2)})`;
+    ctx.beginPath(); ctx.arc(muzzleX, muzzleY, PW*0.9, 0, Math.PI*2); ctx.fill();
+
+    ctx.restore();
+  }
+
+  // ── NIGHT DARKNESS OVERLAY ───────────────────────────────────────────────
+  if(NITE){
+    ctx.fillStyle = NITE;
+    ctx.fillRect(sx, sy + bobY, sw, sh);
+  }
 }
 
 function selectUnitTool(key){
@@ -3194,6 +3454,7 @@ function draw(){
     // ── Update systems ───────────────────────────────────────────────────────
     updateDayNight(dt);
     tickPlanet(dt);
+    tickNPCTroopers(dt);
     updateWeather(dt, W, H, tY);
     tickGrass();  // regen grass if tiles changed
     tickRocks();  // regen rocks if tiles changed
