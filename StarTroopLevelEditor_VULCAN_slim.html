@@ -1,0 +1,3851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Star Troop — Level Editor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;}
+body{background:#1a0800;color:#fff;font-family:monospace;display:flex;flex-direction:column;user-select:none;}
+#topbar{display:flex;align-items:center;gap:5px;padding:4px 10px;background:#0d0600;border-bottom:1px solid #3a1800;flex-shrink:0;flex-wrap:wrap;}
+.title{color:#f97316;font-weight:bold;font-size:11px;letter-spacing:.15em;margin-right:4px;}
+.btn{padding:3px 9px;border-radius:3px;font-size:11px;font-weight:bold;cursor:pointer;border:1px solid #333;background:#1a1a1a;color:#888;font-family:monospace;transition:all .1s;}
+.btn:hover{border-color:#c2560a;color:#ddd;}.btn.active{background:#f97316;border-color:#fb923c;color:#000;}
+.btn.green{background:#052e1c;border-color:#065f46;color:#6ee7b7;}
+.btn.red{background:#2d0808;border-color:#7f1d1d;color:#fca5a5;}
+.btn.blue{background:#080e22;border-color:#1e3a8a;color:#93c5fd;}
+.sep{width:1px;height:18px;background:#2a2a2a;margin:0 1px;flex-shrink:0;}.spacer{flex:1;}
+#preset-wrap{display:flex;align-items:center;gap:5px;}
+#preset-wrap label{color:#a05020;font-size:10px;font-weight:bold;white-space:nowrap;}
+#preset-sel{background:#1a0800;color:#f97316;border:1px solid #5a2800;border-radius:3px;font-size:11px;font-family:monospace;font-weight:bold;padding:3px 8px;cursor:pointer;}
+#preset-sel:focus{outline:none;border-color:#f97316;}
+#fade-wrap{display:flex;align-items:center;gap:4px;}
+#fade-wrap label{color:#666;font-size:10px;white-space:nowrap;}
+#fade-slider{width:72px;accent-color:#f97316;cursor:pointer;}
+#main{display:flex;flex:1;overflow:hidden;min-height:0;}
+#layers-panel{width:188px;background:#0d0600;border-right:1px solid #3a1800;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+.lp-title{color:#f97316;font-size:10px;font-weight:bold;letter-spacing:.12em;padding:7px 8px 4px;border-bottom:1px solid #1a0800;}
+.layer-slot{padding:5px 7px;border-bottom:1px solid #1a0800;}
+.slot-label{color:#a05020;font-size:10px;font-weight:bold;margin-bottom:3px;display:flex;align-items:center;gap:4px;}
+.slot-spd{color:#444;font-size:9px;font-weight:normal;}
+.layer-preview{width:100%;height:38px;object-fit:cover;image-rendering:pixelated;border-radius:3px;border:1px solid #2a1000;margin-bottom:3px;background:#111;}
+.layer-select{width:100%;background:#111;color:#ccc;border:1px solid #2a2a2a;border-radius:3px;font-size:10px;font-family:monospace;padding:2px 4px;cursor:pointer;}
+.layer-controls{display:flex;gap:3px;margin-top:3px;}
+.layer-op{flex:1;padding:2px 0;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:2px;color:#555;font-size:9px;font-weight:bold;cursor:pointer;font-family:monospace;text-align:center;}
+.layer-op:hover{border-color:#f97316;color:#f97316;}
+.vis-check{width:13px;height:13px;border-radius:2px;border:1px solid #555;display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0;cursor:pointer;}
+.vis-check.on{background:#f97316;border-color:#fb923c;color:#000;}
+#tile-panel{width:176px;background:#0d0600;border-left:1px solid #3a1800;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+.sec{color:#f97316;font-size:10px;font-weight:bold;letter-spacing:.1em;padding:5px 7px 2px;display:flex;align-items:center;gap:5px;}
+.zdot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.tgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;padding:0 5px 5px;}
+.tbtn{height:32px;border-radius:3px;border:1px solid #2a2a2a;overflow:hidden;cursor:pointer;background:#111;}
+.tbtn:hover{border-color:#c2560a88;}.tbtn.sel{border-color:#f97316;box-shadow:0 0 0 1px #f97316;}
+.tbtn img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated;display:block;}
+.divider{border:none;border-top:1px solid #1a0800;margin:1px 0;}
+.hints{padding:5px 7px;color:#2a2a2a;font-size:9px;line-height:1.9;border-top:1px solid #1a0800;margin-top:auto;flex-shrink:0;}
+
+  .struct-btn,.unit-btn { transition: all .1s; }
+  .struct-btn.sel { background:#1a3a20 !important; border-color:#4a8a50 !important; color:#80ffa0 !important; }
+  .struct-btn:hover { border-color:#6a6a8a !important; color:#ffffff !important; }
+
+#cv-wrap{flex:1;position:relative;overflow:hidden;background:#000;}
+/* CRITICAL: touch-action none prevents browser intercepting scroll for zoom */
+#cv{display:block;width:100%;height:100%;cursor:crosshair;touch-action:none;}
+#loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(0,0,0,.96);color:#f97316;font-size:12px;letter-spacing:.2em;z-index:20;}
+#load-bar-wrap{width:220px;height:3px;background:#1a0800;border-radius:2px;overflow:hidden;}
+#load-bar{height:100%;width:0%;background:#f97316;}
+#hud{position:absolute;bottom:10px;left:10px;display:flex;align-items:center;gap:7px;background:rgba(0,0,0,.75);border:1px solid #3a1800;border-radius:4px;padding:4px 8px;}
+#hud img{width:24px;height:24px;image-rendering:pixelated;border-radius:2px;}
+.hn{color:#f97316;font-size:10px;font-weight:bold;}.ht{color:#555;font-size:9px;}
+/* ZOOM BUTTONS — bigger, more obvious */
+#zc{position:absolute;top:10px;right:10px;display:flex;gap:3px;background:rgba(0,0,0,.7);border:1px solid #3a1800;border-radius:4px;padding:3px;}
+.zb{width:30px;height:24px;background:#1a0800;border:1px solid #3a1800;border-radius:3px;color:#f97316;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:bold;font-family:monospace;}
+.zb:hover{border-color:#f97316;background:#2a1000;}
+#zoom-lbl{min-width:36px;color:#a05020;font-size:10px;display:flex;align-items:center;justify-content:center;font-family:monospace;}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <span class="title">⚔ STAR TROOP — <span style="color:#ff4444;font-size:10px">VULCAN VERSION</span></span>
+  <button class="btn active" id="t-paint" onclick="setTool('paint')">✏ PAINT</button>
+  <button class="btn"        id="t-erase" onclick="setTool('erase')">✕ ERASE</button>
+  <button class="btn"        id="t-fill"  onclick="setTool('fill')">▦ FILL</button>
+  <div class="sep"></div>
+  <button class="btn active" id="t-grid" onclick="toggleGrid()">GRID</button>
+        <button onclick="skipPhase()" style="background:#1a0a0f;border:1px solid #6b2020;color:#ffb07a;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px">⏩ PHASE</button>
+        <div style="display:flex;align-items:center;gap:5px;margin-left:4px;">
+          <span style="color:#a05020;font-size:10px;font-weight:bold;white-space:nowrap;">☀ CYCLE</span>
+          <input type="range" id="cycle-speed" min="0.05" max="3" step="0.05" value="1"
+            style="width:72px;accent-color:#f97316;cursor:pointer;"
+            oninput="DN.speed=parseFloat(this.value);document.getElementById('cycle-spd-lbl').textContent=parseFloat(this.value).toFixed(2)+'x'">
+          <span id="cycle-spd-lbl" style="color:#f97316;font-size:10px;font-weight:bold;min-width:32px;">1.00x</span>
+        </div>
+        <button id="btn-weather" onclick="cycleWeather()" style="background:#1a0a0f;border:1px solid #6b2020;color:#ffb07a;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px">🌤 CALM</button>
+  <div class="sep"></div>
+  <div id="preset-wrap">
+    <label>TERRAIN:</label>
+    <select id="preset-sel" onchange="applyPreset(this.value)">
+      <option value="soil">🔥 ALIEN SOIL</option>
+      <option value="grit">🪨 GRIT</option>
+      <option value="darkgrit">🖤 DARK GRIT</option>
+      <option value="natural">🌿 NATURAL</option>
+      <option value="brick">🧱 BRICK</option>
+      <option value="boulder">🪨 BOULDER</option>
+      <option value="dark">🌑 DARK</option>
+      <option value="flat">🟧 FLAT</option>
+    </select>
+  </div>
+  <div class="sep"></div>
+  <div id="fade-wrap">
+    <label>FADE▼:</label>
+    <input type="range" id="fade-slider" min="0" max="130" value="82"
+           oninput="fadeDepth=Math.min(1.3,this.value/100)"/>
+  </div>
+  <div class="sep"></div>
+  <button id="env-panel-btn" onclick="toggleEnvPanel()" style="background:#0a1a2a;border:1px solid #2a6b8b;color:#7ad4ff;padding:4px 9px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">🌍 ENV</button>
+  <div class="sep"></div>
+  <button class="btn green" onclick="autoFill()">AUTO-FILL</button>
+  <button class="btn red"   onclick="clearAll()">CLEAR</button>
+  <button class="btn blue"  onclick="exportJSON()">EXPORT</button>
+  <div class="spacer"></div>
+  <span id="zoom-lbl-top" style="color:#555;font-size:10px;">100%</span>
+</div>
+<div id="main">
+  <div id="layers-panel">
+    <div class="lp-title">⬡ BG LAYERS</div>
+
+    <div class="layer-slot">
+      <div class="slot-label"><div class="vis-check on" id="vis-FAR" onclick="toggleVis('FAR')">✓</div>FAR&nbsp;<span class="slot-spd" id="spd-FAR">0.04×</span></div>
+      <img class="layer-preview" id="prev-FAR" src="" alt=""/>
+      <select class="layer-select" id="sel-FAR" onchange="switchLayer('FAR',this.value)"></select>
+      <div class="layer-controls">
+        <button class="layer-op" onclick="nudgeSpeed('FAR',-0.01)">spd−</button>
+        <button class="layer-op" onclick="nudgeSpeed('FAR',+0.01)">spd+</button>
+        <button class="layer-op" onclick="nudgeY('FAR',-4)">y−</button>
+        <button class="layer-op" onclick="nudgeY('FAR',+4)">y+</button>
+      </div>
+    </div>
+    <div class="layer-slot">
+      <div class="slot-label"><div class="vis-check on" id="vis-MID" onclick="toggleVis('MID')">✓</div>MID&nbsp;<span class="slot-spd" id="spd-MID">0.12×</span></div>
+      <img class="layer-preview" id="prev-MID" src="" alt=""/>
+      <select class="layer-select" id="sel-MID" onchange="switchLayer('MID',this.value)"></select>
+      <div class="layer-controls">
+        <button class="layer-op" onclick="nudgeSpeed('MID',-0.01)">spd−</button>
+        <button class="layer-op" onclick="nudgeSpeed('MID',+0.01)">spd+</button>
+        <button class="layer-op" onclick="nudgeY('MID',-4)">y−</button>
+        <button class="layer-op" onclick="nudgeY('MID',+4)">y+</button>
+      </div>
+    </div>
+    <div class="layer-slot">
+      <div class="slot-label"><div class="vis-check on" id="vis-NEAR" onclick="toggleVis('NEAR')">✓</div>NEAR&nbsp;<span class="slot-spd" id="spd-NEAR">0.22×</span></div>
+      <img class="layer-preview" id="prev-NEAR" src="" alt=""/>
+      <select class="layer-select" id="sel-NEAR" onchange="switchLayer('NEAR',this.value)"></select>
+      <div class="layer-controls">
+        <button class="layer-op" onclick="nudgeSpeed('NEAR',-0.01)">spd−</button>
+        <button class="layer-op" onclick="nudgeSpeed('NEAR',+0.01)">spd+</button>
+        <button class="layer-op" onclick="nudgeY('NEAR',-4)">y−</button>
+        <button class="layer-op" onclick="nudgeY('NEAR',+4)">y+</button>
+      </div>
+    </div>
+    <div style="padding:5px 7px;color:#2a2a2a;font-size:9px;line-height:1.8;">y± adjusts vertical.<br>Switch layers live.</div>
+  </div>
+
+  <div id="cv-wrap">
+    <canvas id="cv"></canvas>
+    <div id="loading">
+      <span>LOADING ASSETS…</span>
+      <div id="load-bar-wrap"><div id="load-bar"></div></div>
+      <span id="load-pct" style="font-size:10px;color:#555;">0%</span>
+    </div>
+    <div id="hud">
+      <img id="hud-img" src="" alt=""/>
+      <div><div class="hn" id="hud-name">Alien Soil Crust</div><div class="ht" id="hud-tool">paint</div></div>
+    </div>
+    <!-- ZOOM CONTROLS — always visible top-right -->
+    <div id="zc">
+      <button class="zb" onclick="adjustZoom(0.25)" title="Zoom In">+</button>
+      <div id="zoom-lbl">100%</div>
+      <button class="zb" onclick="adjustZoom(-0.25)" title="Zoom Out">−</button>
+      <button class="zb" onclick="resetZoom()" title="Reset Zoom" style="font-size:9px">1:1</button>
+    </div>
+  </div>
+
+  
+  <!-- VULCAN STRUCTURES PANEL -->
+  <div id="struct-panel" style="width:176px;background:#0d0600;border-left:1px solid #3a1800;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;">
+    <div style="color:#f97316;font-size:10px;font-weight:bold;letter-spacing:.12em;padding:7px 8px 4px;border-bottom:1px solid #1a0800;">🏗 BUILD</div>
+    <div style="padding:5px 6px;display:flex;flex-direction:column;gap:4px;">
+      <div style="color:#888;font-size:9px;padding:2px 0;">Click to select · Place on terrain</div>
+      <div style="color:#888;font-size:9px;padding:0 0 3px;">Right-click to remove</div>
+      <button id="sb-null" class="struct-btn sel" onclick="selectStructureTool(null)"
+        style="padding:4px 6px;background:#1a3a10;border:1px solid #2a6a20;color:#80ff60;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
+        ✏ TERRAIN MODE
+      </button>
+      <div style="color:#f97316;font-size:9px;font-weight:bold;padding:4px 0 2px;letter-spacing:.08em;">DEFENSE</div>
+      <button id="sb-wall" class="struct-btn" onclick="selectStructureTool('wall')"
+        style="padding:5px 6px;background:#1a1a2a;border:1px solid #3a3a5a;color:#c0c0e0;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
+        🧱 WALL <span style="color:#666;font-size:9px;float:right;">💧15</span>
+      </button>
+      <button id="sb-tower" class="struct-btn" onclick="selectStructureTool('tower')"
+        style="padding:5px 6px;background:#1a1a2a;border:1px solid #3a3a5a;color:#c0c0e0;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
+        🗼 TOWER <span style="color:#666;font-size:9px;float:right;">💧40</span>
+      </button>
+      <div style="color:#f97316;font-size:9px;font-weight:bold;padding:4px 0 2px;letter-spacing:.08em;">BUILDINGS</div>
+      <button id="sb-hq" class="struct-btn" onclick="selectStructureTool('hq')"
+        style="padding:5px 6px;background:#1a1a2a;border:1px solid #3a3a5a;color:#c0c0e0;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
+        🏛 HQ <span style="color:#666;font-size:9px;float:right;">💧120</span>
+      </button>
+      <button id="sb-barracks" class="struct-btn" onclick="selectStructureTool('barracks')"
+        style="padding:5px 6px;background:#1a1a2a;border:1px solid #3a3a5a;color:#c0c0e0;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
+        🏠 BARRACKS <span style="color:#666;font-size:9px;float:right;">💧60</span>
+      </button>
+      <button id="sb-armory" class="struct-btn" onclick="selectStructureTool('armory')"
+        style="padding:5px 6px;background:#1a1a2a;border:1px solid #3a3a5a;color:#c0c0e0;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
+        🔧 ARMORY <span style="color:#666;font-size:9px;float:right;">💧80</span>
+      </button>
+      <button id="sb-workshop" class="struct-btn" onclick="selectStructureTool('workshop')"
+        style="padding:5px 6px;background:#1a1a1a;border:1px solid #3a3a5a;color:#c8c8e8;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
+        🔩 WORKSHOP
+      </button>
+      <button id="sb-turret" class="struct-btn" onclick="selectStructureTool('turret')"
+        style="padding:5px 6px;background:#1a1a1a;border:1px solid #3a3a5a;color:#c8c8e8;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
+        🔫 TURRET
+      </button>
+      <hr style="border:none;border-top:1px solid #1a0800;margin:4px 0;">
+      <div style="color:#f97316;font-size:9px;font-weight:bold;padding:4px 0 2px;letter-spacing:.08em;">UNITS</div>
+      <button id="ub-trooper" class="unit-btn" onclick="selectUnitTool('trooper')"
+        style="padding:5px 6px;background:#1a2a1a;border:1px solid #2a5a2a;color:#a0e090;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
+        🪖 TROOPER
+      </button>
+      <button id="ub-warrior_bug" class="unit-btn" onclick="selectUnitTool('warrior_bug')"
+        style="padding:5px 6px;background:#1a2a1a;border:1px solid #2a5a2a;color:#a0e090;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
+        🐛 WARRIOR BUG
+      </button>
+      <button id="ub-hopper_bug" class="unit-btn" onclick="selectUnitTool('hopper_bug')"
+        style="padding:5px 6px;background:#1a2a1a;border:1px solid #2a5a2a;color:#a0e090;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
+        🦟 HOPPER BUG
+      </button>
+      <hr style="border:none;border-top:1px solid #1a0800;margin:4px 0;">
+      <button onclick="STRUCTURES.length=0;UNITS.length=0;" style="padding:4px 6px;background:#2d0808;border:1px solid #7f1d1d;color:#fca5a5;font-size:9px;cursor:pointer;font-family:monospace;border-radius:3px;">
+        🗑 CLEAR ALL
+      </button>
+    </div>
+  </div>
+
+  <div id="tile-panel">
+    <div class="sec"><span class="zdot" style="background:#D4820C"></span>CRUST</div>
+    <div class="tgrid" id="pg-surf"></div>
+    <div class="divider"></div>
+    <div class="sec"><span class="zdot" style="background:#7A3A08"></span>UPPER</div>
+    <div class="tgrid" id="pg-upper"></div>
+    <div class="divider"></div>
+    <div class="sec"><span class="zdot" style="background:#3A1604"></span>MID / TRANS</div>
+    <div class="tgrid" id="pg-mid"></div>
+    <div class="divider"></div>
+    <div class="sec"><span class="zdot" style="background:#180800"></span>DEEP</div>
+    <div class="tgrid" id="pg-deep"></div>
+    <div class="divider"></div>
+    <div class="sec"><span class="zdot" style="background:#040100"></span>BEDROCK</div>
+    <div class="tgrid" id="pg-bed"></div>
+    <div class="hints">+/− keys → zoom<br>Ctrl+scroll → zoom<br>LMB drag → paint<br>RMB drag → erase<br>Scroll → pan</div>
+  </div>
+</div>
+
+<script>
+const LAYER_LIBRARY = {
+  'FAR': [
+    {label:'Far Mountains', src:'assets/asset_0000.png'},
+    {label:'AI Far', src:'assets/asset_0001.png'},
+  ],
+  'MID': [
+    {label:'Midground', src:'assets/asset_0002.png'},
+    {label:'AI Mid', src:'assets/asset_0001.png'},
+  ],
+  'NEAR': [
+    {label:'Ground Fog', src:'assets/asset_0003.png'},
+    {label:'AI Near', src:'assets/asset_0001.png'},
+  ],
+};
+
+const TILE_ASSETS = {
+  'dead_tree_0': 'assets/asset_0004.png',
+  'dead_tree_1': 'assets/asset_0005.png',
+  'dead_tree_2': 'assets/asset_0006.png',
+  'dead_tree_3': 'assets/asset_0007.png',
+  'dead_tree_4': 'assets/asset_0008.png',
+  'dead_tree_5': 'assets/asset_0009.png',
+  'dead_tree_6': 'assets/asset_0010.png',
+  'dead_tree_7': 'assets/asset_0011.png',
+  'dead_tree_8': 'assets/asset_0012.png',
+  'dead_tree_9': 'assets/asset_0013.png',
+  'st_audit_backgrounds': 'assets/asset_0014.png',
+  'st_audit_buildings': 'assets/asset_0015.png',
+  'st_audit_chars': 'assets/asset_0016.png',
+  'st_audit_concept': 'assets/asset_0017.png',
+  'st_audit_effects': 'assets/asset_0018.png',
+  'st_audit_enemies': 'assets/asset_0016.png',
+  'st_audit_props': 'assets/asset_0016.png',
+  'st_audit_terrain': 'assets/asset_0019.png',
+  'st_audit_ui': 'assets/asset_0019.png',
+  'st_audit_weapons': 'assets/asset_0020.png',
+  'st_bed_v2_0': 'assets/asset_0021.png',
+  'st_bed_v2_1': 'assets/asset_0022.png',
+  'st_bed_v2_2': 'assets/asset_0023.png',
+  'st_bed_v2_3': 'assets/asset_0024.png',
+  'st_bg_dust_haze': 'assets/asset_0025.png',
+  'st_bg_midground': 'assets/asset_0002.png',
+  'st_bg_mountains': 'assets/asset_0026.png',
+  'st_boulder_bed_0': 'assets/asset_0027.png',
+  'st_boulder_bed_1': 'assets/asset_0028.png',
+  'st_boulder_bed_2': 'assets/asset_0029.png',
+  'st_boulder_bed_3': 'assets/asset_0030.png',
+  'st_boulder_deep_0': 'assets/asset_0031.png',
+  'st_boulder_deep_1': 'assets/asset_0032.png',
+  'st_boulder_deep_2': 'assets/asset_0033.png',
+  'st_boulder_deep_3': 'assets/asset_0034.png',
+  'st_boulder_mid_0': 'assets/asset_0035.png',
+  'st_boulder_mid_1': 'assets/asset_0036.png',
+  'st_boulder_mid_2': 'assets/asset_0037.png',
+  'st_boulder_mid_3': 'assets/asset_0038.png',
+  'st_boulder_surf_0': 'assets/asset_0039.png',
+  'st_boulder_surf_1': 'assets/asset_0040.png',
+  'st_boulder_surf_2': 'assets/asset_0041.png',
+  'st_boulder_surf_3': 'assets/asset_0042.png',
+  'st_boulder_surf_4': 'assets/asset_0043.png',
+  'st_boulder_surf_5': 'assets/asset_0044.png',
+  'st_boulder_trans_0': 'assets/asset_0045.png',
+  'st_boulder_trans_1': 'assets/asset_0046.png',
+  'st_boulder_trans_2': 'assets/asset_0047.png',
+  'st_boulder_trans_3': 'assets/asset_0048.png',
+  'st_boulder_upper_0': 'assets/asset_0049.png',
+  'st_boulder_upper_1': 'assets/asset_0050.png',
+  'st_boulder_upper_2': 'assets/asset_0051.png',
+  'st_boulder_upper_3': 'assets/asset_0052.png',
+  'st_brick_bed_0': 'assets/asset_0053.png',
+  'st_brick_bed_1': 'assets/asset_0054.png',
+  'st_brick_bed_2': 'assets/asset_0055.png',
+  'st_brick_bed_3': 'assets/asset_0056.png',
+  'st_brick_deep_0': 'assets/asset_0057.png',
+  'st_brick_deep_1': 'assets/asset_0058.png',
+  'st_brick_deep_2': 'assets/asset_0059.png',
+  'st_brick_deep_3': 'assets/asset_0060.png',
+  'st_brick_mid_0': 'assets/asset_0061.png',
+  'st_brick_mid_1': 'assets/asset_0062.png',
+  'st_brick_mid_2': 'assets/asset_0063.png',
+  'st_brick_mid_3': 'assets/asset_0064.png',
+  'st_brick_surf_0': 'assets/asset_0065.png',
+  'st_brick_surf_1': 'assets/asset_0066.png',
+  'st_brick_surf_2': 'assets/asset_0067.png',
+  'st_brick_surf_3': 'assets/asset_0068.png',
+  'st_brick_surf_4': 'assets/asset_0069.png',
+  'st_brick_surf_5': 'assets/asset_0070.png',
+  'st_brick_trans_0': 'assets/asset_0071.png',
+  'st_brick_trans_1': 'assets/asset_0072.png',
+  'st_brick_trans_2': 'assets/asset_0073.png',
+  'st_brick_trans_3': 'assets/asset_0074.png',
+  'st_brick_upper_0': 'assets/asset_0075.png',
+  'st_brick_upper_1': 'assets/asset_0076.png',
+  'st_brick_upper_2': 'assets/asset_0077.png',
+  'st_brick_upper_3': 'assets/asset_0078.png',
+  'st_dark2_bed_0': 'assets/asset_0079.png',
+  'st_dark2_bed_1': 'assets/asset_0080.png',
+  'st_dark2_bed_2': 'assets/asset_0081.png',
+  'st_dark2_bed_3': 'assets/asset_0082.png',
+  'st_dark2_deep_0': 'assets/asset_0083.png',
+  'st_dark2_deep_1': 'assets/asset_0084.png',
+  'st_dark2_deep_2': 'assets/asset_0085.png',
+  'st_dark2_deep_3': 'assets/asset_0086.png',
+  'st_dark2_mid_0': 'assets/asset_0087.png',
+  'st_dark2_mid_1': 'assets/asset_0088.png',
+  'st_dark2_mid_2': 'assets/asset_0089.png',
+  'st_dark2_mid_3': 'assets/asset_0090.png',
+  'st_dark2_preview': 'assets/asset_0091.png',
+  'st_dark2_surf_0': 'assets/asset_0092.png',
+  'st_dark2_surf_1': 'assets/asset_0093.png',
+  'st_dark2_surf_2': 'assets/asset_0094.png',
+  'st_dark2_surf_3': 'assets/asset_0095.png',
+  'st_dark2_surf_4': 'assets/asset_0096.png',
+  'st_dark2_surf_5': 'assets/asset_0097.png',
+  'st_dark2_surf_6': 'assets/asset_0098.png',
+  'st_dark2_surf_7': 'assets/asset_0099.png',
+  'st_dark2_trans_0': 'assets/asset_0100.png',
+  'st_dark2_trans_1': 'assets/asset_0101.png',
+  'st_dark2_trans_2': 'assets/asset_0102.png',
+  'st_dark2_trans_3': 'assets/asset_0103.png',
+  'st_dark2_upper_0': 'assets/asset_0104.png',
+  'st_dark2_upper_1': 'assets/asset_0105.png',
+  'st_dark2_upper_2': 'assets/asset_0106.png',
+  'st_dark2_upper_3': 'assets/asset_0107.png',
+  'st_dark2_upper_4': 'assets/asset_0108.png',
+  'st_dark2_upper_5': 'assets/asset_0109.png',
+  'st_deep_v2_0': 'assets/asset_0110.png',
+  'st_deep_v2_1': 'assets/asset_0111.png',
+  'st_deep_v2_2': 'assets/asset_0112.png',
+  'st_deep_v2_3': 'assets/asset_0113.png',
+  'st_depth_proc_r0': 'assets/asset_0114.png',
+  'st_depth_proc_r1': 'assets/asset_0115.png',
+  'st_depth_proc_r10': 'assets/asset_0116.png',
+  'st_depth_proc_r11': 'assets/asset_0117.png',
+  'st_depth_proc_r12': 'assets/asset_0118.png',
+  'st_depth_proc_r13': 'assets/asset_0119.png',
+  'st_depth_proc_r14': 'assets/asset_0120.png',
+  'st_depth_proc_r15': 'assets/asset_0121.png',
+  'st_depth_proc_r16': 'assets/asset_0122.png',
+  'st_depth_proc_r17': 'assets/asset_0123.png',
+  'st_depth_proc_r18': 'assets/asset_0061.png',
+  'st_depth_proc_r19': 'assets/asset_0124.png',
+  'st_depth_proc_r2': 'assets/asset_0125.png',
+  'st_depth_proc_r20': 'assets/asset_0126.png',
+  'st_depth_proc_r21': 'assets/asset_0127.png',
+  'st_depth_proc_r22': 'assets/asset_0128.png',
+  'st_depth_proc_r23': 'assets/asset_0129.png',
+  'st_depth_proc_r24': 'assets/asset_0130.png',
+  'st_depth_proc_r25': 'assets/asset_0131.png',
+  'st_depth_proc_r26': 'assets/asset_0132.png',
+  'st_depth_proc_r27': 'assets/asset_0133.png',
+  'st_depth_proc_r3': 'assets/asset_0134.png',
+  'st_depth_proc_r4': 'assets/asset_0135.png',
+  'st_depth_proc_r5': 'assets/asset_0136.png',
+  'st_depth_proc_r6': 'assets/asset_0137.png',
+  'st_depth_proc_r7': 'assets/asset_0138.png',
+  'st_depth_proc_r8': 'assets/asset_0139.png',
+  'st_depth_proc_r9': 'assets/asset_0140.png',
+  'st_depth_v0': 'assets/asset_0141.png',
+  'st_depth_v1': 'assets/asset_0142.png',
+  'st_depth_v2': 'assets/asset_0143.png',
+  'st_depth_v3': 'assets/asset_0144.png',
+  'st_depth_v4': 'assets/asset_0145.png',
+  'st_grit_bed_0': 'assets/asset_0146.png',
+  'st_grit_bed_1': 'assets/asset_0147.png',
+  'st_grit_bed_2': 'assets/asset_0148.png',
+  'st_grit_bed_3': 'assets/asset_0149.png',
+  'st_grit_deep_0': 'assets/asset_0150.png',
+  'st_grit_deep_1': 'assets/asset_0151.png',
+  'st_grit_deep_2': 'assets/asset_0152.png',
+  'st_grit_deep_3': 'assets/asset_0153.png',
+  'st_grit_mid_0': 'assets/asset_0154.png',
+  'st_grit_mid_1': 'assets/asset_0155.png',
+  'st_grit_mid_2': 'assets/asset_0156.png',
+  'st_grit_mid_3': 'assets/asset_0157.png',
+  'st_grit_preview': 'assets/asset_0091.png',
+  'st_grit_preview2': 'assets/asset_0158.png',
+  'st_grit_surf_0': 'assets/asset_0159.png',
+  'st_grit_surf_1': 'assets/asset_0160.png',
+  'st_grit_surf_2': 'assets/asset_0161.png',
+  'st_grit_surf_3': 'assets/asset_0162.png',
+  'st_grit_surf_4': 'assets/asset_0163.png',
+  'st_grit_surf_5': 'assets/asset_0164.png',
+  'st_grit_surf_6': 'assets/asset_0165.png',
+  'st_grit_surf_7': 'assets/asset_0166.png',
+  'st_grit_trans_0': 'assets/asset_0167.png',
+  'st_grit_trans_1': 'assets/asset_0168.png',
+  'st_grit_trans_2': 'assets/asset_0169.png',
+  'st_grit_trans_3': 'assets/asset_0170.png',
+  'st_grit_upper_0': 'assets/asset_0171.png',
+  'st_grit_upper_1': 'assets/asset_0172.png',
+  'st_grit_upper_2': 'assets/asset_0173.png',
+  'st_grit_upper_3': 'assets/asset_0174.png',
+  'st_grit_upper_4': 'assets/asset_0175.png',
+  'st_grit_upper_5': 'assets/asset_0176.png',
+  'st_mid_v2_0': 'assets/asset_0177.png',
+  'st_mid_v2_1': 'assets/asset_0178.png',
+  'st_mid_v2_2': 'assets/asset_0179.png',
+  'st_mid_v2_3': 'assets/asset_0180.png',
+  'st_nat_bed_0': 'assets/asset_0181.png',
+  'st_nat_bed_1': 'assets/asset_0182.png',
+  'st_nat_bed_2': 'assets/asset_0183.png',
+  'st_nat_bed_3': 'assets/asset_0184.png',
+  'st_nat_deep_0': 'assets/asset_0185.png',
+  'st_nat_deep_1': 'assets/asset_0186.png',
+  'st_nat_deep_2': 'assets/asset_0187.png',
+  'st_nat_deep_3': 'assets/asset_0188.png',
+  'st_nat_mid_0': 'assets/asset_0189.png',
+  'st_nat_mid_1': 'assets/asset_0190.png',
+  'st_nat_mid_2': 'assets/asset_0191.png',
+  'st_nat_mid_3': 'assets/asset_0192.png',
+  'st_nat_preview': 'assets/asset_0193.png',
+  'st_nat_surf_0': 'assets/asset_0194.png',
+  'st_nat_surf_1': 'assets/asset_0195.png',
+  'st_nat_surf_2': 'assets/asset_0196.png',
+  'st_nat_surf_3': 'assets/asset_0197.png',
+  'st_nat_surf_4': 'assets/asset_0198.png',
+  'st_nat_surf_5': 'assets/asset_0199.png',
+  'st_nat_surf_6': 'assets/asset_0200.png',
+  'st_nat_surf_7': 'assets/asset_0201.png',
+  'st_nat_trans_0': 'assets/asset_0202.png',
+  'st_nat_trans_1': 'assets/asset_0203.png',
+  'st_nat_trans_2': 'assets/asset_0204.png',
+  'st_nat_trans_3': 'assets/asset_0205.png',
+  'st_nat_upper_0': 'assets/asset_0206.png',
+  'st_nat_upper_1': 'assets/asset_0207.png',
+  'st_nat_upper_2': 'assets/asset_0208.png',
+  'st_nat_upper_3': 'assets/asset_0209.png',
+  'st_nat_upper_4': 'assets/asset_0210.png',
+  'st_nat_upper_5': 'assets/asset_0211.png',
+  'st_soil_bed_0': 'assets/asset_0212.png',
+  'st_soil_bed_1': 'assets/asset_0213.png',
+  'st_soil_bed_2': 'assets/asset_0214.png',
+  'st_soil_bed_3': 'assets/asset_0215.png',
+  'st_soil_deep_0': 'assets/asset_0216.png',
+  'st_soil_deep_1': 'assets/asset_0215.png',
+  'st_soil_deep_2': 'assets/asset_0217.png',
+  'st_soil_deep_3': 'assets/asset_0218.png',
+  'st_soil_mid_0': 'assets/asset_0219.png',
+  'st_soil_mid_1': 'assets/asset_0220.png',
+  'st_soil_mid_2': 'assets/asset_0221.png',
+  'st_soil_mid_3': 'assets/asset_0217.png',
+  'st_soil_preview': 'assets/asset_0193.png',
+  'st_soil_surf_0': 'assets/asset_0222.png',
+  'st_soil_surf_1': 'assets/asset_0223.png',
+  'st_soil_surf_2': 'assets/asset_0224.png',
+  'st_soil_surf_3': 'assets/asset_0225.png',
+  'st_soil_surf_4': 'assets/asset_0226.png',
+  'st_soil_surf_5': 'assets/asset_0227.png',
+  'st_soil_surf_6': 'assets/asset_0228.png',
+  'st_soil_surf_7': 'assets/asset_0229.png',
+  'st_soil_trans_0': 'assets/asset_0230.png',
+  'st_soil_trans_1': 'assets/asset_0231.png',
+  'st_soil_trans_2': 'assets/asset_0232.png',
+  'st_soil_trans_3': 'assets/asset_0233.png',
+  'st_soil_upper_0': 'assets/asset_0234.png',
+  'st_soil_upper_1': 'assets/asset_0235.png',
+  'st_soil_upper_2': 'assets/asset_0236.png',
+  'st_soil_upper_3': 'assets/asset_0237.png',
+  'st_soil_upper_4': 'assets/asset_0238.png',
+  'st_soil_upper_5': 'assets/asset_0239.png',
+  'st_surf_proc_v0': 'assets/asset_0240.png',
+  'st_surf_proc_v1': 'assets/asset_0241.png',
+  'st_surf_proc_v10': 'assets/asset_0242.png',
+  'st_surf_proc_v11': 'assets/asset_0243.png',
+  'st_surf_proc_v12': 'assets/asset_0244.png',
+  'st_surf_proc_v13': 'assets/asset_0245.png',
+  'st_surf_proc_v2': 'assets/asset_0246.png',
+  'st_surf_proc_v3': 'assets/asset_0247.png',
+  'st_surf_proc_v4': 'assets/asset_0248.png',
+  'st_surf_proc_v5': 'assets/asset_0249.png',
+  'st_surf_proc_v6': 'assets/asset_0250.png',
+  'st_surf_proc_v7': 'assets/asset_0251.png',
+  'st_surf_proc_v8': 'assets/asset_0252.png',
+  'st_surf_proc_v9': 'assets/asset_0253.png',
+  'st_surf_v0': 'assets/asset_0254.png',
+  'st_surf_v1': 'assets/asset_0255.png',
+  'st_surf_v2': 'assets/asset_0256.png',
+  'st_surf_v2_0': 'assets/asset_0257.png',
+  'st_surf_v2_1': 'assets/asset_0258.png',
+  'st_surf_v2_2': 'assets/asset_0259.png',
+  'st_surf_v2_3': 'assets/asset_0260.png',
+  'st_surf_v2_4': 'assets/asset_0261.png',
+  'st_surf_v2_5': 'assets/asset_0262.png',
+  'st_surf_v2_6': 'assets/asset_0263.png',
+  'st_surf_v2_7': 'assets/asset_0264.png',
+  'st_surf_v3': 'assets/asset_0265.png',
+  'st_surf_v4': 'assets/asset_0266.png',
+  'st_terrain_preview_big': 'assets/asset_0267.png',
+  'st_terrain_sheet_preview': 'assets/asset_0268.png',
+  'st_terrain_surf_48': 'assets/asset_0269.png',
+  'st_terrain_surf_new': 'assets/asset_0270.png',
+  'st_trans_v2_0': 'assets/asset_0271.png',
+  'st_trans_v2_1': 'assets/asset_0272.png',
+  'st_trans_v2_2': 'assets/asset_0273.png',
+  'st_trans_v2_3': 'assets/asset_0274.png',
+  'st_upper_v2_0': 'assets/asset_0275.png',
+  'st_upper_v2_1': 'assets/asset_0276.png',
+  'st_upper_v2_2': 'assets/asset_0277.png',
+  'st_upper_v2_3': 'assets/asset_0278.png',
+  'st_upper_v2_4': 'assets/asset_0279.png',
+  'st_upper_v2_5': 'assets/asset_0280.png',
+  'st_flat_bed_0': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAs0lEQVR4nO3XsQ3DMADEQDtQl12y/3bKGFc8OQFN6C3o/X3f+wxz7p3+/uejBTTzAc72ADoBBWgCWkAzH6AJaAHNfIAz/hToBMwH6BbQApr5AE1AC2gKoAU0/QO0gGY+QI8hLaCZD9AtoAU08wGagBbQzAdoAlpAMx+gt4AW0MwH6BbQApoCaAFN/wAtoJkP0AS0gGY+QI8hLaCZD9AtoAU08wGagBbQzAdoAlpAUwAtoPkDNQ4bx/jtOX0AAAAASUVORK5CYII=',
+  'st_flat_bed_1': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAsElEQVR4nO2XwQ3AMAyEnMq/DtP9p0vH4AFMcEVGVc73njti9l71989DD6DRC1h3AF1AAkqAHkCjF1AC9AAavYCVPwW6AL2A/gL0ABq9gBKgB9DoBZQAPYBGL0CfwI7cQAnID6AL0AsoAXoAjV5ACdADaPQC9An0FqAH0OgT0F+AXkAJ0ANo9AJKgB5AoxdQAvQAGv1jqAToATR6ASVAD6DRCygBegCNXkAJ0ANo9AJ+PFcczzrnp7wAAAAASUVORK5CYII=',
+  'st_flat_bed_2': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAt0lEQVR4nO2ZwRGAIBDETuaeFmP/zWEZeSSpYIm3iPJ877kjZu9Vr38OHYBm3c+/CUhAFaAD0OgF6CuwIzegnwD9HqAXUAXoADR6AVWADkDTQUi+/irQBNABaPQCqgAdgEYvYOU3Y02AXoD+LbAj/xrST4B+D9AL0FdA/0eoCsgHoAnQC6gCdACaJoAOQKM/CFUBOgCNXkAVoAPQ6AVUAToATVdjdAAavYA2QToAjV5AFaAD0OgF/Fi0IdVDornZAAAAAElFTkSuQmCC',
+  'st_flat_bed_3': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAt0lEQVR4nO2YwRGAMAzDSi9PlmH/4cIYekiaQBi7cH2+9+4RM7vq5z+XFqAZ9/uvAQXQBGgBmhpAC9DMkVegCdACNPoAmgAtQFMDaAEafQAjvxCqAfoA+grQAjQ1gBag0Qegn0A3QvLn7wzQBzArPwT0DdAH0FeAFqDpRogWoNEH0CFIC9DoA2gCtACNvgH6G6EmIC9ADagBtACNPoAmQAvQ6H+EmgAtQFMDaAEafQBNgBag0QfwA2FuItVCeiASAAAAAElFTkSuQmCC',
+  'st_flat_deep_0': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAuElEQVR4nO3Z0RHCMBAD0QDugJLovyZTxvvQbgUbzenscV6/7+c+w5x7p7//eWsBzXwAZ7sATUABVAEtoJkP4Izfg5qAAtACmo5BLaCZD6AKaAHNecZHoApoAU0BaAFNO0ALaOYDmK/A/EWoCowPQBNQAFpA0w7QApr5APo1pgU08wF0CmgBTQFoAU07QAto5l+EqoAW0MwHUAW0gKYAtIBmfgfMX4SqwPgANAHzAVQBLaApAC2g+QOUTBzrpF1a4wAAAABJRU5ErkJggg==',
+  'st_flat_deep_1': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAtElEQVR4nO3WURFCMRDF0AfUAZrwL6nIOB+5UZBmurP7+n0/9wlz7k2//3lrAU0+wGkPwH7AAmwEtIAmH+DE76D9gHyAbQEtoMkH2AhoAU0+wA4hLaDJB9gW0AKafICNgBbQ5APsENICmnyAbQEtoMkH2AhoAU0+wA4hLaDJB9gW0AKafICNgBbQ5APsENICmnyAbQEtoMkH2AhoAU0+wA4hLaDJB9gW0AKafICNgBbQ5AP8AalUHudBT+fBAAAAAElFTkSuQmCC',
+  'st_flat_deep_2': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAtklEQVR4nO2ZwQ2AMBDDDnQjMBP7b9SO4YftCUyUUBWe/9szYvYc9fPPSwvQuPs/NaAAmgAtQLMjr0AToAVoagAtQKMPQD8B/THYBOQFqAH6AJoALUDTR1FagEYfQC9BWoBGH4B+At0GaQEa/QRqQA2Qow9g5ZfBGqAPoFOAFqDRB6CfwI78HNQ3QP8O0AfQBGgBGn0A3QZpARp9AJ0CtABNDaAFaPT/BpsALUCjD6AJ0AI0+gAuTxsk8okOw0cAAAAASUVORK5CYII=',
+  'st_flat_deep_3': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAuUlEQVR4nO2awQ2AMAzEAsoIDMX+C7Vj+GF7AnO6pCrw/N+eEbPnqJ9/XlqAxt3/qQEF0AjQAjQrPwVrgD6AliAtQFMDaAGaHXkFGgFagKYG0AI0+gD0I7Ajvw7qG6DfAfoAGgFagEbfAP1tsBGQF6AG1ABagEYfQN8GaQGaliAtQKMPoBGgBWj6U5QWoNEH0BKkBWhqAC1Ao38p2gjQAjQ1gBag0QegH4GOQfnztwP0ATQCtACNPoALJ4Am9ovXl6YAAAAASUVORK5CYII=',
+  'st_flat_mid_0': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAr0lEQVR4nO2VwRGAMAzDCpc7VmFC1g9j6CF5Ate14ut7nz1iza76/eemDdAa9//XgALQIzBHnkAIyAtQA2oAbYCWfgVCgDZASx9ACNAGaLUC8veHwKycAX0D9AHoj6B+BkNAXoAaoA9Aj4B+BfQN0N8AfQAhQBug1QrI3x8C+gD0CMyRX8EaIC9AR1CPgL4B+gD0CLQCtAFaegRqQA2QS78CIUAboKUPIARoA7T0Afw8qyZChzj4sgAAAABJRU5ErkJggg==',
+  'st_flat_mid_1': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAr0lEQVR4nO2VwQ2AQAzDDlSJWdiQ7csYftieIBxOc33vs0fM7Kq//9x0AJpx//8MyIA58heoAnIBMiAD6AA0+hWoAnQAmgygA9DoDdCvQBWQC5ABs/Ij0BGkA9B0BOkANBlAB6DRr0AVoAPQZAAdgEZvgH4FqoBcgAzIADoAjX4F9BWYI1dAb0BHUN6AKlAFMkCO3gD9ClQBuQAZkAF0ABr9ClQBOgBNBtABaPQP8AMAiipJmgQNOwAAAABJRU5ErkJggg==',
+  'st_flat_mid_2': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAsElEQVR4nO2XsRGAMAzEAueCWViR4c0YKiRN8AnKY1/f++wRM7vq85+bDkAz7u+fAWfkFZABdQAdgEZvwBz5DegNqANW/gYyoElQTn8BOgCN3gD9JNgTkAuQAXoD9CXYMkQHoNF3QAa0DsupA+gANHUAHYCmDqAD0Oh3gbZB+fnrAP0F6J9AJSg/fx2QAXQAmtZhOgCNfhnKAPf3bxLMgDogA+Q0CdIBaOoAOgCN/gJ+FbMyREW1HrwAAAAASUVORK5CYII=',
+  'st_flat_mid_3': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAArUlEQVR4nO2YsRGAMAzEDOeCXZiR2cMYKqSfwJ9TRMz1vc8ZcfYcdf9Zd/2Zmx6Ajp6AHfkJ6AnIAREgz8rfQRGgd8CO/CGQA+gB6OgdEAF2AtoG5f1zgJ6AHkL0AHS6Ai1D9ARwegjJ+/cV0BOQA+T9c0AE0APQ0W+D7QLu+jkgB0SAHIAOoCuQBOXJAfQAdPQOaBly188BEdBvcXn/HKAnIAfI++eACKAHoPMDjhw2UfVFctsAAAAASUVORK5CYII=',
+  'st_flat_surf_0': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAsElEQVR4nO2ZQQ3AMAwD3SkkBqyERyyD4cedEdjVyWqS8913A9bsovNn2PGTCfwFJEAC2g7KkoCFv4AEwPNLAJ6Ap22grYHPQpnASwBPgB0gAXBJQNtAW/ilqATAAZAA/DToPgCePxN4C0qAHdB2UJYEwPNLgLdBeH47wGkQ/hOWADwB3gbpBNgBEgCXBLQNtOVtsG2gLfw06D4Anl8CJMDbYNtBWXYAPL8E4AnAzwI/gdFIzcGIYjgAAAAASUVORK5CYII=',
+  'st_flat_surf_1': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAArklEQVR4nO2awRGAMAzDAtclWIyFGSyMoYfkCeyeSOoe1/c+O2KdXXX+Oe74M2fkJxABEUA7gBUBKz+BCJDnj4AIkFeBuWkDtPRtMALkAERABNAGaHURGvk3EAGVIdoBrNYgbYCWnoAz8imoJ6AZEAFyRQBtgFaPorQBWvoZUBuU34QjoCHYGpRLvwYjIALk0hPQo6ieAHn+ylAERADtAFa/yLjjNwMiIALk+avDP60uS8oLKS24AAAAAElFTkSuQmCC',
+  'st_flat_surf_2': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAqklEQVR4nO3YQQ3AMAxD0WwqiREb4+HKYPjgZwR29NU4vb732SnW2a3OP6c7/syZ8gkgAAFpB2EhYMsncMprwNxpA2khIG0gLQSkDaTlGuyOrwkiAAHl+a1Ba7A7vkcQAQgoz48An6LlNUATREDaQFoISBtIyzXYHV8TRAACyvNbg9Zgd3yPIAIQUJ4fAT5Fy2uAJoiAtIG0EJA2kJZrsDu+JogABJTntwZ/yZ9Nzmwj2loAAAAASUVORK5CYII=',
+  'st_flat_surf_3': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAsElEQVR4nO3a0Q3DMAwDUaXwEp0sI3csdwx93NMEonAgaSTP7/3eCc+5N61/Tlv+zJn4BRAQt4D5bC+wPXkCzsRdEAFx/XoAAuoeoAfUX4MIiAMgBfSAuH4EnBu/QD4F9IA6AVIg7oEIOBM3AQTEAdAD8gTwAD0gfgEExPVLAT0AAfHJfxuUAnrA9gbLIwW2F9iePAH+FM0TENevByCg7gF6QP01iIA4AFJAD4jrZ4J/3PdRz2nyIYQAAAAASUVORK5CYII=',
+  'st_flat_surf_4': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAArElEQVR4nO2WQRGAQAzEClMVKEMyrg4ZeSSrYMuE7F3f+5wRZ89R3z8rv39uugAdPQErv3925AhEgByAVkBPQA5oBegGcPQOaAXsBOSAVoBuAEfvgFbATkASdJ/fL5AE9QTkgFaAbgBH74BWwE5ADmgF6AZw9A5oBewE5IBWgG4AZ0f+BZKg/P4kGAFyAHoK6wnIAa0A3QCO3gGtgJ2AHNAK0A3g6B3QCkSAPD9mTlfM1EDo0QAAAABJRU5ErkJggg==',
+  'st_flat_surf_5': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAqklEQVR4nO3Y0Q2AMAwD0YA6BZuxMkuVMfrxLhPEkeuzen3vsweetTetfxaufxauf9bgF8gBegjepxc4PVEA1x8FcoBOAT4Ew6DugEIwDOIX4DMgCugOiAJ6FS4DcAN0gJ6A7oCqMK6/IlQG4PrLgCigZ0BNUHcAf4CegP4jVBHCDVAG8A6oCuP6owCfAVFAd0BV2JYfBnMAH4JhMAqc3uDwRAFcfxTgKfADP0Jby3x7Fo8AAAAASUVORK5CYII=',
+  'st_flat_surf_6': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAq0lEQVR4nO3bUQ2AUAxD0UGmAmd4xtNDRj96qqB96e4WEq7vfc4Ua8+pzj9bnn+2PP/slL+ABoBg2kFYGFCe3x2gAVNeASNQnt8a1AAMKJ8BDCjPjwEa4BROOwgLA6zBtIOwjIBTuDs/BmBAeX4MsAUwIO0gLAwwAmkHYfki1B0fAzTAGnQKd+fHAAwoz48BTuHu+EZAA6zB8vz+GdIADEg7CKv+DrjTBtL6AUPvXd8crHDTAAAAAElFTkSuQmCC',
+  'st_flat_surf_7': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAqUlEQVR4nO3awQ3AIAzF0LRiio7WobsSHYPDcybgR8YExPW9zx641t50/ll4/ll4/gi4Ty/gdCVBO34OyAE8ATVgj90BnoAkqBPQIMQTMJ0Cp5dwtmoAnj8CkiBPAJ4/AroM6QT0LG7HbwskQZ6AHKCfAjkAB6AGJEGegF6E7Pw5gCegQUgfhfktkAR1ApKgTkD/BHUCcoBOQA3A83cXSII4ADmAJ4B3wA+Z1GHKrQcaaQAAAABJRU5ErkJggg==',
+  'st_flat_trans_0': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAt0lEQVR4nO2ZwQ2AMAzEAmQNJmP/OcoYftiewD3lGlW9vvc5I2aP+vgzNy1Aow9g5Q1oAvQB6CuwI0+gCsgHoAnQB1AFaAEa/RqsArQAjT6AKkAL0OgDaA3Kz18F9AFUAVqARh9Af4O0AI0+gLYALUCjD0BfAf1rsArIB6AJ0AdQBWgBmtYgLUDTHUAL0OgDqAK0AI1+DVYBWoBGH0AVoAVo9AH0N0gL0OgDaAvQAjT6AHbmoh1Qfi0EHxQBX28XAAAAAElFTkSuQmCC',
+  'st_flat_trans_1': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAt0lEQVR4nO2YQRGAMBDEDjgbSMO/jCIjjyQKws5uO+X63ueMmD3qz5+5aQGalRegBugDaAK0AM2OvAJNgBagqQG0AI0+AP0E9NdgE5AXoAboA2gCtABNP0VpARp9AB2CtACNPgD9BHoN0gI0+gnUgBogRx9Ar0FagEYfQLcALUCjD0A/Af1rUN8A/RmgD6AJ0AI0+gB6DdICNPoAugVoAZoaQAvQ9BqUf38T0AfQBGgBmp25aAeUHxxAIhdOoGiUAAAAAElFTkSuQmCC',
+  'st_flat_trans_2': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAt0lEQVR4nO2YwQ2AQAzDCuocjMb+W9yN4YftCUyUBsHzf3tGzJ6jfv55aQEad/+nBhTAyjewBjSCtACNPgD9CezIE9A3QL8B+gA6AVqApm8BWoBGH0AjSAvQNIK0AI0+gEaQFqDRN0D/Q6QTkBegBtQAWoBG/xboBGgBmhpAC9DoA+iPEC1A0wjSAjT6ABpBWoCmEaQFaPQB6E+gHyLy528D9AF0ArQATd8CtACNPoBGkBag0QdwAQvsJxSf0Z9TAAAAAElFTkSuQmCC',
+  'st_flat_trans_3': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAtElEQVR4nO2YURWAMAzECq860IZ/E5uMfCRRcOtLb4Pn//aMmD1Hff556QA0bv8nAzJgRz4BvQH6DtAPoBWgA9Cs/CWcAXUAHYAmA+gANH0LyM/fCmQAHYCmpzAdgKYOoAPQ6AegX4GewvLz1wEZQAeg0RugvwVaAbkAGZABdACa/gjRAWjqADoAjX4AlSAdgKYSpAPQZAAdgKZbgA5Aox9AJUgHoNEboP8trjegDsgAOfoBXKWoKhsPpGwcAAAAAElFTkSuQmCC',
+  'st_flat_upper_0': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAtUlEQVR4nO2bQRGAQAzEClMDuMEpcg8ZeSRRsFeW9Hhwfe9zRsyeoz7/3HQAmnU//xowK1dADdA7YGfcI+gVSIJy9BKsAXYH6NdgDqAD0OgHoJdgDZAXoDWYA+gANHoH6BugH4Begq1B9/FzQA6oAfIC1IDWYBKUkwTpADQ5gA5As0e+BvUN0A8gCdIBaLoI0QFo+mGCDkCTA+gANPoBdBGiA9D0NUgHoMkBdACaLkJ0ABr9AH57QjVuGm7h4AAAAABJRU5ErkJggg==',
+  'st_flat_upper_1': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAsElEQVR4nO2YSxXAMAzD3L0QGJtSHdoMhg+SESSpqn7Od98NOLOL7j9Pu4B2hr3+EpCBK0AC8A6YhD0CCYADIAGeAnQCdMDCJ6AD2OsvAb4G8QTgB4A/Br0IwfvXARLQLqAd/EXIT1F2+zpAB0gAHAAJ8DUI718H6AA6AXgHuAXox6AEsNdfCUqADqATMIF/CeEJ0AESAI/f4u0C2vE12C6gHR3QLqAd7wHtAtrBD+AHWtg3ekLLEnkAAAAASUVORK5CYII=',
+  'st_flat_upper_2': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAoElEQVR4nO3YwQ2AMAzAwIC6AOMwK8OWMfrwZQKMXCvK9b3PnvCsvdP8s9r4M/fpDzg9eQPWxP9A3gAN2PE3oAFxfg3IG6ABcf5ZE1eAAXEBGGAPYEB8HEXb+J4AAyxCcX4NcBSN82uABtQN0IA4v6MoA+ICMMAewID4OIq28T0BBliE4vwa4Cga59cADagboAFxfkdRBsQFYIA9gAHx+QELzjuLydW/XwAAAABJRU5ErkJggg==',
+  'st_flat_upper_3': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAsElEQVR4nO3YURXDMAzFUHcnCAanWMc1g+GPKyOIWz3ZyfN7v3fgOvfS/c+x25/5bB9guw6egAg4d2wEIiAH4MXvAX2AwSXAE5AE8QREAO+AM/hdgHcAH4EkqBPQKmy3nwMagxGAA9Cz+MH7LwJJUCcgB+hTIAfY/7+7QBEoAr0IbZ9guXKATkCrsL4K8xFIgvgaEAG8A1qF7fZzQAQ0BrcPsF38XSACcgBe/BjkCfgDoAVBflgFr2AAAAAASUVORK5CYII=',
+  'st_flat_upper_4': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAArElEQVR4nO3ZURWAMAxD0cKZAuzgFatDxj7erYIlS9Ke9vreZ0+41t5p/LPa8Gfu0w84XSvuABZYM20KKCAuAApAAAvEGTAJtv/fKMwCLDBxD1BAnQAhGI8AC5F8BuQtIATjAqAAt8E2fBbQBikgLgBrcYeROH4hmG+DeQvYCLXha4MUgAC3wdMvOFwmwboC8qMwC1iItPELwTwBQrDeBi1E2vBZQAjmLZBXwA/6bEWJ1mYRngAAAABJRU5ErkJggg==',
+  'st_flat_upper_5': 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAs0lEQVR4nO2bwRHAMAjDnB4TdJ0s203pGH5ITICpRZzc9Xz33YBrdtH6M2z5ydNuoF0DJ0AEJmGPQAfQd4CnANwAGfgOzCx8AngEXIL0Y1AE2g20ywcRtnwR0AFGYaNwu4NyiQBcvwMwBxiF2x2USwTgBOgA/A7wLgDXLwIOQATaHZQLfwoYhIzC8HIJ0h9ERID9/R2AUVgH0KOwCMD1mwPwDsDfBv1niC1fBDwF8AjgHfADUlFHicbrhCQAAAAASUVORK5CYII=',
+  'grass_A': 'assets/asset_0281.png',
+  'grass_B': 'assets/asset_0282.png',
+  'grass_C': 'assets/asset_0283.png',
+  'grass_D': 'assets/asset_0284.png',
+  'rock_A': 'assets/asset_0285.png',
+  'rock_B': 'assets/asset_0286.png',
+  'rock_C': 'assets/asset_0287.png',
+  'rock_D': 'assets/asset_0288.png',
+  'rock_A2': 'assets/asset_0289.png',
+  'rock_A3': 'assets/asset_0290.png',
+  'rock_B2': 'assets/asset_0291.png',
+  'rock_B3': 'assets/asset_0292.png',
+  'cloud_L1': 'assets/asset_0293.png',
+  'cloud_L2': 'assets/asset_0293.png',
+  'cloud_L3': 'assets/asset_0293.png',
+  'gas_giant': 'assets/asset_0294.png',
+  'moon_full': 'assets/asset_0295.png',
+  'sun_A': 'assets/asset_0296.png',
+  'sun_B': 'assets/asset_0297.png',
+  'trooper_player_right': 'assets/asset_0298.png',
+  'trooper_player_left': 'assets/asset_0299.png',
+  'trooper_player_back': 'assets/asset_0300.png',
+  'trooper_player_side_right': 'assets/asset_0301.png',
+  'trooper_player_side_left': 'assets/asset_0301.png',
+  'trooper_npc_right': 'assets/asset_0302.png',
+  'trooper_npc_left': 'assets/asset_0303.png',
+  'trooper_npc_back': 'assets/asset_0304.png',
+  'trooper_npc_side_right': 'assets/asset_0305.png',
+  'trooper_npc_side_left': 'assets/asset_0305.png',
+};
+
+const TERRAIN_PRESETS = {
+  "natural": {
+    "label": "\ud83c\udf3f NATURAL",
+    "surf": [
+      "st_nat_surf_0",
+      "st_nat_surf_1",
+      "st_nat_surf_2",
+      "st_nat_surf_3",
+      "st_nat_surf_4",
+      "st_nat_surf_5",
+      "st_nat_surf_6",
+      "st_nat_surf_7"
+    ],
+    "upper": [
+      "st_nat_upper_0",
+      "st_nat_upper_1",
+      "st_nat_upper_2",
+      "st_nat_upper_3",
+      "st_nat_upper_4",
+      "st_nat_upper_5"
+    ],
+    "mid": [
+      "st_nat_mid_0",
+      "st_nat_mid_1",
+      "st_nat_mid_2",
+      "st_nat_mid_3"
+    ],
+    "trans": [
+      "st_nat_trans_0",
+      "st_nat_trans_1",
+      "st_nat_trans_2",
+      "st_nat_trans_3"
+    ],
+    "deep": [
+      "st_nat_deep_0",
+      "st_nat_deep_1",
+      "st_nat_deep_2",
+      "st_nat_deep_3"
+    ],
+    "bed": [
+      "st_nat_bed_0",
+      "st_nat_bed_1",
+      "st_nat_bed_2",
+      "st_nat_bed_3"
+    ]
+  },
+  "soil": {
+    "label": "\ud83d\udd25 ALIEN SOIL",
+    "surf": [
+      "st_soil_surf_0",
+      "st_soil_surf_1",
+      "st_soil_surf_2",
+      "st_soil_surf_3",
+      "st_soil_surf_4",
+      "st_soil_surf_5",
+      "st_soil_surf_6",
+      "st_soil_surf_7"
+    ],
+    "upper": [
+      "st_soil_upper_0",
+      "st_soil_upper_1",
+      "st_soil_upper_2",
+      "st_soil_upper_3",
+      "st_soil_upper_4",
+      "st_soil_upper_5"
+    ],
+    "mid": [
+      "st_soil_mid_0",
+      "st_soil_mid_1",
+      "st_soil_mid_2",
+      "st_soil_mid_3"
+    ],
+    "trans": [
+      "st_soil_trans_0",
+      "st_soil_trans_1",
+      "st_soil_trans_2",
+      "st_soil_trans_3"
+    ],
+    "deep": [
+      "st_soil_deep_0",
+      "st_soil_deep_1",
+      "st_soil_deep_2",
+      "st_soil_deep_3"
+    ],
+    "bed": [
+      "st_soil_bed_0",
+      "st_soil_bed_1",
+      "st_soil_bed_2",
+      "st_soil_bed_3"
+    ]
+  },
+  "grit": {
+    "label": "\ud83e\udea8 GRIT",
+    "surf": [
+      "st_grit_surf_0",
+      "st_grit_surf_1",
+      "st_grit_surf_2",
+      "st_grit_surf_3",
+      "st_grit_surf_4",
+      "st_grit_surf_5",
+      "st_grit_surf_6",
+      "st_grit_surf_7"
+    ],
+    "upper": [
+      "st_grit_upper_0",
+      "st_grit_upper_1",
+      "st_grit_upper_2",
+      "st_grit_upper_3",
+      "st_grit_upper_4",
+      "st_grit_upper_5"
+    ],
+    "mid": [
+      "st_grit_mid_0",
+      "st_grit_mid_1",
+      "st_grit_mid_2",
+      "st_grit_mid_3"
+    ],
+    "trans": [
+      "st_grit_trans_0",
+      "st_grit_trans_1",
+      "st_grit_trans_2",
+      "st_grit_trans_3"
+    ],
+    "deep": [
+      "st_grit_deep_0",
+      "st_grit_deep_1",
+      "st_grit_deep_2",
+      "st_grit_deep_3"
+    ],
+    "bed": [
+      "st_grit_bed_0",
+      "st_grit_bed_1",
+      "st_grit_bed_2",
+      "st_grit_bed_3"
+    ]
+  },
+  "darkgrit": {
+    "label": "\ud83d\udda4 DARK GRIT",
+    "surf": [
+      "st_dark2_surf_0",
+      "st_dark2_surf_1",
+      "st_dark2_surf_2",
+      "st_dark2_surf_3",
+      "st_dark2_surf_4",
+      "st_dark2_surf_5",
+      "st_dark2_surf_6",
+      "st_dark2_surf_7"
+    ],
+    "upper": [
+      "st_dark2_upper_0",
+      "st_dark2_upper_1",
+      "st_dark2_upper_2",
+      "st_dark2_upper_3",
+      "st_dark2_upper_4",
+      "st_dark2_upper_5"
+    ],
+    "mid": [
+      "st_dark2_mid_0",
+      "st_dark2_mid_1",
+      "st_dark2_mid_2",
+      "st_dark2_mid_3"
+    ],
+    "trans": [
+      "st_dark2_trans_0",
+      "st_dark2_trans_1",
+      "st_dark2_trans_2",
+      "st_dark2_trans_3"
+    ],
+    "deep": [
+      "st_dark2_deep_0",
+      "st_dark2_deep_1",
+      "st_dark2_deep_2",
+      "st_dark2_deep_3"
+    ],
+    "bed": [
+      "st_dark2_bed_0",
+      "st_dark2_bed_1",
+      "st_dark2_bed_2",
+      "st_dark2_bed_3"
+    ]
+  },
+  "brick": {
+    "label": "\ud83e\uddf1 BRICK",
+    "surf": [
+      "st_brick_surf_0",
+      "st_brick_surf_1",
+      "st_brick_surf_2",
+      "st_brick_surf_3",
+      "st_brick_surf_4",
+      "st_brick_surf_5"
+    ],
+    "upper": [
+      "st_brick_upper_0",
+      "st_brick_upper_1",
+      "st_brick_upper_2",
+      "st_brick_upper_3"
+    ],
+    "mid": [
+      "st_brick_mid_0",
+      "st_brick_mid_1",
+      "st_brick_mid_2",
+      "st_brick_mid_3"
+    ],
+    "trans": [
+      "st_brick_trans_0",
+      "st_brick_trans_1",
+      "st_brick_trans_2",
+      "st_brick_trans_3"
+    ],
+    "deep": [
+      "st_brick_deep_0",
+      "st_brick_deep_1",
+      "st_brick_deep_2",
+      "st_brick_deep_3"
+    ],
+    "bed": [
+      "st_brick_bed_0",
+      "st_brick_bed_1",
+      "st_brick_bed_2",
+      "st_brick_bed_3"
+    ]
+  },
+  "boulder": {
+    "label": "\ud83e\udea8 BOULDER",
+    "surf": [
+      "st_boulder_surf_0",
+      "st_boulder_surf_1",
+      "st_boulder_surf_2",
+      "st_boulder_surf_3",
+      "st_boulder_surf_4",
+      "st_boulder_surf_5"
+    ],
+    "upper": [
+      "st_boulder_upper_0",
+      "st_boulder_upper_1",
+      "st_boulder_upper_2",
+      "st_boulder_upper_3"
+    ],
+    "mid": [
+      "st_boulder_mid_0",
+      "st_boulder_mid_1",
+      "st_boulder_mid_2",
+      "st_boulder_mid_3"
+    ],
+    "trans": [
+      "st_boulder_trans_0",
+      "st_boulder_trans_1",
+      "st_boulder_trans_2",
+      "st_boulder_trans_3"
+    ],
+    "deep": [
+      "st_boulder_deep_0",
+      "st_boulder_deep_1",
+      "st_boulder_deep_2",
+      "st_boulder_deep_3"
+    ],
+    "bed": [
+      "st_boulder_bed_0",
+      "st_boulder_bed_1",
+      "st_boulder_bed_2",
+      "st_boulder_bed_3"
+    ]
+  },
+  "dark": {
+    "label": "\ud83c\udf11 DARK",
+    "surf": [
+      "st_surf_v2_0",
+      "st_surf_v2_1",
+      "st_surf_v2_2",
+      "st_surf_v2_3",
+      "st_surf_v2_4",
+      "st_surf_v2_5"
+    ],
+    "upper": [
+      "st_upper_v2_0",
+      "st_upper_v2_1",
+      "st_upper_v2_2",
+      "st_upper_v2_3"
+    ],
+    "mid": [
+      "st_mid_v2_0",
+      "st_mid_v2_1",
+      "st_mid_v2_2",
+      "st_mid_v2_3"
+    ],
+    "trans": [
+      "st_trans_v2_0",
+      "st_trans_v2_1",
+      "st_trans_v2_2",
+      "st_trans_v2_3"
+    ],
+    "deep": [
+      "st_deep_v2_0",
+      "st_deep_v2_1",
+      "st_deep_v2_2",
+      "st_deep_v2_3"
+    ],
+    "bed": [
+      "st_bed_v2_0",
+      "st_bed_v2_1",
+      "st_bed_v2_2",
+      "st_bed_v2_3"
+    ]
+  }
+,
+  "flat": {
+    "label": "🟧 FLAT",
+    "surf":  ["st_flat_surf_0","st_flat_surf_1","st_flat_surf_2","st_flat_surf_3","st_flat_surf_4","st_flat_surf_5","st_flat_surf_6","st_flat_surf_7"],
+    "upper": ["st_flat_upper_0","st_flat_upper_1","st_flat_upper_2","st_flat_upper_3","st_flat_upper_4","st_flat_upper_5"],
+    "mid":   ["st_flat_mid_0","st_flat_mid_1","st_flat_mid_2","st_flat_mid_3"],
+    "trans": ["st_flat_trans_0","st_flat_trans_1","st_flat_trans_2","st_flat_trans_3"],
+    "deep":  ["st_flat_deep_0","st_flat_deep_1","st_flat_deep_2","st_flat_deep_3"],
+    "bed":   ["st_flat_bed_0","st_flat_bed_1","st_flat_bed_2","st_flat_bed_3"]
+  }
+};
+const GRID_COLS=80, GRID_ROWS=18, TILE_PX=48, TERRAIN_H=0.42;
+let activePreset='natural', activeTileId='st_nat_surf_0', fadeDepth=0.82;
+const LS={FAR2:{speed:0.01,visible:true,img:null,yOff:0},FAR:{speed:0.04,visible:true,img:null,yOff:0},MID:{speed:0.12,visible:true,img:null,yOff:0},NEAR:{speed:0.22,visible:true,img:null,yOff:0}};
+let zoom=1, zoomTarget=1, camX=0, scrollX=0, tool='paint';
+let tilesMap={}, showGrid=true, painting=false, paintBtn=0, hover=null;
+const tileImgs={}, libImgs={};
+let totalLoad=0, doneLoad=0;
+Object.values(LAYER_LIBRARY).forEach(a=>totalLoad+=a.length);
+totalLoad+=Object.keys(TILE_ASSETS).length;
+
+function onLoad(){
+  doneLoad++;
+  const p=Math.round(doneLoad/totalLoad*100);
+  document.getElementById('load-bar').style.width=p+'%';
+  document.getElementById('load-pct').textContent=p+'%';
+  if(doneLoad>=totalLoad) document.getElementById('loading').style.display='none';
+}
+Object.entries(LAYER_LIBRARY).forEach(([slot,entries])=>{
+  libImgs[slot]=[];
+  entries.forEach((entry,i)=>{
+    const img=new Image();
+    img.onload=img.onerror=()=>{libImgs[slot][i]=img;if(i===0){LS[slot].img=img;document.getElementById('prev-'+slot).src=entry.src;}onLoad();};
+    img.src=entry.src;
+  });
+});
+Object.entries(TILE_ASSETS).forEach(([k,src])=>{
+  if(!src){onLoad();return;}
+  const img=new Image();img.onload=img.onerror=onLoad;img.src=src;tileImgs[k]=img;
+});
+['FAR','MID','NEAR'].forEach(slot=>{
+  const sel=document.getElementById('sel-'+slot);
+  LAYER_LIBRARY[slot].forEach((e,i)=>{const o=document.createElement('option');o.value=i;o.textContent=e.label;sel.appendChild(o);});
+  if(LAYER_LIBRARY[slot][0]) document.getElementById('prev-'+slot).src=LAYER_LIBRARY[slot][0].src;
+});
+function switchLayer(slot,v){const i=parseInt(v);LS[slot].idx=i;const img=libImgs[slot][i];if(img)LS[slot].img=img;const e=LAYER_LIBRARY[slot][i];if(e)document.getElementById('prev-'+slot).src=e.src;}
+function toggleVis(slot){LS[slot].visible=!LS[slot].visible;const el=document.getElementById('vis-'+slot);el.classList.toggle('on',LS[slot].visible);el.textContent=LS[slot].visible?'✓':'';}
+function nudgeSpeed(slot,d){LS[slot].speed=Math.max(0,Math.round((LS[slot].speed+d)*100)/100);document.getElementById('spd-'+slot).textContent=LS[slot].speed.toFixed(2)+'×';}
+function nudgeY(slot,d){LS[slot].yOff=(LS[slot].yOff||0)+d;}
+
+function buildAllPalettes(pk){
+  const pd=TERRAIN_PRESETS[pk];
+  [['pg-surf',pd.surf],['pg-upper',pd.upper],['pg-mid',[...pd.mid,...pd.trans]],['pg-deep',pd.deep],['pg-bed',pd.bed]]
+  .forEach(([gid,keys])=>{
+    const el=document.getElementById(gid);el.innerHTML='';
+    keys.forEach((k)=>{
+      const btn=document.createElement('div');
+      btn.className='tbtn'+(k===activeTileId?' sel':'');btn.id='tb-'+k;
+      const img=document.createElement('img');img.src=TILE_ASSETS[k]||'';img.alt='';
+      btn.appendChild(img);
+      btn.onclick=()=>selectTile(k);
+      el.appendChild(btn);
+    });
+  });
+}
+function selectTile(k){
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('tb-'+k)?.classList.add('sel');
+  activeTileId=k; setTool('paint');
+  document.getElementById('hud-img').src=TILE_ASSETS[k]||'';
+  document.getElementById('hud-name').textContent=k.replace(/st_\w+_/,'').replace(/_/g,' ').toUpperCase();
+}
+function applyPreset(key){
+  activePreset=key;
+  activeTileId=TERRAIN_PRESETS[key].surf[0];
+  buildAllPalettes(key);selectTile(activeTileId);autoFill();
+
+  grassInvalidate();}
+buildAllPalettes(activePreset);selectTile(activeTileId);
+
+// ━━━ ENVIRONMENT STATE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const DN={phase:'day',phaseTime:0,darkness:0,dayCount:1,DAY:8000,DUSK:3000,NIGHT:7000,DAWN:3000,speed:1.0};
+let lastFrameTime=performance.now();
+const STARS=Array.from({length:100},(_,i)=>{
+  const h=v=>{let x=Math.sin((i*7+v)*91.3+44.1)*8192.5;return x-Math.floor(x);};
+  return{x:h(0),y:h(1)*0.88,r:h(2)*1.2+0.35,phase:h(3)*Math.PI*2,spd:0.0008+h(4)*0.001};
+});
+const WEATHER={mode:'calm',particles:[],wind:0.3,intensity:0.3};
+const WEATHER_MODES=['calm','sand','storm'];
+let weatherIdx=0;
+
+function spawnSandParticle(W,tY){
+  if(WEATHER.particles.length > 180) return;
+  const spd=1.5+Math.random()*2.5;
+  WEATHER.particles.push({
+    x:WEATHER.wind>0?-5:W+5, y:Math.random()*tY,
+    vx:WEATHER.wind*spd, vy:0.05+Math.random()*0.2,
+    size:0.8+Math.random()*1.6, life:120+Math.random()*120,
+    maxLife:240, r:(180+Math.random()*40)|0,
+    g:(80+Math.random()*30)|0, b:(20+Math.random()*20)|0
+  });
+}
+
+function updateDayNight(dt){
+  DN.phaseTime += dt * DN.speed;
+  switch(DN.phase){
+    case 'day':    DN.darkness=0; if(DN.phaseTime>=DN.DAY){DN.phase='dusk';DN.phaseTime=0;} break;
+    case 'dusk':   DN.darkness=Math.min(1,DN.phaseTime/DN.DUSK); if(DN.phaseTime>=DN.DUSK){DN.phase='night';DN.phaseTime=0;} break;
+    case 'night':  DN.darkness=1; if(DN.phaseTime>=DN.NIGHT){DN.phase='dawn';DN.phaseTime=0;} break;
+    case 'dawn':   DN.darkness=Math.max(0,1-DN.phaseTime/DN.DAWN); if(DN.phaseTime>=DN.DAWN){DN.phase='day';DN.phaseTime=0;DN.dayCount++;} break;
+  }
+}
+
+function updateWeather(dt,W,tY){
+  const rate={calm:0.03,sand:0.3,storm:0.8}[WEATHER.mode]*WEATHER.intensity;
+  if(Math.random()<rate*(dt/16)) spawnSandParticle(W,tY);
+  if(WEATHER.particles.length>600) WEATHER.particles.splice(0,80);
+  for(let i=WEATHER.particles.length-1;i>=0;i--){
+    const p=WEATHER.particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.003; p.life-=dt*0.4;
+    if(p.life<=0||p.x>W+20||p.x<-20||p.y>tY) WEATHER.particles.splice(i,1);
+  }
+}
+
+function drawStars(ctx,W,tY,t,zoom){
+  if(DN.darkness<0.15) return;
+  const alpha=Math.min(1,(DN.darkness-0.15)/0.4) * starBrightness;
+  // Batch: group stars into 4 alpha buckets — 4 state changes instead of 160
+  const buckets=[0.3,0.55,0.75,1.0];
+  for(const bAlpha of buckets){
+    ctx.globalAlpha = alpha * bAlpha;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    for(const s of STARS){
+      const twinkle=0.5+0.5*Math.sin(t*s.spd+s.phase);
+      const sa=0.4+0.6*twinkle;
+      // assign to nearest bucket
+      const bi=sa<0.42?0:sa<0.62?1:sa<0.87?2:3;
+      if(buckets[bi]!==bAlpha) continue;
+      const px=s.x*W, py=s.y*tY;
+      const sr = Math.max(0.5, s.r * Math.max(0.4, Math.min(zoom, 2.0)));
+      ctx.rect(px, py, sr, sr);
+    }
+    ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawNightOverlay(ctx,W,H,tY){
+  // Sky-only darkening — terrain handled separately after props are drawn
+  if(DN.darkness<0.05) return;
+  const d=DN.darkness;
+  ctx.save();
+  ctx.globalCompositeOperation='source-over';
+  ctx.globalAlpha = Math.min(0.55, d * 0.58);
+  ctx.fillStyle   = 'rgb(14,8,38)';
+  ctx.fillRect(0, 0, W, tY);
+  ctx.restore();
+}
+
+function drawNightTerrainOverlay(ctx,W,H,tY){
+  // Called AFTER terrain tiles + all props — darkens ground realistically at night
+  if(DN.darkness<0.05) return;
+  const d=DN.darkness;
+  ctx.save();
+  ctx.globalCompositeOperation='source-over';
+  // Strong dark pass — kills the orange at night (up to 68% opacity)
+  ctx.globalAlpha = Math.min(0.75, d * 0.78);
+  ctx.fillStyle   = 'rgb(6,4,18)';
+  ctx.fillRect(0, tY, W, H - tY);
+  // Cold purple tint — moonlit alien desert
+  ctx.globalAlpha = Math.min(0.28, d * 0.30);
+  ctx.fillStyle   = 'rgb(30,18,65)';
+  ctx.fillRect(0, tY, W, H - tY);
+  ctx.restore();
+}
+
+
+
+// ── VULCAN VERSION: Searchlight beams from base at night ────────────────────
+function drawSearchlights(ctx, W, tY, camX, t){
+  if(DN.darkness < 0.4) return;
+  const alpha = Math.min(0.22, (DN.darkness - 0.4) * 0.36);
+  const beams = [
+    { bx: W * 0.22, sweep: 0.6, spd: 0.00035 },
+    { bx: W * 0.38, sweep: 0.5, spd: 0.00028 },
+    { bx: W * 0.55, sweep: 0.7, spd: 0.00042 },
+  ];
+  ctx.save();
+  for(const b of beams){
+    const angle = Math.sin(t * b.spd) * b.sweep - Math.PI * 0.5 + 0.3;
+    const len = tY * 1.4;
+    const ex = b.bx + Math.cos(angle) * len;
+    const ey = tY  + Math.sin(angle) * len;
+    const beam = ctx.createLinearGradient(b.bx, tY, ex, ey);
+    beam.addColorStop(0, `rgba(240,240,200,${(alpha*0.9).toFixed(3)})`);
+    beam.addColorStop(0.3, `rgba(220,220,180,${(alpha*0.4).toFixed(3)})`);
+    beam.addColorStop(1,   'rgba(200,200,160,0)');
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.beginPath();
+    ctx.moveTo(b.bx, tY);
+    ctx.lineTo(b.bx + Math.cos(angle - 0.05)*len, ey + Math.sin(angle-0.05)*len*0.1);
+    ctx.lineTo(b.bx + Math.cos(angle + 0.05)*len, ey + Math.sin(angle+0.05)*len*0.1);
+    ctx.closePath();
+    ctx.fillStyle = beam;
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ── VULCAN VERSION: Bug eye glow — green specks in the darkness ──────────────
+const BUG_EYES = [];
+(function initBugEyes(){
+  let seed = 0x4B4154;
+  function rng(){ seed=(seed*1664525+1013904223)&0xFFFFFFFF; return(seed>>>0)/0xFFFFFFFF; }
+  for(let i=0;i<80;i++){
+    BUG_EYES.push({
+      rx: rng(),          // 0..1 of world width
+      ry: 0.92 + rng()*0.06, // near ground
+      size: 1 + rng()*2,
+      phase: rng()*Math.PI*2,
+      spd: 0.0008 + rng()*0.001,
+      pair: rng() > 0.4   // most are pairs
+    });
+  }
+})();
+
+function drawBugEyes(ctx, W, tY, camX, t, zoom){
+  if(DN.darkness < 0.5) return;
+  const alpha = Math.min(1,(DN.darkness-0.5)/0.3) * 0.85;
+  // World width: match the full scrollable tile world so eyes are locked to world space
+  const WORLD_PX = GRID_COLS * TILE_PX; // total world width in world-pixels
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  let _eyeGlowCount = 0;
+  for(const eye of BUG_EYES){
+    // wx = world-space X position, scrolled at exactly camX * zoom — same as terrain
+    const wx = eye.rx * WORLD_PX * zoom - camX;
+    // Wrap so eyes tile across the world without gaps
+    const wrapW = WORLD_PX * zoom;
+    let sx = ((wx % wrapW) + wrapW) % wrapW;
+    if(sx < -eye.size*12 || sx > W + eye.size*12) continue; // offscreen
+    // sy: just above terrain line, scaled with zoom
+    const sy = tY - eye.size * zoom * (0.5 + (eye.ry - 0.92) * 8);
+    const pulse = 0.6 + 0.4 * Math.sin(t * eye.spd + eye.phase);
+    const a = alpha * pulse;
+    if(a < 0.05) continue;
+    const glowR = eye.size * zoom * 5;
+    ctx.globalAlpha = a * 0.4;
+    if(_eyeGlowCount < 16){
+      _eyeGlowCount++;
+      const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, glowR);
+    glow.addColorStop(0, 'rgba(50,255,60,0.8)');
+    glow.addColorStop(1, 'rgba(0,80,10,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(sx, sy, glowR, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = a;
+    ctx.fillStyle = `rgba(80,255,90,${a.toFixed(2)})`;
+    const dotR = eye.size * zoom;
+    ctx.beginPath(); ctx.arc(sx, sy, dotR, 0, Math.PI*2); ctx.fill();
+    if(eye.pair){
+      const px = sx + dotR * 3.5, py = sy + dotR * 0.5;
+      ctx.beginPath(); ctx.arc(px, py, dotR * 0.85, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawWeatherParticles(ctx){
+  if(!WEATHER.particles.length) return;
+  ctx.save();
+  // Single colour for all sand/dust particles — same palette anyway
+  ctx.fillStyle='rgb(195,88,28)';
+  // Batch by alpha bucket (4 levels)
+  const aBuckets=[0.15,0.30,0.45,0.60];
+  for(const bA of aBuckets){
+    ctx.globalAlpha=bA;
+    ctx.beginPath();
+    for(const p of WEATHER.particles){
+      const a=(p.life/p.maxLife)*0.60;
+      const bi=a<0.22?0:a<0.37?1:a<0.52?2:3;
+      if(aBuckets[bi]!==bA) continue;
+      ctx.rect(p.x, p.y, p.size, p.size*0.5);
+    }
+    ctx.fill();
+  }
+  ctx.globalAlpha=1; ctx.restore();
+}
+
+function drawAmbientHaze(ctx,W,H,tY){
+  if(WEATHER.mode==='calm') return;
+  const hazA=WEATHER.mode==='storm'?0.18:0.08;
+  const haz=ctx.createLinearGradient(0,0,0,tY);
+  haz.addColorStop(0,'rgba(160,70,10,0)');
+  haz.addColorStop(0.6,'rgba(190,90,15,'+(hazA*0.5)+')');
+  haz.addColorStop(1,'rgba(210,105,20,'+hazA+')');
+  ctx.fillStyle=haz; ctx.fillRect(0,0,W,tY);
+}
+
+function cycleWeather(){
+  weatherIdx=(weatherIdx+1)%WEATHER_MODES.length;
+  WEATHER.mode=WEATHER_MODES[weatherIdx];
+  WEATHER.wind=WEATHER.mode==='calm'?0.3:WEATHER.mode==='sand'?0.8:1.8;
+  WEATHER.intensity=WEATHER.mode==='calm'?0.3:WEATHER.mode==='sand'?0.7:1.2;
+  const labels={calm:'🌤 CALM',sand:'🌬 SAND',storm:'🌪 STORM'};
+  const btn=document.getElementById('btn-weather');
+  if(btn) btn.textContent=labels[WEATHER.mode];
+}
+
+function skipPhase(){ DN.phaseTime=999999; }
+
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+function resize(){cv.width=cv.offsetWidth||cv.parentElement.clientWidth;cv.height=cv.offsetHeight||cv.parentElement.clientHeight;}
+resize();new ResizeObserver(resize).observe(document.getElementById('cv-wrap'));
+
+
+
+// ── Procedural Sun & Moon — arc left→right across sky ────────────────────────
+function drawCelestials(ctx, W, tY, t, zoom) {
+  // Compute total cycle position [0..1]
+  // 0 = sunrise, 0.5 = solar noon, 1 = next sunrise
+  const TOTAL = DN.DAY + DN.DUSK + DN.NIGHT + DN.DAWN;
+  // Accumulate absolute phase time
+  let cyclePos = 0;
+  switch(DN.phase){
+    case 'day':   cyclePos = DN.phaseTime / TOTAL; break;
+    case 'dusk':  cyclePos = (DN.DAY + DN.phaseTime) / TOTAL; break;
+    case 'night': cyclePos = (DN.DAY + DN.DUSK + DN.phaseTime) / TOTAL; break;
+    case 'dawn':  cyclePos = (DN.DAY + DN.DUSK + DN.NIGHT + DN.phaseTime) / TOTAL; break;
+  }
+
+  // ── SUN ──────────────────────────────────────────────────────────────────
+  // Sun visible during day (cyclePos 0..DAY/TOTAL) + dusk/dawn edges
+  const dayFrac  = DN.DAY / TOTAL;   // fraction of cycle that is daytime
+  const duskFrac = DN.DUSK / TOTAL;
+  const nightFrac= DN.NIGHT / TOTAL;
+
+  // Sun arc: rises at left (x≈-R) at cyclePos=0, sets right (x≈W+R) at cyclePos=dayFrac+duskFrac
+  const sunArcEnd = dayFrac + duskFrac;
+  const sunT = Math.max(0, Math.min(1, cyclePos / sunArcEnd)); // 0=rise, 1=set
+
+  // Arc follows a sin curve — flat at horizon, high at noon
+  const sunX  = W * sunT;
+  const sunY  = tY * 0.85 - Math.sin(sunT * Math.PI) * tY * 0.78;
+  const skyZoom = Math.max(0.3, Math.min(zoom, 3.0));
+  const sunR  = Math.max(W, tY) * 0.038 * sunScale * skyZoom;
+
+  // Visibility: full during day, fade during dusk/dawn
+  const sunAlpha = Math.max(0, 1 - DN.darkness * 1.2);
+
+  if(sunAlpha > 0.01) {
+    ctx.save();
+    ctx.globalAlpha = sunAlpha;
+
+    // Sun sprite — sun_B (dying star) near horizon, sun_A (blazing) at zenith
+    // Blend between them based on elevation: sunT=0 rise, 0.5=noon, 1=set
+    const elevFrac = Math.sin(sunT * Math.PI); // 0 at horizon, 1 at noon
+    const imgA = tileImgs['sun_A']; // blazing orange — used at high elevation
+    const imgB = tileImgs['sun_B']; // dying red star — used near horizon
+
+    // Corona glow — guard finite values
+    if(!isFinite(sunX)||!isFinite(sunY)||!isFinite(sunR)||sunR<=0){ctx.restore();return;}
+    // ── VULCAN SUN: Massive multi-layer corona ─────────────────────────────────
+    const isHigh = elevFrac > 0.3;
+    // Layer 1: Mega outer glow — fills a big portion of the sky
+    const outerGlow = ctx.createRadialGradient(sunX, sunY, sunR*0.5, sunX, sunY, sunR * 9.0);
+    outerGlow.addColorStop(0,   isHigh ? 'rgba(255,140,20,0.28)' : 'rgba(200,40,5,0.32)');
+    outerGlow.addColorStop(0.25,'rgba(255,100,10,0.14)');
+    outerGlow.addColorStop(0.55,'rgba(220,60,5,0.06)');
+    outerGlow.addColorStop(1,   'rgba(120,20,0,0)');
+    ctx.fillStyle = outerGlow;
+    ctx.beginPath(); ctx.arc(sunX, sunY, sunR * 9.0, 0, Math.PI*2); ctx.fill();
+    // Layer 2: Mid corona — bright ring
+    const midGlow = ctx.createRadialGradient(sunX, sunY, sunR*0.6, sunX, sunY, sunR * 4.5);
+    midGlow.addColorStop(0,   isHigh ? 'rgba(255,180,60,0.55)' : 'rgba(240,80,15,0.60)');
+    midGlow.addColorStop(0.35,'rgba(255,130,20,0.25)');
+    midGlow.addColorStop(0.7, 'rgba(200,60,5,0.08)');
+    midGlow.addColorStop(1,   'rgba(100,15,0,0)');
+    ctx.fillStyle = midGlow;
+    ctx.beginPath(); ctx.arc(sunX, sunY, sunR * 4.5, 0, Math.PI*2); ctx.fill();
+    // Layer 3: Tight inner corona — sharp bright ring
+    const innerGlow = ctx.createRadialGradient(sunX, sunY, sunR*0.8, sunX, sunY, sunR * 2.0);
+    innerGlow.addColorStop(0,   isHigh ? 'rgba(255,220,120,0.75)' : 'rgba(255,120,30,0.80)');
+    innerGlow.addColorStop(0.5, isHigh ? 'rgba(255,160,40,0.40)' : 'rgba(220,60,10,0.45)');
+    innerGlow.addColorStop(1,   'rgba(180,40,0,0)');
+    ctx.fillStyle = innerGlow;
+    ctx.beginPath(); ctx.arc(sunX, sunY, sunR * 2.0, 0, Math.PI*2); ctx.fill();
+    // Layer 4: Horizon bloom — when sun is low, bleeds orange across the horizon
+    if(!isHigh) {
+      const horizBloom = ctx.createRadialGradient(sunX, sunY, sunR, sunX, sunY, sunR * 12.0);
+      horizBloom.addColorStop(0,   'rgba(255,80,10,0.18)');
+      horizBloom.addColorStop(0.3, 'rgba(200,50,5,0.08)');
+      horizBloom.addColorStop(1,   'rgba(100,20,0,0)');
+      ctx.globalAlpha = sunAlpha * 0.8;
+      ctx.fillStyle = horizBloom;
+      ctx.save();
+      ctx.scale(1, 0.4); // squash vertically for horizon spread
+      ctx.beginPath(); ctx.arc(sunX, sunY / 0.4, sunR * 12.0, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+      ctx.globalAlpha = sunAlpha;
+    }
+
+    // Sun sprite selection — clean crossfade in a narrow band around elevFrac=0.35
+    // Below 0.25 = fully sun_B (dying red, near horizon)
+    // Above 0.45 = fully sun_A (blazing orange, high sky)
+    // 0.25–0.45  = crossfade zone (short — never both visible at full opacity)
+    const CROSS_LOW  = 0.25;
+    const CROSS_HIGH = 0.45;
+    const crossT = Math.max(0, Math.min(1, (elevFrac - CROSS_LOW) / (CROSS_HIGH - CROSS_LOW)));
+    // crossT=0 → pure B, crossT=1 → pure A
+    const alphaA = crossT;           // 0 at horizon, 1 at zenith
+    const alphaB = 1 - crossT;      // 1 at horizon, 0 at zenith
+    const sprSize = sunR * 2.6;
+
+    // Draw B first (behind), then A on top — both only visible in crossfade zone
+    if(imgB && imgB.complete && imgB.naturalWidth && alphaB > 0.01) {
+      ctx.globalAlpha = sunAlpha * alphaB;
+      ctx.drawImage(imgB, sunX - sprSize*0.5, sunY - sprSize*0.5,
+        sprSize, sprSize * (imgB.naturalHeight / imgB.naturalWidth));
+    }
+    if(imgA && imgA.complete && imgA.naturalWidth && alphaA > 0.01) {
+      ctx.globalAlpha = sunAlpha * alphaA;
+      const swA = sprSize * 1.1, shA = swA * (imgA.naturalHeight / imgA.naturalWidth);
+      ctx.drawImage(imgA, sunX - swA*0.5, sunY - shA*0.5, swA, shA);
+    }
+
+    ctx.restore();
+  }
+
+}
+
+// ── MOON — drawn AFTER gas giant so it always appears in front ──────────────
+// Global moon position — updated each frame so terrain can use it
+let MOON_STATE = { x:0, y:0, alpha:0, size:0 };
+
+function drawMoon(ctx, W, tY, t, zoom) {
+  // Phase-tracking (same system as sun)
+  const TOTAL = DN.DAY + DN.DUSK + DN.NIGHT + DN.DAWN;
+  let cyclePos = 0;
+  switch(DN.phase){
+    case 'day':   cyclePos = DN.phaseTime / TOTAL; break;
+    case 'dusk':  cyclePos = (DN.DAY + DN.phaseTime) / TOTAL; break;
+    case 'night': cyclePos = (DN.DAY + DN.DUSK + DN.phaseTime) / TOTAL; break;
+    case 'dawn':  cyclePos = (DN.DAY + DN.DUSK + DN.NIGHT + DN.phaseTime) / TOTAL; break;
+  }
+
+  const moonStart = DN.DAY / TOTAL;
+  const moonSpan  = (DN.DUSK + DN.NIGHT + DN.DAWN) / TOTAL;
+  const moonT     = Math.max(0, Math.min(1, (cyclePos - moonStart) / moonSpan));
+
+  const moonX = W * 0.05 + W * 0.90 * moonT;
+  const moonY = tY * 0.85 - Math.sin(moonT * Math.PI) * tY * 0.70;
+  const skyZoom = Math.max(0.3, Math.min(zoom, 3.0));
+  const mSize = Math.max(W, tY) * 0.110 * moonScale * skyZoom;  // big and cinematic
+
+  if(!isFinite(moonX)||!isFinite(moonY)||!isFinite(mSize)||mSize<=0) return;
+
+  // Full brightness — no dampening. Moon BLAZES at night.
+  const moonAlpha = Math.min(1, DN.darkness * 1.2 + 0.05);
+  MOON_STATE = { x: moonX, y: moonY, alpha: moonAlpha, size: mSize };
+
+  if(moonAlpha <= 0.01) return;
+
+  const moonImg = tileImgs['moon_full'];
+  if(!moonImg||!moonImg.complete||!moonImg.naturalWidth) return;
+
+  ctx.save();
+
+  // ── Layer 1: Mega atmospheric halo — enormous, very soft ──────────────────
+  const halo1 = mSize * 7.0;
+  if(halo1 > 0) {
+    const g1 = ctx.createRadialGradient(moonX, moonY, mSize*0.5, moonX, moonY, halo1);
+    g1.addColorStop(0,   `rgba(180,210,255,${(moonAlpha*0.22).toFixed(3)})`);
+    g1.addColorStop(0.2, `rgba(140,180,240,${(moonAlpha*0.12).toFixed(3)})`);
+    g1.addColorStop(0.5, `rgba(80,120,200,${(moonAlpha*0.05).toFixed(3)})`);
+    g1.addColorStop(1,   'rgba(10,20,80,0)');
+    ctx.fillStyle = g1;
+    ctx.beginPath(); ctx.arc(moonX, moonY, halo1, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ── Layer 2: Mid corona — visible ring of cold light ──────────────────────
+  const halo2 = mSize * 3.2;
+  if(halo2 > mSize*0.3) {
+    const g2 = ctx.createRadialGradient(moonX, moonY, mSize*0.3, moonX, moonY, halo2);
+    g2.addColorStop(0,   `rgba(230,240,255,${(moonAlpha*0.70).toFixed(3)})`);
+    g2.addColorStop(0.3, `rgba(190,215,255,${(moonAlpha*0.38).toFixed(3)})`);
+    g2.addColorStop(0.7, `rgba(120,160,240,${(moonAlpha*0.12).toFixed(3)})`);
+    g2.addColorStop(1,   'rgba(60,90,180,0)');
+    ctx.fillStyle = g2;
+    ctx.beginPath(); ctx.arc(moonX, moonY, halo2, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ── Layer 3: Tight bright halo right around disc ───────────────────────────
+  const halo3 = mSize * 1.5;
+  if(halo3 > mSize*0.4) {
+    const g3 = ctx.createRadialGradient(moonX, moonY, mSize*0.4, moonX, moonY, halo3);
+    g3.addColorStop(0,   `rgba(255,255,255,${(moonAlpha*0.95).toFixed(3)})`);
+    g3.addColorStop(0.5, `rgba(220,235,255,${(moonAlpha*0.55).toFixed(3)})`);
+    g3.addColorStop(1,   'rgba(150,180,255,0)');
+    ctx.fillStyle = g3;
+    ctx.beginPath(); ctx.arc(moonX, moonY, halo3, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ── Moon sprite ────────────────────────────────────────────────────────────
+  ctx.globalAlpha = moonAlpha;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(moonImg, moonX - mSize*0.5, moonY - mSize*0.5, mSize, mSize);
+
+  // ── Core bloom: bright white disc over the sprite ─────────────────────────
+  ctx.globalAlpha = moonAlpha * 0.50;
+  const coreGrad = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, mSize*0.38);
+  coreGrad.addColorStop(0,   'rgba(255,255,255,1)');
+  coreGrad.addColorStop(0.6, 'rgba(220,230,255,0.6)');
+  coreGrad.addColorStop(1,   'rgba(180,200,255,0)');
+  ctx.fillStyle = coreGrad;
+  ctx.beginPath(); ctx.arc(moonX, moonY, mSize*0.38, 0, Math.PI*2); ctx.fill();
+
+  ctx.restore();
+}
+
+// ── Moonlight terrain wash — drawn AFTER all terrain/props ────────────────
+
+// ── VULCAN VERSION: Second crescent moon — smaller, offset, cinematic ────────
+function drawSecondMoon(ctx, W, tY, t, zoom) {
+  const TOTAL = DN.DAY + DN.DUSK + DN.NIGHT + DN.DAWN;
+  let cyclePos = 0;
+  switch(DN.phase){
+    case 'day':   cyclePos = DN.phaseTime / TOTAL; break;
+    case 'dusk':  cyclePos = (DN.DAY + DN.phaseTime) / TOTAL; break;
+    case 'night': cyclePos = (DN.DAY + DN.DUSK + DN.phaseTime) / TOTAL; break;
+    case 'dawn':  cyclePos = (DN.DAY + DN.DUSK + DN.NIGHT + DN.phaseTime) / TOTAL; break;
+  }
+  const moonStart = DN.DAY / TOTAL;
+  const moonSpan  = (DN.DUSK + DN.NIGHT + DN.DAWN) / TOTAL;
+  // Offset by 20% of arc — trails behind primary moon
+  const moonT = Math.max(0, Math.min(1, (cyclePos - moonStart) / moonSpan - 0.18));
+  if(moonT <= 0) return;
+
+  const moonX = W * 0.12 + W * 0.76 * moonT;
+  const moonY = tY * 0.72 - Math.sin(moonT * Math.PI) * tY * 0.55;
+  const skyZoom = Math.max(0.3, Math.min(zoom, 3.0));
+  const mSize = Math.max(W, tY) * 0.055 * moonScale * skyZoom; // half size of primary
+
+  if(!isFinite(moonX)||!isFinite(moonY)||!isFinite(mSize)||mSize<=0) return;
+  const moonAlpha = Math.min(0.85, DN.darkness * 1.1);
+  if(moonAlpha <= 0.01) return;
+
+  ctx.save();
+  // Soft halo
+  const halo = mSize * 2.8;
+  const g = ctx.createRadialGradient(moonX, moonY, mSize*0.3, moonX, moonY, halo);
+  g.addColorStop(0,   `rgba(180,210,255,${(moonAlpha*0.45).toFixed(3)})`);
+  g.addColorStop(0.4, `rgba(140,180,240,${(moonAlpha*0.18).toFixed(3)})`);
+  g.addColorStop(1,   'rgba(10,20,80,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(moonX, moonY, halo, 0, Math.PI*2); ctx.fill();
+
+  // Draw crescent using clip technique — no sprite needed
+  ctx.globalAlpha = moonAlpha;
+  ctx.fillStyle = 'rgb(185,215,255)';
+  ctx.beginPath(); ctx.arc(moonX, moonY, mSize, 0, Math.PI*2); ctx.fill();
+  // Punch out offset circle to create crescent
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath(); ctx.arc(moonX + mSize*0.38, moonY - mSize*0.05, mSize*0.80, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawMoonlightOnTerrain(ctx, W, H, tY) {
+  const { x, y, alpha, size } = MOON_STATE;
+  if(alpha <= 0.08 || !isFinite(x)) return;
+  if(x < -W * 0.5 || x > W * 1.5) return;
+
+  // ── Offscreen cache: only rebuild when moon pos / brightness changes ──────
+  const cacheKey = `${(x/10)|0}_${(y/10)|0}_${(alpha*20)|0}_${W}_${H}`;
+  if(drawMoonlightOnTerrain._key === cacheKey && drawMoonlightOnTerrain._oc){
+    ctx.drawImage(drawMoonlightOnTerrain._oc, 0, 0);
+    return;
+  }
+  drawMoonlightOnTerrain._key = cacheKey;
+  if(!drawMoonlightOnTerrain._oc || drawMoonlightOnTerrain._oc.width!==W || drawMoonlightOnTerrain._oc.height!==H){
+    drawMoonlightOnTerrain._oc = document.createElement('canvas');
+    drawMoonlightOnTerrain._oc.width = W;
+    drawMoonlightOnTerrain._oc.height = H;
+  }
+  const ctx2 = drawMoonlightOnTerrain._oc.getContext('2d');
+  ctx2.clearRect(0,0,W,H);
+  // Remap ctx → ctx2 for the rest of this function
+  const _origCtx = ctx; ctx = ctx2;
+  ctx.save();
+
+  // ── 1. Sky beam: soft elliptical glow from moon base to horizon ────────────
+  // Use a radial gradient centred at the horizon directly below moon — no rect
+  const beamCX = x;
+  const beamCY = tY;
+  const beamRX = W * 0.22;   // horizontal radius
+  const beamRY = tY - y;     // vertical radius — reaches up to moon
+  if(beamRX > 0 && beamRY > 0) {
+    const beamGrad = ctx.createRadialGradient(beamCX, beamCY, 0, beamCX, beamCY, Math.max(beamRX, beamRY));
+    beamGrad.addColorStop(0,   `rgba(180,210,255,${(alpha*0.11).toFixed(3)})`);
+    beamGrad.addColorStop(0.5, `rgba(160,190,255,${(alpha*0.05).toFixed(3)})`);
+    beamGrad.addColorStop(1,   'rgba(120,160,240,0)');
+    ctx.fillStyle = beamGrad;
+    // Draw as ellipse — perfectly circular gradient, no square box
+    ctx.save();
+    ctx.scale(beamRX / Math.max(beamRX, beamRY), beamRY / Math.max(beamRX, beamRY));
+    ctx.beginPath();
+    ctx.arc(beamCX / (beamRX / Math.max(beamRX, beamRY)),
+            beamCY / (beamRY / Math.max(beamRX, beamRY)),
+            Math.max(beamRX, beamRY), 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ── 2. Ground pool: large circular glow on terrain surface below moon ──────
+  const splashX = x;
+  const splashY = tY;          // centre on the terrain line itself
+  const splashR = W * 0.55;    // wide circle of light on the ground
+  if(splashR > 0) {
+    const sg = ctx.createRadialGradient(splashX, splashY, 0, splashX, splashY, splashR);
+    sg.addColorStop(0,    `rgba(210,230,255,${(alpha*0.30).toFixed(3)})`);
+    sg.addColorStop(0.20, `rgba(180,210,255,${(alpha*0.18).toFixed(3)})`);
+    sg.addColorStop(0.50, `rgba(130,165,230,${(alpha*0.08).toFixed(3)})`);
+    sg.addColorStop(0.80, `rgba(80,110,200,${(alpha*0.03).toFixed(3)})`);
+    sg.addColorStop(1,    'rgba(40,60,160,0)');
+    ctx.fillStyle = sg;
+    // Arc fill — guaranteed circular, never rectangular
+    ctx.beginPath();
+    ctx.arc(splashX, splashY, splashR, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // ── 3. Tight bright pool right at the ground centre ───────────────────────
+  const poolR = W * 0.18;
+  if(poolR > 0) {
+    const pg = ctx.createRadialGradient(splashX, tY, 0, splashX, tY, poolR);
+    pg.addColorStop(0,   `rgba(230,245,255,${(alpha*0.22).toFixed(3)})`);
+    pg.addColorStop(0.5, `rgba(200,225,255,${(alpha*0.10).toFixed(3)})`);
+    pg.addColorStop(1,   'rgba(160,195,255,0)');
+    ctx.fillStyle = pg;
+    ctx.beginPath();
+    ctx.arc(splashX, tY, poolR, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // ── 4. Horizon rim: thin linear glow at the sky/terrain boundary ──────────
+  // This is legitimately a horizontal strip so fillRect is correct here
+  const rimH = 6;
+  const rimGrad = ctx.createLinearGradient(x - W*0.4, 0, x + W*0.4, 0);
+  rimGrad.addColorStop(0,   'rgba(180,215,255,0)');
+  rimGrad.addColorStop(0.5, `rgba(200,225,255,${(alpha*0.20).toFixed(3)})`);
+  rimGrad.addColorStop(1,   'rgba(180,215,255,0)');
+  ctx.fillStyle = rimGrad;
+  ctx.fillRect(x - W*0.4, tY - rimH, W*0.8, rimH);
+
+  ctx.restore();
+  // Restore original ctx and blit cached result
+  ctx = _origCtx;
+  ctx.drawImage(drawMoonlightOnTerrain._oc, 0, 0);
+}
+
+function tickPlanet(dt) {
+  // Still advance for rotation angle only
+  planetCycleT = (planetCycleT + (dt * planetSpeed) / (PLANET_PERIOD_MS * 2)) % 1.0;
+}
+
+function drawPlanet(ctx, W, tY, camX, t, zoom) {
+  const img = tileImgs['gas_giant'];
+  if(!img || !img.complete || !img.naturalWidth) return;
+
+  // ── Position via DN cycle — mirrors moon approach exactly ─────────────────
+  const TOTAL = DN.DAY + DN.DUSK + DN.NIGHT + DN.DAWN;
+  let cyclePos = 0;
+  switch(DN.phase){
+    case 'day':   cyclePos = DN.phaseTime / TOTAL; break;
+    case 'dusk':  cyclePos = (DN.DAY + DN.phaseTime) / TOTAL; break;
+    case 'night': cyclePos = (DN.DAY + DN.DUSK + DN.phaseTime) / TOTAL; break;
+    case 'dawn':  cyclePos = (DN.DAY + DN.DUSK + DN.NIGHT + DN.phaseTime) / TOTAL; break;
+  }
+
+  // Gas giant: visible from DUSK through DAWN (same window as moon)
+  // Travels right-to-left so it opposes the moon direction — two celestial bodies, different paths
+  const ggStart = DN.DAY / TOTAL;
+  const ggSpan  = (DN.DUSK + DN.NIGHT + DN.DAWN) / TOTAL;
+  const ggT     = Math.max(0, Math.min(1, (cyclePos - ggStart) / ggSpan));
+
+  // Fade in at dusk, fade out at dawn — symmetric, quick
+  const fadeIn  = Math.min(1, ggT * 5);
+  const fadeOut = Math.min(1, (1 - ggT) * 5);
+  const dnAlpha = fadeIn * fadeOut;
+  if(dnAlpha < 0.01) return;
+
+  // Arc: RIGHT → LEFT (opposite of moon which goes left→right)
+  // ggT=0: enters from right edge off-screen, ggT=1: exits off left edge
+  // Same sin arc as moon: rises high at ggT=0.5, hugs horizon at ggT=0 and 1
+  const gcx = W * 0.95 - W * 0.90 * ggT;                          // right→left: 95% down to 5%
+  const gcy = tY * 0.85 - Math.sin(ggT * Math.PI) * tY * 0.70    // same arc height as moon
+              + tY * planetYPos;
+
+  // Size
+  const skyZoom = Math.max(0.3, Math.min(zoom, 3.0));
+  const dh = tY * 0.36 * planetScale * skyZoom;
+  const dw = dh * (img.naturalWidth / img.naturalHeight);
+  const R  = dh * 0.45;
+
+  const alpha = Math.min(1, dnAlpha * planetAlpha);
+  if(alpha < 0.01) return;
+  if(!isFinite(gcx)||!isFinite(gcy)||!isFinite(dw)||!isFinite(dh)||dw<=0||dh<=0) return;
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+
+  // ── Glow halo ─────────────────────────────────────────────────────────────
+  if(isFinite(gcx) && isFinite(gcy) && R > 0) {
+    const glow = ctx.createRadialGradient(gcx, gcy, R*0.5, gcx, gcy, R*2.2);
+    glow.addColorStop(0,   `rgba(200,70,15,${(0.25*dnAlpha).toFixed(3)})`);
+    glow.addColorStop(0.5, `rgba(140,40,8,${(0.12*dnAlpha).toFixed(3)})`);
+    glow.addColorStop(1,   'rgba(80,20,5,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(gcx, gcy, R*2.2, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ── Rotation (uses planetCycleT accumulator for smooth spin) ──────────────
+  const angle = (t * 0.001 * planetRotSpeed * Math.PI) / 180;
+
+  ctx.globalAlpha = alpha;
+  ctx.translate(gcx, gcy);
+  ctx.rotate(angle);
+  ctx.drawImage(img, -dw * 0.5, -dh * 0.5, dw, dh);
+
+  ctx.restore();
+}
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// INSTANCED GRASS SYSTEM — chunk-culled, zero per-frame allocation
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const GRASS_DEFS = [
+  // key, srcW (px at 48h), srcH, density weight, minScale, maxScale
+  { key:'grass_A', w:36,  h:48, weight:3, minS:0.55, maxS:1.10 },  // tall spindly
+  { key:'grass_B', w:99,  h:48, weight:4, minS:0.45, maxS:0.90 },  // wide tuft
+  { key:'grass_C', w:24,  h:48, weight:2, minS:0.60, maxS:1.20 },  // reeds
+  { key:'grass_D', w:46,  h:48, weight:3, minS:0.50, maxS:1.00 },  // wispy
+];
+
+// Build weighted lookup table for O(1) random selection
+const GRASS_WEIGHTS = [];
+GRASS_DEFS.forEach((d,i)=>{ for(let n=0;n<d.weight;n++) GRASS_WEIGHTS.push(i); });
+
+// Instance layout (typed): 4 floats per instance
+// [0]=worldX, [1]=variantIdx, [2]=scale, [3]=flip(0|1)
+const MAX_GRASS = 4096;
+let grassBuf     = new Float32Array(MAX_GRASS * 5); // [worldX, varIdx, scale, flip, layer]
+let grassCount   = 0;
+
+// Chunk culling: divide world into N chunks, each holds sorted instance indices
+const GRASS_CHUNKS   = 32;
+let   grassChunkMap  = null;  // array of Uint16Array (filled on generate)
+let   grassGenHash   = -1;    // hash of last generated layout (avoids regen on unchanged tiles)
+
+// Seeded LCG — deterministic per position, zero GC
+let _lcgSeed = 0;
+function lcgSeed(s){ _lcgSeed = (s ^ 0xdeadbeef) >>> 0; }
+function lcgNext(){
+  _lcgSeed = (Math.imul(_lcgSeed, 1664525) + 1013904223) >>> 0;
+  return _lcgSeed / 0xFFFFFFFF;
+}
+
+// ── Generate grass instances from current tile map ────────────────────────
+function generateGrass(){
+  grassCount = 0;
+  const instances = []; // temp, becomes typed array
+
+  // Iterate every surface tile — if it has a tile placed, spawn grass on top
+  const ts = TILE_PX; // world pixels per tile col
+  // Surface row = row 0 in the grid
+  for(let col=0; col<GRID_COLS; col++){
+    const tile = tilesMap[`${col},0`];
+    if(!tile) continue; // empty — no grass
+
+    // World X of this column
+    const worldX = col * ts;
+
+    // Spawn 1..3 grass instances per tile, deterministic from col
+    lcgSeed(col * 7919 + 3571);
+    if(lcgNext() > grassDensity) continue; // density gate
+    lcgSeed(col * 7919 + 3571); // re-seed so downstream is stable
+    const count = 1 + Math.floor(lcgNext() * 3); // 1,2,3
+    for(let n=0; n<count; n++){
+      if(instances.length >= MAX_GRASS) break;
+      const varIdx  = GRASS_WEIGHTS[Math.floor(lcgNext() * GRASS_WEIGHTS.length)];
+      const def     = GRASS_DEFS[varIdx];
+      const scale   = def.minS + lcgNext() * (def.maxS - def.minS);
+      const flip    = lcgNext() > 0.5 ? 1 : 0;
+      // X offset within tile — bottom-centre anchored so spread around tile centre
+      const xOff    = (lcgNext() - 0.5) * ts * 0.85;
+      const rockLayer = lcgNext() < 0.30 ? 0 : 1; // 0=BG, 1=FG
+    instances.push(worldX + ts*0.5 + xOff, varIdx, scale, flip, rockLayer);
+    }
+  }
+
+  // Pack into typed array
+  grassCount = instances.length / 5;
+  grassBuf = new Float32Array(instances);
+
+  // ── Build chunk map ───────────────────────────────────────────────────────
+  const worldW = GRID_COLS * ts;
+  const chunkW = worldW / GRASS_CHUNKS;
+  const buckets = Array.from({length: GRASS_CHUNKS}, ()=>[]);
+  for(let i=0; i<grassCount; i++){
+    const wx = grassBuf[i*5];
+    const ci = Math.min(GRASS_CHUNKS-1, Math.floor(wx / chunkW));
+    buckets[ci].push(i);
+  }
+  grassChunkMap = buckets.map(b => new Uint16Array(b));
+
+  console.log(`[GRASS] Generated ${grassCount} instances across ${GRASS_CHUNKS} chunks`);
+}
+
+// ── Draw grass — chunk-culled, zero allocation ────────────────────────────
+function drawGrass(ctx, camX, tY, W, zoom, drawingBGLayer){
+  if(!grassChunkMap || grassCount === 0) return;
+  // Bail if grass imgs not loaded
+  if(!tileImgs['grass_A'] || !tileImgs['grass_A'].complete) return;
+
+  const ts       = TILE_PX * zoom; // screen px per tile
+  const worldW   = GRID_COLS * TILE_PX;
+  const chunkW   = worldW / GRASS_CHUNKS;
+
+  // Viewport in world space (with generous margin for large sprites)
+  const margin   = 128;
+  const vLeft    = camX/zoom - margin; // convert screen camX to world space for chunk cull
+  const vRight   = camX/zoom + W/zoom + margin;
+
+  // Determine which chunks overlap viewport
+  const c0 = Math.max(0, Math.floor(vLeft  / chunkW));
+  const c1 = Math.min(GRASS_CHUNKS-1, Math.ceil(vRight / chunkW));
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  for(let ci=c0; ci<=c1; ci++){
+    const chunk = grassChunkMap[ci];
+    for(let j=0; j<chunk.length; j++){
+      const i      = chunk[j];
+      const wx     = grassBuf[i*5 + 0];
+      const varIdx = grassBuf[i*5 + 1] | 0;
+      const scale  = grassBuf[i*5 + 2];
+      const flip   = grassBuf[i*5 + 3] | 0;
+      const glayer = grassBuf[i*5 + 4] | 0;
+
+      // World → screen
+      const sx = wx * zoom - camX; // world→screen: matches terrain formula
+
+      // Early pixel-space cull (belt-and-suspenders)
+      if(sx < -200 || sx > W + 200) continue;
+      // Layer filter
+      const wantBG = (drawingBGLayer === true);
+      if(wantBG && glayer !== 0) continue;
+      if(!wantBG && glayer !== 1) continue;
+
+      const def    = GRASS_DEFS[varIdx];
+      const img    = tileImgs[def.key];
+      if(!img || !img.complete || !img.naturalWidth) continue;
+
+      const gsLayerS = (glayer === 0) ? 0.50 : 1.0;
+      const dh = def.h * scale * zoom * gsLayerS;
+      const dw = def.w * scale * zoom * gsLayerS;
+      const dy = tY - dh * 1.0; // grass bases sit on terrain line
+      const dx = sx - dw * 0.5;
+
+      // Use setTransform for flip — avoids save/restore GC pressure
+      if(flip){
+        ctx.setTransform(-1, 0, 0, 1, 0, 0);
+        ctx.drawImage(img, -dx - dw, dy, dw, dh);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      } else {
+        ctx.drawImage(img, dx, dy, dw, dh);
+      }
+    }
+  }
+  ctx.restore();
+}
+
+// Trigger grass regen whenever tiles change
+function grassInvalidate(){ grassGenHash = -1; }
+
+// Called each frame — only regens if invalidated
+function tickGrass(){
+  if(grassGenHash !== -1) return;
+  generateGrass();
+  grassGenHash = 0;
+}
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// INSTANCED ROCK SYSTEM — chunk-culled, zero per-frame allocation
+// Same architecture as grass: Float32Array + Uint16Array chunk map + LCG seed
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+const ROCK_DEFS = [
+  // key,     srcW, srcH, weight, minS, maxS,  anchor (0=bottom-centre, 1=bottom-left flush)
+  { key:'rock_A', w:69,  h:64,  weight:3, minS:0.60, maxS:1.40 },  // jagged boulder
+  { key:'rock_B', w:84,  h:40,  weight:4, minS:0.55, maxS:1.20 },  // rubble cluster — most common
+  { key:'rock_C', w:31,  h:96,  weight:1, minS:0.70, maxS:1.30 },  // spire hoodoo — rare
+  { key:'rock_D',  w:102, h:28,  weight:2, minS:0.65, maxS:1.30 },  // flat slab
+  { key:'rock_A2', w:81,  h:72,  weight:3, minS:0.55, maxS:1.35 },  // jagged overhang
+  { key:'rock_A3', w:74,  h:68,  weight:3, minS:0.55, maxS:1.25 },  // fractured shard
+  { key:'rock_B2', w:93,  h:32,  weight:5, minS:0.60, maxS:1.30 },  // debris scatter — very common, low
+  { key:'rock_B3', w:75,  h:48,  weight:3, minS:0.60, maxS:1.20 },  // leaning pair
+];
+
+const ROCK_WEIGHTS = [];
+ROCK_DEFS.forEach((d,i)=>{ for(let n=0;n<d.weight;n++) ROCK_WEIGHTS.push(i); });
+
+const MAX_ROCKS  = 2048;
+let   rockBuf    = new Float32Array(MAX_ROCKS * 5); // [worldX, varIdx, scale, flip, layer]
+let   rockCount  = 0;
+let   rockChunkMap  = null;
+let   rockGenHash   = -1;
+const ROCK_CHUNKS   = 32;
+
+// Reuse the same LCG from grass (lcgSeed/lcgNext defined there)
+
+function generateRocks(){
+  rockCount = 0;
+  const instances = [];
+  const ts = TILE_PX;
+
+  // Sparse placement: ~1 rock per every 6–10 surface tiles
+  // Use a separate LCG seed offset (col * prime + offset) so rocks don't align with grass
+  for(let col=0; col<GRID_COLS; col++){
+    if(!tilesMap[col+',0']) continue; // only on terrain surface
+
+    lcgSeed(col * 6173 + 9871); // different prime from grass
+    // ~15% chance per tile → sparse but organic
+    if(lcgNext() > 0.22 * rockDensity) continue; // density controlled
+
+    const worldX  = col * ts;
+    const varIdx  = ROCK_WEIGHTS[Math.floor(lcgNext() * ROCK_WEIGHTS.length)];
+    const def     = ROCK_DEFS[varIdx];
+    const scale   = def.minS + lcgNext() * (def.maxS - def.minS);
+    const flip    = lcgNext() > 0.5 ? 1 : 0;
+    const xOff    = (lcgNext() - 0.5) * ts * 0.7;
+    const gLayer = lcgNext() < 0.20 ? 0 : 1; // 20% BG behind terrain
+    instances.push(worldX + ts*0.5 + xOff, varIdx, scale, flip, gLayer);
+
+    // 18% chance of a companion small rock nearby (debris scatter or leaning pair)
+    if(lcgNext() < 0.18 && instances.length < (MAX_ROCKS-1)*5){
+      const smallIdx = ROCK_WEIGHTS[Math.floor(lcgNext() * ROCK_WEIGHTS.length)];
+      const smallDef = ROCK_DEFS[smallIdx];
+      const smallS   = smallDef.minS + lcgNext() * (smallDef.maxS - smallDef.minS) * 0.7;
+      const smallFlip= lcgNext() > 0.5 ? 1 : 0;
+      // Offset: place companion 0.8–1.8 tiles away
+      const cOff     = (lcgNext() * 1.0 + 0.8) * ts * (lcgNext() > 0.5 ? 1 : -1);
+      instances.push(worldX + ts*0.5 + cOff, smallIdx, smallS, smallFlip, gLayer);
+    }
+  }
+
+  rockCount = instances.length / 5;
+  rockBuf   = new Float32Array(instances);
+
+  // Build chunk map
+  const worldW = GRID_COLS * ts;
+  const chunkW = worldW / ROCK_CHUNKS;
+  const buckets = Array.from({length: ROCK_CHUNKS}, ()=>[]);
+  for(let i=0; i<rockCount; i++){
+    const wx = rockBuf[i*5];
+    const ci = Math.min(ROCK_CHUNKS-1, Math.floor(wx / chunkW));
+    buckets[ci].push(i);
+  }
+  rockChunkMap = buckets.map(b => new Uint16Array(b));
+  console.log('[ROCKS] Generated', rockCount, 'instances');
+}
+
+function drawRocks(ctx, camX, tY, W, zoom, drawingBGLayer){
+  if(!rockChunkMap || rockCount === 0) return;
+  if(!tileImgs['rock_A'] || !tileImgs['rock_A'].complete) return;
+
+  const ts      = TILE_PX * zoom;
+  const worldW  = GRID_COLS * TILE_PX;
+  const chunkW  = worldW / ROCK_CHUNKS;
+  const margin  = 160;
+  const vLeft   = camX/zoom - margin;
+  const vRight  = camX/zoom + W/zoom + margin;
+  const c0 = Math.max(0, Math.floor(vLeft  / chunkW));
+  const c1 = Math.min(ROCK_CHUNKS-1, Math.ceil(vRight / chunkW));
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  for(let ci=c0; ci<=c1; ci++){
+    const chunk = rockChunkMap[ci];
+    for(let j=0; j<chunk.length; j++){
+      const i      = chunk[j];
+      const wx     = rockBuf[i*5 + 0];
+      const varIdx = rockBuf[i*5 + 1] | 0;
+      const scale  = rockBuf[i*5 + 2];
+      const flip   = rockBuf[i*5 + 3] | 0;
+      const rlayer = rockBuf[i*5 + 4] | 0;
+
+      const sx = wx * zoom - camX; // world→screen: matches terrain formula
+      if(sx < -220 || sx > W + 220) continue;
+      // Layer filter: only draw rocks matching current pass
+      const wantBG = (drawingBGLayer === true);
+      if(wantBG && rlayer !== 0) continue;
+      if(!wantBG && rlayer !== 1) continue;
+
+      const def  = ROCK_DEFS[varIdx];
+      const img  = tileImgs[def.key];
+      if(!img || !img.complete || !img.naturalWidth) continue;
+
+      const layerS = (rlayer === 0) ? 0.55 : 1.0; // BG rocks are smaller
+      const dh = def.h * scale * zoom * layerS;
+      const dw = def.w * scale * zoom * layerS;
+      // BG: draw above terrain line (visually behind); FG: sit on surface
+      const dy = tY - dh * 1.0; // rocks sit on terrain line
+      const dx = sx - dw * 0.5;
+
+      if(rlayer === 0){
+        // BG rock — use pre-baked darkened canvas, no filter in hot path
+        const bakedRock = _getBGRock(img, def.key);
+        if(flip){
+          ctx.setTransform(-1, 0, 0, 1, 0, 0);
+          ctx.drawImage(bakedRock, -dx-dw, dy, dw, dh);
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+        } else {
+          ctx.drawImage(bakedRock, dx, dy, dw, dh);
+        }
+      } else {
+        if(flip){
+          ctx.setTransform(-1, 0, 0, 1, 0, 0);
+          ctx.drawImage(img, -dx - dw, dy, dw, dh);
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+        } else {
+          ctx.drawImage(img, dx, dy, dw, dh);
+        }
+      }
+    }
+  }
+  ctx.restore();
+}
+
+function rockInvalidate(){ rockGenHash = -1; }
+function setRockDensity(v){ rockDensity = v; rockInvalidate(); }
+function setGrassDensity(v){ grassDensity = v; grassInvalidate(); }
+
+function tickRocks(){
+  if(rockGenHash !== -1) return;
+  generateRocks();
+  rockGenHash = 0;
+}
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+// ── drawTrees — called twice: BG pass (before terrain) + FG pass (after terrain) ──
+// Pre-computed tree data (hoisted — rebuilt only when zoom or GRID_COLS changes)
+const TREE_CATALOGUE = [
+  {k:'dead_tree_0',  ht:'tall',  wd:'narrow', baseH:3.8, jitter:0.7},
+  {k:'dead_tree_2',  ht:'tall',  wd:'narrow', baseH:4.2, jitter:0.5},
+  {k:'dead_tree_5',  ht:'tall',  wd:'narrow', baseH:4.0, jitter:0.5},
+  {k:'dead_tree_7',  ht:'tall',  wd:'narrow', baseH:5.0, jitter:0.4},
+  {k:'dead_tree_8',  ht:'mid',   wd:'wide',   baseH:2.6, jitter:0.9},
+  {k:'dead_tree_9',  ht:'mid',   wd:'wide',   baseH:2.5, jitter:0.7},
+];
+let _TRS = [];         // loaded image entries — updated once images complete
+let _TREE_CL = [];     // cluster array — rebuilt when GRID_COLS changes
+let _treeCLCols = -1;  // track what GRID_COLS we last built for
+
+function _rebuildTreeData(){
+  _TRS = TREE_CATALOGUE.map(tc=>({...tc,img:tileImgs[tc.k]})).filter(tc=>tc.img&&tc.img.complete&&tc.img.naturalWidth>0);
+  const NC = Math.max(8, Math.floor(GRID_COLS/7));
+  _TREE_CL = [];
+  for(let ci=0;ci<NC;ci++){
+    const h1=(ci*6073+3137)%1000, h2=(ci*2771+1933)%1000, h3=(ci*4519+877)%1000;
+    const frac=(ci+0.5)/NC;
+    const wobble=((h1-500)/1000)*0.14;
+    const centre=Math.floor((frac+wobble)*GRID_COLS);
+    const typeRoll=h2/1000;
+    const type=typeRoll<0.60?'grove':typeRoll<0.85?'pair':'lone';
+    const radius=type==='grove'?3+(h3%4):type==='pair'?1:0;
+    const heightBias=h1%3;
+    _TREE_CL.push({centre,radius,type,density:0.55+h2/1000*0.4,heightBias});
+  }
+  _treeCLCols = GRID_COLS;
+}
+
+// Pre-baked BG asset canvases — keyed by "key_filter", baked once at natural size
+const _bgAssetCache = {};
+function _getBGAsset(img, key, filter){
+  const cacheKey = key + '|' + filter;
+  if(_bgAssetCache[cacheKey]) return _bgAssetCache[cacheKey];
+  const oc = document.createElement('canvas');
+  oc.width = img.naturalWidth; oc.height = img.naturalHeight;
+  const c2 = oc.getContext('2d');
+  c2.filter = filter;
+  c2.drawImage(img, 0, 0);
+  _bgAssetCache[cacheKey] = oc;
+  return oc;
+}
+// Convenience wrappers
+function _getBGTree(img, key){ return _getBGAsset(img, key, 'brightness(0.72) sepia(0.25)'); }
+function _getBGRock(img, key){ return _getBGAsset(img, key, 'brightness(0.72) saturate(0.7)'); }
+
+function drawTrees(ctx, camX, tY, W, zoom, drawingBGLayer){
+  // Rebuild cluster data if needed
+  if(_treeCLCols !== GRID_COLS || _TRS.length === 0) _rebuildTreeData();
+  if(_TRS.length === 0) return;
+
+  const ts = TILE_PX * zoom;
+  const s0 = Math.max(0, Math.floor(camX/ts)-2);
+  const e0 = Math.min(GRID_COLS-1, Math.floor((camX+W)/ts)+2);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  for(let c=s0; c<=e0; c++){
+    if(!tilesMap[c+',0']) continue;
+
+    const hv  = (c*3137+1777)%10000;
+    const hv2 = (c*7919+2311)%10000;
+    const rv  = hv/10000;
+
+    let bestProb=0, bestCl=null;
+    for(const cl of _TREE_CL){
+      const dist=Math.abs(c-cl.centre);
+      if(dist>cl.radius+2) continue;
+      const falloff=dist<=cl.radius ? 1-Math.pow(dist/Math.max(1,cl.radius),1.8)*0.5 : Math.max(0,1-(dist-cl.radius));
+      const prob=cl.density*falloff;
+      if(prob>bestProb){bestProb=prob;bestCl=cl;}
+    }
+    const finalProb=Math.max(0.06, bestProb * treeDensity);
+    if(rv>finalProb) continue;
+
+    const numTrees=(bestCl&&bestCl.type==='grove'&&hv2%10<3)?2:1;
+
+    for(let ti=0;ti<numTrees;ti++){
+      let candidates;
+      if(!bestCl||bestCl.heightBias===0) candidates=_TRS;
+      else if(bestCl.heightBias===1) candidates=hv2%10<7?_TRS.filter(t=>t.ht==='tall'):_TRS;
+      else candidates=hv2%10<6?(_TRS.filter(t=>t.ht!=='tall').length?_TRS.filter(t=>t.ht!=='tall'):_TRS):_TRS;
+      if(!candidates||!candidates.length) candidates=_TRS;
+
+      const tIdx=((hv+ti*3137)%10000)%candidates.length;
+      const tc=candidates[tIdx];
+      const img=tc.img;
+      if(!img||!img.complete||!img.naturalWidth) continue;
+
+      const asp=img.naturalWidth/img.naturalHeight;
+      const jitterAmt=(((hv2+ti*7)%100)/100)*tc.jitter;
+      const hScale=tc.baseH+jitterAmt;
+      const tH=ts*hScale;
+      const tW=tH*asp;
+      const xJitter=ti===0 ? ((hv%200)-100)/100*ts*0.3 : ((hv2%120)-60)/100*ts*1.2+(hv2%2?ts*0.8:-ts*0.4);
+      const drawX=c*ts-camX+(ts-tW)*0.5+xJitter;
+
+      const isBG=(hv%100<35);
+      if(isBG!==drawingBGLayer) continue;
+
+      if(isBG){
+        const layerS=0.62;
+        const tHf=tH*layerS, tWf=tW*layerS;
+        const drawXf=drawX+(tW-tWf)*0.5;
+        const drawYf=tY-tHf;
+        // Use pre-baked darkened canvas — NO ctx.filter in hot path
+        const baked=_getBGTree(img, tc.k);
+        ctx.drawImage(baked, drawXf, drawYf, tWf, tHf);
+      } else {
+        ctx.drawImage(img, drawX, tY-tH, tW, tH);
+      }
+    }
+  }
+  ctx.restore();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CLOUD SYSTEM — 3-layer infinite-scroll parallax
+// Render order (back to front): L2 rolling → L1 mackerel → L3 dust veil
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+let cloudScale = 1.0;  // cloud height scale
+let cloudAlpha = 1.0;  // master cloud opacity
+let cloudDrift = 1.0;  // drift speed multiplier
+
+// Per-layer Y offsets (additive — fraction of tY)
+let cloudYOff = [0.0, 0.0, 0.0]; // L1, L2, L3 individual vertical nudge
+
+// Sun / Moon size
+let sunScale  = 1.0;  // multiplier on sunR
+let moonScale = 1.0;  // multiplier on mSize
+
+// Planet
+let planetScale    = 1.0;  // size multiplier
+let planetSpeed    = 1.0;  // orbit speed multiplier
+let planetYPos     = 0.0;  // Y offset as fraction of tY (positive = lower)
+let planetAlpha    = 0.94; // opacity
+let planetRotSpeed = 0.15; // degrees per second (slow majestic spin)
+let planetCycleT   = 0.0;  // accumulator for planet arc position (0..1)
+const PLANET_PERIOD_MS = 120000; // full orbit period in ms (120 seconds)
+
+// Star density / brightness
+let starBrightness = 1.0;
+
+// Ambient haze strength (0=off)
+let hazeStrength = 1.0;
+
+// Tree / Rock / Grass density scale (0..2)
+let treeDensity  = 1.0;
+let rockDensity  = 1.0;
+let grassDensity = 1.0;
+
+const CLOUD_LAYERS = [
+  // wFrac: tile width as fraction of viewport W (1.2 = 120% wide for seamless tiling)
+  // yFrac: vertical CENTRE of band as fraction of sky height (tY)
+  //        0.15 = near top, 0.45 = mid-sky, 0.65 = low horizon band
+  { key:'cloud_L1', parallax:0.08, drift: 4, wFrac:1.4, yFrac:0.18, alpha:0.65 }, // FAR  — high, slow
+  { key:'cloud_L2', parallax:0.20, drift:10, wFrac:1.3, yFrac:0.42, alpha:0.80 }, // MID  — rolling banks
+  { key:'cloud_L3', parallax:0.38, drift:18, wFrac:1.2, yFrac:0.62, alpha:0.58 }, // NEAR — low dust veil
+];
+
+function drawClouds(ctx, W, tY, camX, t, zoom) {
+  const d     = DN.darkness;
+  const duskF = 1 - Math.abs(d - 0.5) * 2;  // peaks at 1 at true dusk/dawn
+  const moonlitBoost = d * 0.35;
+  const duskBoost    = duskF * 0.20;
+
+  const skyZoom = Math.max(0.3, Math.min(zoom, 3.0));
+  for(let li=0; li<CLOUD_LAYERS.length; li++) {
+    const cl  = CLOUD_LAYERS[li];
+    const img = tileImgs[cl.key];
+    if(!img || !img.complete || !img.naturalWidth) continue;
+
+    // Height-driven: base height at zoom=1, width follows aspect (no stretching)
+    const aspect = img.naturalWidth / img.naturalHeight; // ~6:1 wide sprites
+    // Reference height at zoom=1: cloud band is wFrac*W / aspect
+    const baseH = (W * cl.wFrac / aspect) * cloudScale;
+    const dh = baseH * skyZoom;           // scale height uniformly
+    const dw = dh * aspect;               // width always = height * aspect → locked ratio
+    // Centre-anchor: yFrac = middle of band, cloudYOff = per-layer nudge
+    const dy = tY * cl.yFrac - dh * 0.5 + tY * (cloudYOff[li] || 0);
+    const scrollOffset = camX * cl.parallax + (t * cl.drift * cloudDrift / 1000);
+    const tileOffset   = ((scrollOffset % dw) + dw) % dw;
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+
+    // ── 1. Draw cloud sprite at base alpha ────────────────────────────────────
+    const baseAlpha = Math.min(1, (cl.alpha + moonlitBoost * 0.3 + duskBoost * 0.2) * cloudAlpha);
+    ctx.globalAlpha = baseAlpha;
+    for(let x = -tileOffset; x < W + dw; x += dw) {
+      ctx.drawImage(img, x, dy, dw, dh);
+    }
+
+    // ── 2. Colour tint overlay — fillRect clipped to cloud shape via source-atop ─
+    //    Do NOT re-drawImage here — that causes alpha stacking / flicker.
+    //    The cloud pixels drawn in pass 1 already define the mask.
+    if(d > 0.05) {
+      // Night: cold blue-silver moonlit tint
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.globalAlpha = Math.min(0.30, moonlitBoost * 0.55);
+      ctx.fillStyle = 'rgba(120,145,220,1)';
+      ctx.fillRect(0, dy, W, dh);
+    }
+    if(duskF > 0.08) {
+      // Dusk/Dawn: warm amber backlit
+      ctx.globalCompositeOperation = 'source-atop';
+      ctx.globalAlpha = Math.min(0.25, duskBoost * 0.6);
+      ctx.fillStyle = 'rgba(220,95,15,1)';
+      ctx.fillRect(0, dy, W, dh);
+    }
+
+    ctx.restore();
+  }
+}
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+// ── DRAW PLAYER ──────────────────────────────────────────────────────────────
+function drawPlayer(ctx, camX, tY, W, zoom) {
+  // Ground: sit on top of terrain surface
+  const groundScreenY = tY;
+  const dw = PLAYER.WIDTH  * zoom;
+  const dh = PLAYER.HEIGHT * zoom;
+
+  // Screen X from world position
+  const sx = PLAYER.worldX * zoom - camX - dw * 0.5;
+  const sy = groundScreenY - dh;  // feet on terrain line
+
+  // Pick sprite key based on facing
+  const sprKey = 'trooper_player_' + PLAYER.facing;
+  const img = tileImgs[sprKey];
+
+  if(img && img.complete && img.naturalWidth) {
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = 1;
+    ctx.drawImage(img, sx, sy, dw, dh);
+    ctx.restore();
+  } else {
+    // Fallback — coloured rect so player is always visible
+    ctx.save();
+    ctx.fillStyle = '#3a8fff';
+    ctx.fillRect(sx, sy, dw, dh);
+    ctx.restore();
+  }
+
+  // Shadow underfoot
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = '#000';
+  const shW = dw * 0.7, shH = 5 * zoom;
+  ctx.beginPath();
+  ctx.ellipse(sx + dw*0.5, groundScreenY - 2, shW*0.5, shH*0.5, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// VULCAN STRUCTURES SYSTEM v1.0
+// Wall segments, Buildings (HQ/Barracks/Armory/Workshop), Guard Towers
+// ════════════════════════════════════════════════════════════════════════════
+
+const STRUCTURES = [];   // Array of placed structure objects
+let structureTool = null; // null = terrain mode, else structure type key
+let structHover   = null; // current hover position for ghost preview
+
+const STRUCT_DEFS = {
+  wall: {
+    label:'WALL', icon:'🧱', w:2, h:2,
+    color:'#5a5a6a', borderColor:'#8a8a9a',
+    cost: 15,
+    draw(ctx, x, y, w, h, darkness, t) {
+      // Stone wall segment with pillar caps
+      const stone1 = '#4a4a58', stone2 = '#5c5c6e', pillar = '#6a6a7c';
+      // Main wall body
+      ctx.fillStyle = stone2;
+      ctx.fillRect(x, y, w, h);
+      // Stone texture — horizontal mortar lines
+      ctx.fillStyle = stone1;
+      const mortar = Math.max(2, h/6);
+      for(let i=0;i<3;i++){
+        ctx.fillRect(x, y + (h/3)*i + mortar*0.3, w, Math.max(1, mortar*0.4));
+      }
+      // Pillar caps (left/right sides)
+      ctx.fillStyle = pillar;
+      ctx.fillRect(x, y, Math.max(3, w*0.15), h);
+      ctx.fillRect(x+w-Math.max(3,w*0.15), y, Math.max(3, w*0.15), h);
+      // Top crenellation
+      ctx.fillStyle = '#7a7a8c';
+      const cW = Math.max(3, w*0.25);
+      ctx.fillRect(x, y-Math.max(2,h*0.12), cW, Math.max(2,h*0.12));
+      ctx.fillRect(x+w-cW, y-Math.max(2,h*0.12), cW, Math.max(2,h*0.12));
+      // Night: dim orange window glow from inside
+      if(darkness > 0.4) {
+        ctx.globalAlpha = (darkness-0.4)*0.6;
+        ctx.fillStyle = 'rgba(255,140,30,0.5)';
+        ctx.fillRect(x+w*0.3, y+h*0.3, w*0.4, h*0.3);
+        ctx.globalAlpha = 1;
+      }
+    }
+  },
+
+  tower: {
+    label:'TOWER', icon:'🗼', w:2, h:5,
+    color:'#4a5060', borderColor:'#7a8090',
+    cost: 40,
+    draw(ctx, x, y, w, h, darkness, t) {
+      // Lattice guard tower — tall, narrow base, wide platform top
+      const base = '#404050', mid = '#50505f', plat = '#606070';
+      // Tower legs (lattice)
+      ctx.fillStyle = base;
+      ctx.fillRect(x + w*0.1, y + h*0.35, w*0.15, h*0.65);  // left leg
+      ctx.fillRect(x + w*0.75, y + h*0.35, w*0.15, h*0.65); // right leg
+      // Cross braces
+      ctx.strokeStyle = '#505060';
+      ctx.lineWidth = Math.max(1, w*0.06);
+      ctx.beginPath();
+      ctx.moveTo(x+w*0.15, y+h*0.38); ctx.lineTo(x+w*0.85, y+h*0.60); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x+w*0.85, y+h*0.38); ctx.lineTo(x+w*0.15, y+h*0.60); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x+w*0.15, y+h*0.60); ctx.lineTo(x+w*0.85, y+h*0.82); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x+w*0.85, y+h*0.60); ctx.lineTo(x+w*0.15, y+h*0.82); ctx.stroke();
+      // Platform base
+      ctx.fillStyle = mid;
+      ctx.fillRect(x, y + h*0.28, w, h*0.12);
+      // Platform room
+      ctx.fillStyle = plat;
+      ctx.fillRect(x - w*0.1, y + h*0.05, w*1.2, h*0.26);
+      // Platform roof
+      ctx.fillStyle = '#505060';
+      ctx.fillRect(x - w*0.12, y + h*0.02, w*1.24, h*0.06);
+      // Windows on platform
+      ctx.fillStyle = darkness > 0.3 ? 'rgba(255,160,40,0.9)' : '#1a1a22';
+      const wW = w*0.18, wH = h*0.10;
+      ctx.fillRect(x + w*0.05, y+h*0.10, wW, wH);
+      ctx.fillRect(x + w*0.42, y+h*0.10, wW, wH);
+      ctx.fillRect(x + w*0.79, y+h*0.10, wW, wH);
+      // Window glow at night
+      if(darkness > 0.3) {
+        ctx.globalAlpha = (darkness-0.3)*0.5;
+        ctx.fillStyle = 'rgba(255,140,20,0.4)';
+        ctx.fillRect(x-w*0.05, y+h*0.06, w*1.1, h*0.22);
+        ctx.globalAlpha = 1;
+      }
+      // Spotlight mount on top
+      ctx.fillStyle = '#707080';
+      ctx.fillRect(x+w*0.4, y-h*0.04, w*0.2, h*0.06);
+      // Red warning light
+      const pulse = 0.5 + 0.5*Math.sin(t*0.0015);
+      ctx.globalAlpha = 0.5 + pulse*0.5;
+      ctx.fillStyle = '#ff2020';
+      ctx.beginPath();
+      ctx.arc(x+w*0.5, y, Math.max(2, w*0.08), 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      // Searchlight beam at night — emits from mounted light at tower top-front
+      if(darkness > 0.5) {
+        const beamA = (darkness-0.5)/0.5;
+        const sweep = Math.sin(t*0.0004 + x*0.001) * 0.6;
+        const beamLen = h * 4.5;
+        // Light origin: front edge of platform, top of tower
+        const bx = x + w * 0.72, by = y + h * 0.04;
+        // Draw searchlight housing
+        ctx.save();
+        ctx.fillStyle = `rgba(60,60,70,${Math.min(1,beamA+0.3)})`;
+        ctx.fillRect(bx - w*0.07, by - h*0.04, w*0.18, h*0.07);
+        ctx.fillStyle = `rgba(255,240,180,${beamA*0.95})`;
+        ctx.beginPath();
+        ctx.arc(bx + w*0.05, by, h*0.03, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+        const ex = bx + Math.cos(Math.PI*0.5 + sweep)*beamLen;
+        const ey = by + Math.sin(Math.PI*0.5 + sweep)*beamLen;
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const bGrad = ctx.createLinearGradient(bx, by, ex, ey);
+        bGrad.addColorStop(0, `rgba(240,240,200,${(beamA*0.3).toFixed(3)})`);
+        bGrad.addColorStop(0.4,`rgba(220,220,180,${(beamA*0.12).toFixed(3)})`);
+        bGrad.addColorStop(1,  'rgba(200,200,160,0)');
+        ctx.fillStyle = bGrad;
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx+Math.cos(Math.PI*0.5+sweep-0.06)*beamLen, ey);
+        ctx.lineTo(bx+Math.cos(Math.PI*0.5+sweep+0.06)*beamLen, ey);
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+    }
+  },
+
+  hq: {
+    label:'HQ', icon:'🏛', w:5, h:4,
+    color:'#3a3a48', borderColor:'#6a6a78',
+    cost: 120,
+    draw(ctx, x, y, w, h, darkness, t) {
+      const dark = '#2e2e3a', mid2 = '#3c3c4a', lite = '#5a5a6a';
+      // Main structure — wide with dome suggestion
+      ctx.fillStyle = mid2;
+      ctx.fillRect(x, y+h*0.15, w, h*0.85);
+      // Dome top
+      ctx.fillStyle = dark;
+      ctx.beginPath();
+      ctx.ellipse(x+w*0.5, y+h*0.18, w*0.35, h*0.22, 0, Math.PI, 0);
+      ctx.fill();
+      // Flag pole
+      ctx.fillStyle = lite;
+      ctx.fillRect(x+w*0.46, y-h*0.25, Math.max(2,w*0.04), h*0.40);
+      // Flag (red with Federation logo)
+      ctx.fillStyle = '#cc2020';
+      ctx.fillRect(x+w*0.50, y-h*0.22, w*0.18, h*0.14);
+      // Sign: HQ
+      ctx.fillStyle = '#404050';
+      ctx.fillRect(x+w*0.28, y+h*0.22, w*0.44, h*0.16);
+      ctx.fillStyle = '#f0d080';
+      ctx.font = `bold ${Math.max(8,h*0.12)}px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText('HQ', x+w*0.5, y+h*0.34);
+      ctx.textAlign = 'left';
+      // Windows — lit at night
+      const winColor = darkness > 0.3 ? 'rgba(255,160,40,0.9)' : '#1a1520';
+      const wW=w*0.10, wH=h*0.12;
+      [[0.10,0.48],[0.25,0.48],[0.60,0.48],[0.75,0.48],
+       [0.10,0.68],[0.25,0.68],[0.60,0.68],[0.75,0.68]].forEach(([rx,ry])=>{
+        ctx.fillStyle = winColor;
+        ctx.fillRect(x+w*rx, y+h*ry, wW, wH);
+        if(darkness > 0.3) {
+          ctx.globalAlpha = (darkness-0.3)*0.35;
+          ctx.fillStyle='rgba(255,140,20,0.5)';
+          ctx.fillRect(x+w*rx-2, y+h*ry-2, wW+4, wH+4);
+          ctx.globalAlpha=1;
+        }
+      });
+      // Comms antenna
+      ctx.fillStyle = lite;
+      ctx.fillRect(x+w*0.88, y-h*0.15, Math.max(2,w*0.03), h*0.35);
+      // Red blinking light on antenna
+      const p = 0.5+0.5*Math.sin(t*0.0012+1.2);
+      ctx.globalAlpha = 0.4+p*0.6;
+      ctx.fillStyle='#ff2020';
+      ctx.beginPath(); ctx.arc(x+w*0.895, y-h*0.16, Math.max(2,w*0.04), 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha=1;
+      // Bottom — sandbag line
+      ctx.fillStyle = '#5a5030';
+      ctx.fillRect(x, y+h*0.90, w, h*0.10);
+    }
+  },
+
+  barracks: {
+    label:'BARRACKS', icon:'🏠', w:4, h:3,
+    color:'#3a3830', borderColor:'#6a6850',
+    cost: 60,
+    draw(ctx, x, y, w, h, darkness, t) {
+      const body = '#38383a', roof = '#282830', trim = '#505058';
+      // Main body
+      ctx.fillStyle = body;
+      ctx.fillRect(x, y+h*0.22, w, h*0.78);
+      // Roof — pitched
+      ctx.fillStyle = roof;
+      ctx.beginPath();
+      ctx.moveTo(x-w*0.02, y+h*0.24);
+      ctx.lineTo(x+w*0.5,  y);
+      ctx.lineTo(x+w*1.02, y+h*0.24);
+      ctx.closePath(); ctx.fill();
+      // Sign
+      ctx.fillStyle = '#404040';
+      ctx.fillRect(x+w*0.2, y+h*0.26, w*0.6, h*0.14);
+      ctx.fillStyle = '#c8c860';
+      ctx.font = `bold ${Math.max(7,h*0.10)}px monospace`;
+      ctx.textAlign='center';
+      ctx.fillText('BARRACKS', x+w*0.5, y+h*0.36);
+      ctx.textAlign='left';
+      // Door
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(x+w*0.42, y+h*0.60, w*0.18, h*0.40);
+      // Windows
+      const wCol = darkness>0.3?'rgba(255,150,30,0.9)':'#151518';
+      [[0.08,0.44],[0.28,0.44],[0.64,0.44],[0.84,0.44],
+       [0.08,0.65],[0.84,0.65]].forEach(([rx,ry])=>{
+        ctx.fillStyle=wCol;
+        ctx.fillRect(x+w*rx,y+h*ry,w*0.14,h*0.14);
+        if(darkness>0.3){
+          ctx.globalAlpha=(darkness-0.3)*0.3;
+          ctx.fillStyle='rgba(255,130,20,0.5)';
+          ctx.fillRect(x+w*rx-1,y+h*ry-1,w*0.14+2,h*0.14+2);
+          ctx.globalAlpha=1;
+        }
+      });
+      // Sandbags base
+      ctx.fillStyle='#5a5030';
+      ctx.fillRect(x,y+h*0.92,w,h*0.08);
+    }
+  },
+
+  armory: {
+    label:'ARMORY', icon:'🔧', w:3, h:3,
+    color:'#3a2a20', borderColor:'#7a5a40',
+    cost: 80,
+    draw(ctx, x, y, w, h, darkness, t) {
+      const body='#302825', trim2='#504038', accent='#705040';
+      ctx.fillStyle=body;
+      ctx.fillRect(x, y+h*0.18, w, h*0.82);
+      // Flat industrial roof
+      ctx.fillStyle=trim2;
+      ctx.fillRect(x-w*0.02, y+h*0.12, w*1.04, h*0.10);
+      // Warning stripe on roof
+      for(let i=0;i<4;i++){
+        ctx.fillStyle = i%2===0?'#d0a010':'#1a1a1a';
+        ctx.fillRect(x+w*0.04+i*w*0.24, y+h*0.12, w*0.20, h*0.06);
+      }
+      // Sign
+      ctx.fillStyle='#603020';
+      ctx.fillRect(x+w*0.1,y+h*0.22,w*0.8,h*0.14);
+      ctx.fillStyle='#ffa020';
+      ctx.font=`bold ${Math.max(7,h*0.10)}px monospace`;
+      ctx.textAlign='center';
+      ctx.fillText('ARMORY',x+w*0.5,y+h*0.32);
+      ctx.textAlign='left';
+      // Heavy door
+      ctx.fillStyle='#202020';
+      ctx.fillRect(x+w*0.35,y+h*0.55,w*0.30,h*0.45);
+      ctx.fillStyle='#404040';
+      ctx.fillRect(x+w*0.37,y+h*0.57,w*0.12,h*0.40);
+      ctx.fillRect(x+w*0.51,y+h*0.57,w*0.12,h*0.40);
+      // Warning light
+      const wp=0.5+0.5*Math.sin(t*0.0020+2.0);
+      ctx.globalAlpha=0.5+wp*0.5;
+      ctx.fillStyle=darkness>0.4?'#ff6010':'#cc4000';
+      ctx.beginPath();ctx.arc(x+w*0.5,y+h*0.15,Math.max(2,w*0.06),0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;
+      // Windows (small, industrial)
+      const wCol2=darkness>0.3?'rgba(255,130,20,0.85)':'#0d0d0d';
+      [[0.08,0.42],[0.72,0.42]].forEach(([rx,ry])=>{
+        ctx.fillStyle=wCol2;
+        ctx.fillRect(x+w*rx,y+h*ry,w*0.18,h*0.14);
+      });
+    }
+  }
+};
+
+
+// ── VULCAN: Load structure sprite assets from CDN ──────────────────────────
+const STRUCT_IMGS = {};
+const STRUCT_ASSET_URLS = {
+  wall_segment:  'https://base44.app/api/apps/6a07d557e104123d6d54764f/files/mp/public/6a07d557e104123d6d54764f/c1de647df_wall_section_clean.png',
+  guard_tower:   'https://base44.app/api/apps/6a07d557e104123d6d54764f/files/mp/public/6a07d557e104123d6d54764f/8312feb97_guard_tower_clean.png',
+  hq_building:   'https://base44.app/api/apps/6a07d557e104123d6d54764f/files/mp/public/6a07d557e104123d6d54764f/bbdfd8554_hq_building_clean.png',
+  barracks:      'https://base44.app/api/apps/6a07d557e104123d6d54764f/files/mp/public/6a07d557e104123d6d54764f/9b1042b8a_barracks_clean.png',
+  armory:        'https://base44.app/api/apps/6a07d557e104123d6d54764f/files/mp/public/6a07d557e104123d6d54764f/5fce4a1c8_armory_clean.png',
+  workshop:      'https://base44.app/api/apps/6a07d557e104123d6d54764f/files/mp/public/6a07d557e104123d6d54764f/efee9dc5c_workshop_clean.png',
+  wall_turret:   'https://base44.app/api/apps/6a07d557e104123d6d54764f/files/mp/public/6a07d557e104123d6d54764f/3234ccd4d_wall_turret_clean.png',
+  trooper_sheet: 'https://base44.app/api/apps/6a07d557e104123d6d54764f/files/mp/public/6a07d557e104123d6d54764f/7f53e9762_trooper_idle.png',
+};
+(function loadStructAssets(){
+  Object.entries(STRUCT_ASSET_URLS).forEach(([key, url])=>{
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = url;
+    img.onload  = ()=>{ STRUCT_IMGS[key] = img; console.log('✅ struct asset loaded:', key); };
+    img.onerror = ()=>console.warn('❌ struct asset failed:', key, url);
+  });
+})();
+
+// Structure placement state
+let placingStruct = null; // key of structure being placed
+
+function structWorldX(screenX){ return (screenX + camX) / zoom; }
+function structScreenX(worldX){ return worldX * zoom - camX; }
+
+function getGroundY(){ 
+  // Returns terrain top screen Y
+  return cv.height * (1 - TERRAIN_H); 
+}
+
+function placeStructure(worldX, structKey){
+  const def = STRUCT_DEFS[structKey];
+  if(!def) return;
+  STRUCTURES.push({
+    key: structKey,
+    worldX: worldX,
+    w: def.w,  // in tile units
+    h: def.h,
+  });
+}
+
+function removeStructureAt(screenX, screenY){
+  const tY = getGroundY();
+  const ts = TILE_PX * zoom;
+  for(let i=STRUCTURES.length-1;i>=0;i--){
+    const s = STRUCTURES[i];
+    const sx = structScreenX(s.worldX);
+    const def = STRUCT_DEFS[s.key];
+    const sw = def.w * ts, sh = def.h * ts;
+    const sy = tY - sh;
+    if(screenX >= sx && screenX <= sx+sw && screenY >= sy && screenY <= tY){
+      STRUCTURES.splice(i,1);
+      return true;
+    }
+  }
+  return false;
+}
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// VULCAN UNIT SYSTEM v1.0
+// Placeable units: Trooper, Warrior Bug, Hopper Bug
+// ════════════════════════════════════════════════════════════════════════════
+
+const UNITS = [];
+let unitTool = null;
+
+const UNIT_DEFS = {
+  trooper: {
+    label:'TROOPER', icon:'🪖', worldW:32, worldH:48,
+    assetKey:'trooper_sheet',
+    // Sprite sheet: 6 frames wide, use frame 0 (idle) for editor preview
+    frameW: 1/6,  // fraction of sheet width per frame
+    frameIdx: 0,
+    tint: null
+  },
+  warrior_bug: {
+    label:'WARRIOR BUG', icon:'🐛', worldW:64, worldH:40,
+    assetKey:'warrior_bug',
+    frameW: 1, frameIdx: 0,
+    tint: 'rgba(30,60,10,0.3)'
+  },
+  hopper_bug: {
+    label:'HOPPER BUG', icon:'🦟', worldW:56, worldH:48,
+    assetKey:'hopper_bug',
+    frameW: 1, frameIdx: 0,
+    tint: null,
+    floatHeight: 0.4   // floats above terrain (fraction of height)
+  },
+};
+
+function placeUnit(worldX, key){
+  const def = UNIT_DEFS[key];
+  if(!def) return;
+  UNITS.push({ key, worldX, flip: false });
+}
+
+function removeUnitAt(screenX, screenY, tY){
+  for(let i=UNITS.length-1;i>=0;i--){
+    const u=UNITS[i], def=UNIT_DEFS[u.key];
+    if(!def) continue;
+    const sw=def.worldW*zoom, sh=def.worldH*zoom;
+    const sx=u.worldX*zoom-camX;
+    const floatOff = (def.floatHeight||0)*sh;
+    const uy=tY-sh-floatOff;
+    if(screenX>=sx && screenX<=sx+sw && screenY>=uy && screenY<=tY){
+      UNITS.splice(i,1); return true;
+    }
+  }
+  return false;
+}
+
+function drawUnits(ctx, W, tY, t, zoom, darkness){
+  if(UNITS.length===0 && !unitTool) return;
+
+  for(const u of UNITS){
+    const def = UNIT_DEFS[u.key];
+    if(!def) continue;
+    const sw = def.worldW * zoom, sh = def.worldH * zoom;
+    const sx = u.worldX * zoom - camX;
+    if(sx > W+sw || sx+sw < 0) continue;
+    const floatOff = (def.floatHeight||0)*sh;
+    const sy = tY - sh - floatOff;
+    drawUnitSprite(ctx, u.key, def, sx, sy, sw, sh, darkness, t, 1, u.flip);
+  }
+}
+
+function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip){
+  const img = STRUCT_IMGS[def.assetKey];
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.imageSmoothingEnabled = false;
+
+  if(img && img.complete && img.naturalWidth){
+    // For sprite sheets — clip to single frame
+    const frameW = img.naturalWidth * def.frameW;
+    const frameH = img.naturalHeight;
+    const srcX   = def.frameIdx * frameW;
+
+    if(flip){
+      ctx.translate(sx+sw, sy);
+      ctx.scale(-1,1);
+      ctx.drawImage(img, srcX, 0, frameW, frameH, 0, 0, sw, sh);
+    } else {
+      ctx.drawImage(img, srcX, 0, frameW, frameH, sx, sy, sw, sh);
+    }
+
+    // Night tint
+    if(darkness > 0.3 && def.tint){
+      ctx.globalCompositeOperation='multiply';
+      ctx.globalAlpha=alpha*Math.min(0.5,darkness*0.6);
+      ctx.fillStyle=def.tint;
+      ctx.fillRect(sx,sy,sw,sh);
+      ctx.globalCompositeOperation='source-over';
+    }
+  } else {
+    // Fallback rect
+    ctx.fillStyle = key.includes('bug') ? '#2a4020' : '#2a3a50';
+    ctx.fillRect(sx, sy, sw, sh);
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.font=`${Math.max(10,sh*0.3)}px monospace`;
+    ctx.textAlign='center';
+    ctx.fillText(def.icon, sx+sw*0.5, sy+sh*0.6);
+  }
+  ctx.restore();
+}
+
+function selectUnitTool(key){
+  unitTool = key;
+  structureTool = null; // exclusive with structures
+  document.querySelectorAll('.struct-btn,.unit-btn').forEach(b=>b.classList.remove('sel'));
+  const btn = document.getElementById('ub-'+key);
+  if(btn) btn.classList.add('sel');
+  if(!key){ setTool('paint'); }
+}
+
+// Map STRUCT_DEFS keys to asset image keys
+const STRUCT_TO_ASSET = {
+  wall:     'wall_segment',
+  tower:    'guard_tower',
+  hq:       'hq_building',
+  barracks: 'barracks',
+  armory:   'armory',
+  workshop: 'workshop',
+  turret:   'wall_turret',
+};
+
+function drawStructSprite(ctx, key, sx, sy, sw, sh, darkness, t, alpha){
+  const assetKey = STRUCT_TO_ASSET[key];
+  const img = assetKey && STRUCT_IMGS[assetKey];
+
+  ctx.save();
+  ctx.globalAlpha = alpha !== undefined ? alpha : 1;
+  ctx.imageSmoothingEnabled = false;
+
+  if(img && img.complete && img.naturalWidth > 0){
+    // ── Sprite draw ─────────────────────────────────────────────────────────
+    // Preserve aspect ratio, bottom-anchor to terrain line
+    const aspect = img.naturalWidth / img.naturalHeight;
+    let dw = sw, dh = sh;
+    // Scale to fit within sw x sh keeping aspect
+    if(dw / dh > aspect) dw = dh * aspect;
+    else                  dh = dw / aspect;
+    const dx = sx + (sw - dw) * 0.5;
+    const dy = sy + sh - dh;           // bottom-anchor
+    ctx.drawImage(img, dx, dy, dw, dh);
+
+    // Night: overlay a dark-blue tint on structures
+    if(darkness > 0.3){
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.globalAlpha = (alpha||1) * Math.min(0.55, darkness * 0.65);
+      ctx.fillStyle = 'rgba(40,30,80,1)';
+      ctx.fillRect(dx, dy, dw, dh);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    // Window glow effect — add warm light bloom at night
+    if(darkness > 0.4){
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = (alpha||1) * (darkness - 0.4) * 0.25;
+      ctx.fillStyle = 'rgba(255,130,30,1)';
+      // Small glow rects for window positions by building type
+      const winGlows = {
+        wall:     [[0.3,0.3,0.4,0.3]],
+        tower:    [[0.05,0.08,0.9,0.22]],
+        hq:       [[0.08,0.45,0.85,0.4]],
+        barracks: [[0.08,0.42,0.84,0.38]],
+        armory:   [[0.06,0.40,0.88,0.20]],
+        workshop: [[0.10,0.38,0.80,0.22]],
+        turret:   [],
+      };
+      const glows = winGlows[key] || [];
+      glows.forEach(([rx,ry,rw,rh])=>{
+        ctx.fillRect(dx+dw*rx, dy+dh*ry, dw*rw, dh*rh);
+      });
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  } else {
+    // ── Canvas fallback (while image loads) ─────────────────────────────────
+    const def = STRUCT_DEFS[key];
+    if(def) def.draw(ctx, sx, sy, sw, sh, darkness, t);
+  }
+
+  // Tower searchlight beam (always drawn — sprite or canvas)
+  if(key === 'tower' && darkness > 0.5){
+    ctx.globalAlpha = (alpha||1);
+    ctx.globalCompositeOperation = 'source-over';
+    const beamA = Math.min(1,(darkness-0.5)/0.4);
+    const sweep  = Math.sin(t * 0.00038 + sx * 0.0008) * 0.65;
+    const beamLen = sh * 2.8;
+    const bx = sx + sw*0.5, by = sy + sh * 0.08;
+    const ex = bx + Math.cos(Math.PI*0.5 + sweep)*beamLen;
+    const ey = by + Math.sin(Math.PI*0.5 + sweep)*beamLen;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const bGrad = ctx.createLinearGradient(bx, by, ex, ey);
+    bGrad.addColorStop(0,   `rgba(240,240,200,${(beamA*0.32).toFixed(3)})`);
+    bGrad.addColorStop(0.35,`rgba(220,220,180,${(beamA*0.13).toFixed(3)})`);
+    bGrad.addColorStop(1,   'rgba(200,200,160,0)');
+    ctx.fillStyle = bGrad;
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(bx+Math.cos(Math.PI*0.5+sweep-0.055)*beamLen, ey);
+    ctx.lineTo(bx+Math.cos(Math.PI*0.5+sweep+0.055)*beamLen, ey);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  // Antenna red blink (HQ + Tower)
+  if((key==='hq'||key==='tower') && darkness > 0.1){
+    const pulse = 0.4 + 0.6 * Math.abs(Math.sin(t*0.0014));
+    ctx.globalAlpha = (alpha||1) * pulse;
+    ctx.fillStyle = '#ff2020';
+    const blinkR = Math.max(3, sw * 0.025);
+    const blinkX = key==='hq' ? sx+sw*0.88 : sx+sw*0.5;
+    const blinkY = key==='hq' ? sy+sh*0.02  : sy - blinkR;
+    ctx.beginPath(); ctx.arc(blinkX, blinkY, blinkR, 0, Math.PI*2); ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawStructures(ctx, W, tY, camX, t, zoom, darkness){
+  if(STRUCTURES.length===0 && !structHover) return;
+  const ts = TILE_PX * zoom;
+
+  // Draw placed structures — sorted left to right for correct overlap
+  const sorted = [...STRUCTURES].sort((a,b)=>a.worldX - b.worldX);
+  for(const s of sorted){
+    const def = STRUCT_DEFS[s.key];
+    if(!def) continue;
+    const sw = def.w * ts, sh = def.h * ts;
+    const sx = structScreenX(s.worldX);
+    const sy = tY - sh;
+    if(sx > W + sw*1.5 || sx + sw < -sw*0.5) continue; // cull offscreen
+    drawStructSprite(ctx, s.key, sx, sy, sw, sh, darkness, t, 1);
+  }
+
+  // Ghost preview
+  if(structureTool && structHover){
+    const def = STRUCT_DEFS[structureTool];
+    if(def){
+      const sw = def.w * ts, sh = def.h * ts;
+      const sx = structHover.wx * zoom - camX;
+      const sy = tY - sh;
+      drawStructSprite(ctx, structureTool, sx, sy, sw, sh, darkness, t, 0.45);
+      // Cyan outline
+      ctx.save();
+      ctx.strokeStyle = '#00ffcc';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4,3]);
+      ctx.strokeRect(sx, sy, sw, sh);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+}
+
+function selectStructureTool(key){
+  structureTool = key;
+  unitTool = null;
+  document.querySelectorAll('.struct-btn,.unit-btn').forEach(b=>b.classList.remove('sel'));
+  const btn = document.getElementById('sb-'+key);
+  if(btn) btn.classList.add('sel');
+  if(!key) { setTool('paint'); structureTool=null; }
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// FEDERATION BATTLECRUISER SYSTEM — VULCAN
+// CPU-light canvas-drawn atmospheric capital ships + dropship swarm events
+// ══════════════════════════════════════════════════════════════════════════
+
+const BC_CFG = {
+  count:        2,       // number of cruisers
+  speedPx:      8,       // world-pixels per second (ENV adjustable)
+  yFrac:        0.18,    // vertical position as fraction of sky height
+  scale:        1.0,     // overall scale (ENV)
+  alpha:        0.92,    // opacity (ENV)
+  parallax:     0.06,    // very slow parallax — far background layer
+  // Dropship swarm
+  swarmInterval:  28000, // ms between swarm events per ship
+  swarmSize:      6,
+  dropSpeedPx:    90,    // dropships fly faster than cruiser
+};
+
+// Battlecruiser state array
+const BATTLECRUISERS = [];
+// Active dropship swarms
+const DROPSHIP_SWARMS = [];
+
+(function initBattlecruisers(){
+  const worldW = 3200; // default world width estimate — updated each tick
+  for(let i = 0; i < BC_CFG.count; i++){
+    BATTLECRUISERS.push({
+      wx:          (i * 0.55 + 0.1) * worldW,  // staggered start positions
+      dir:         (i % 2 === 0) ? 1 : -1,      // alternating directions
+      yFrac:       BC_CFG.yFrac + i * 0.06,     // slight vertical stagger
+      nextSwarm:   BC_CFG.swarmInterval * (0.4 + i * 0.6),
+      swarmTimer:  0,
+      thrusterPhase: Math.random() * Math.PI * 2,
+    });
+  }
+})();
+
+function tickBattlecruisers(dt, worldW){
+  const spd = BC_CFG.speedPx * (dt / 1000);
+  for(const bc of BATTLECRUISERS){
+    bc.wx += spd * bc.dir;
+    bc.thrusterPhase += dt * 0.003;
+    // Wrap around world
+    if(bc.wx > worldW + 800)  bc.wx = -800;
+    if(bc.wx < -800)          bc.wx = worldW + 800;
+    // Swarm timer
+    bc.swarmTimer += dt;
+    if(bc.swarmTimer >= bc.nextSwarm){
+      bc.swarmTimer = 0;
+      bc.nextSwarm = BC_CFG.swarmInterval * (0.7 + Math.random() * 0.6);
+      _spawnDropshipSwarm(bc, worldW);
+    }
+  }
+  // Tick active swarms
+  for(let i = DROPSHIP_SWARMS.length - 1; i >= 0; i--){
+    const sw = DROPSHIP_SWARMS[i];
+    const spd2 = BC_CFG.dropSpeedPx * (dt / 1000);
+    sw.x += spd2 * sw.dir;
+    sw.progress += dt / sw.duration;
+    // Arc — dip down as they fly away, shrink to simulate distance
+    sw.y = sw.startY + Math.sin(sw.progress * Math.PI) * sw.arcDip;
+    sw.scale = 1.0 - sw.progress * 0.75; // shrinks to 25% as it flies off
+    sw.alpha = sw.progress < 0.1 ? sw.progress * 10 :
+               sw.progress > 0.8 ? (1 - sw.progress) * 5 : 1.0;
+    if(sw.progress >= 1.0) DROPSHIP_SWARMS.splice(i, 1);
+  }
+}
+
+function _spawnDropshipSwarm(bc, worldW){
+  // Calculate screen position of the cruiser at spawn time
+  const dir = bc.dir;
+  for(let i = 0; i < BC_CFG.swarmSize; i++){
+    // Pool cap — max 18 active dropships total
+  if(DROPSHIP_SWARMS.length >= 18) return;
+  DROPSHIP_SWARMS.push({
+      // Store in world-x so they scroll correctly
+      wx:       bc.wx + (i - 2.5) * 18,
+      startWX:  bc.wx,
+      startY:   0,   // set at draw time using tY
+      y:        0,
+      yFrac:    bc.yFrac + 0.04 + i * 0.008,
+      dir:      dir,
+      progress: 0,
+      duration: 4500 + Math.random() * 1500, // ms
+      arcDip:   60 + Math.random() * 40,
+      scale:    1.0,
+      alpha:    0,
+      stagger:  i * 180, // ms stagger — set progress offset
+    });
+    // Apply stagger via negative progress start
+    DROPSHIP_SWARMS[DROPSHIP_SWARMS.length-1].progress = -(i * 180) / (4500 + 1500);
+  }
+}
+
+// ── Draw a single battlecruiser (pure canvas, no images) ─────────────────
+function _drawBattlecruiser(ctx, sx, sy, scale, alpha, dir, thrPhase, d){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if(dir < 0){ ctx.scale(-1, 1); sx = -sx; }
+
+  const W = 220 * scale;
+  const H = 42  * scale;
+  const x = sx - W * 0.5;
+  const y = sy - H * 0.5;
+  const s = scale;
+
+  // ── Hull shadow / depth ──────────────────────────────────────────────────
+  ctx.globalAlpha = alpha * 0.4;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath();
+  ctx.ellipse(sx, sy + H*0.6, W*0.45, H*0.18, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.globalAlpha = alpha;
+
+  // ── Main hull body ───────────────────────────────────────────────────────
+  const hull = ctx.createLinearGradient(x, y, x, y+H);
+  const nightTint = d > 0.5 ? 0.6 : 1.0;
+  hull.addColorStop(0, `rgba(${(80*nightTint)|0},${(72*nightTint)|0},${(60*nightTint)|0},1)`);
+  hull.addColorStop(0.4, `rgba(${(58*nightTint)|0},${(52*nightTint)|0},${(42*nightTint)|0},1)`);
+  hull.addColorStop(1, `rgba(${(30*nightTint)|0},${(26*nightTint)|0},${(20*nightTint)|0},1)`);
+  ctx.fillStyle = hull;
+
+  // Main cigar hull
+  ctx.beginPath();
+  ctx.moveTo(x + W*0.12, y + H*0.1);
+  ctx.lineTo(x + W*0.88, y + H*0.05);
+  ctx.lineTo(x + W*0.98, y + H*0.3);
+  ctx.lineTo(x + W*0.92, y + H*0.75);
+  ctx.lineTo(x + W*0.10, y + H*0.85);
+  ctx.lineTo(x + W*0.01, y + H*0.45);
+  ctx.closePath();
+  ctx.fill();
+
+  // ── Hull plating lines ───────────────────────────────────────────────────
+  ctx.strokeStyle = `rgba(${(100*nightTint)|0},${(90*nightTint)|0},${(70*nightTint)|0},0.5)`;
+  ctx.lineWidth = s * 0.8;
+  for(let i=1; i<6; i++){
+    const px = x + W*(0.15 + i*0.13);
+    ctx.beginPath();
+    ctx.moveTo(px, y + H*0.1);
+    ctx.lineTo(px - W*0.01, y + H*0.8);
+    ctx.stroke();
+  }
+
+  // ── Bridge tower ────────────────────────────────────────────────────────
+  ctx.fillStyle = `rgba(${(65*nightTint)|0},${(58*nightTint)|0},${(48*nightTint)|0},1)`;
+  ctx.fillRect(x + W*0.2, y - H*0.35, W*0.12, H*0.4);
+  ctx.fillRect(x + W*0.18, y - H*0.55, W*0.16, H*0.22);
+  // Bridge windows
+  const winA = d > 0.3 ? 1.0 : 0.6;
+  ctx.fillStyle = `rgba(255,200,100,${winA * 0.9})`;
+  for(let i=0; i<4; i++){
+    ctx.fillRect(x + W*(0.20+i*0.025), y - H*0.48, W*0.016, H*0.1);
+  }
+
+  // ── Comm arrays / antennae ───────────────────────────────────────────────
+  ctx.strokeStyle = `rgba(${(90*nightTint)|0},${(85*nightTint)|0},${(70*nightTint)|0},0.9)`;
+  ctx.lineWidth = s * 0.7;
+  [[0.25,-0.6],[0.32,-0.55],[0.28,-0.7],[0.36,-0.5]].forEach(([fx,fy])=>{
+    ctx.beginPath();
+    ctx.moveTo(x+W*fx, y+H*0.05);
+    ctx.lineTo(x+W*fx, y+H*fy);
+    ctx.stroke();
+  });
+
+  // ── Dorsal hull detail / weapons ─────────────────────────────────────────
+  for(let i=0; i<5; i++){
+    const bx = x + W*(0.35 + i*0.1);
+    const bh = H*(0.12 + (i%2)*0.06);
+    ctx.fillStyle = `rgba(${(55*nightTint)|0},${(50*nightTint)|0},${(40*nightTint)|0},1)`;
+    ctx.fillRect(bx, y + H*0.02, W*0.04, bh);
+    // Turret barrel
+    ctx.fillStyle = `rgba(${(40*nightTint)|0},${(38*nightTint)|0},${(30*nightTint)|0},1)`;
+    ctx.fillRect(bx + W*0.03, y + H*0.04, W*0.025, H*0.06);
+  }
+
+  // ── Dropship bay doors (ventral) ────────────────────────────────────────
+  ctx.fillStyle = `rgba(20,18,14,0.8)`;
+  for(let i=0; i<3; i++){
+    ctx.fillRect(x + W*(0.38+i*0.1), y + H*0.72, W*0.06, H*0.12);
+  }
+
+  // ── Rear engine block ───────────────────────────────────────────────────
+  ctx.fillStyle = `rgba(${(45*nightTint)|0},${(40*nightTint)|0},${(32*nightTint)|0},1)`;
+  ctx.fillRect(x + W*0.87, y + H*0.15, W*0.1, H*0.55);
+
+  // Engine glows — thruster pulse
+  const thrPulse = 0.7 + 0.3 * Math.sin(thrPhase);
+  const engColors = ['rgba(80,160,255,', 'rgba(60,120,255,', 'rgba(80,180,255,'];
+  for(let i=0; i<3; i++){
+    const ex = x + W*0.97;
+    const ey = y + H*(0.22 + i*0.17);
+    const er = s * (4 + thrPulse * 2);
+    const g = ctx.createRadialGradient(ex,ey,0,ex,ey,er*3);
+    g.addColorStop(0, engColors[i] + (0.9*thrPulse).toFixed(2)+')');
+    g.addColorStop(1, 'rgba(0,60,180,0)');
+    ctx.globalAlpha = alpha * 0.8 * thrPulse;
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(ex, ey, er*3, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = `rgba(180,220,255,${0.95*thrPulse})`;
+    ctx.fillRect(ex - s, ey - s*1.5, s*1.5, s*3);
+  }
+
+  // ── Running lights (night) ───────────────────────────────────────────────
+  if(d > 0.25){
+    const lightAlpha = (d - 0.25) * 1.33;
+    ctx.fillStyle = `rgba(255,80,80,${lightAlpha * 0.9})`;
+    ctx.beginPath(); ctx.arc(x+W*0.01, y+H*0.45, s*2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = `rgba(80,255,80,${lightAlpha * 0.9})`;
+    ctx.beginPath(); ctx.arc(x+W*0.99, y+H*0.3, s*2, 0, Math.PI*2); ctx.fill();
+    // Faint orange hull accent lights
+    ctx.fillStyle = `rgba(255,160,60,${lightAlpha * 0.5})`;
+    for(let i=0; i<5; i++){
+      ctx.beginPath();
+      ctx.arc(x+W*(0.2+i*0.14), y+H*0.82, s*1.2, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  ctx.restore();
+}
+
+// ── Draw a single dropship (tiny, fast) ──────────────────────────────────
+function _drawDropshipMini(ctx, sx, sy, scale, alpha, dir){
+  if(alpha <= 0.02 || scale <= 0.05) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if(dir < 0){ ctx.scale(-1,1); sx = -sx; }
+
+  const W = 28 * scale;
+  const H = 10 * scale;
+  const x = sx - W*0.5;
+  const y = sy - H*0.5;
+
+  // Hull
+  ctx.fillStyle = 'rgba(55,50,42,1)';
+  ctx.beginPath();
+  ctx.moveTo(x + W*0.05, y + H*0.3);
+  ctx.lineTo(x + W*0.85, y + H*0.1);
+  ctx.lineTo(x + W*0.98, y + H*0.45);
+  ctx.lineTo(x + W*0.80, y + H*0.9);
+  ctx.lineTo(x + W*0.05, y + H*0.85);
+  ctx.closePath();
+  ctx.fill();
+
+  // Engine glow
+  const eg = ctx.createRadialGradient(x+W, y+H*0.5, 0, x+W, y+H*0.5, W*0.3);
+  eg.addColorStop(0, 'rgba(120,180,255,0.9)');
+  eg.addColorStop(1, 'rgba(0,60,200,0)');
+  ctx.fillStyle = eg;
+  ctx.beginPath();
+  ctx.arc(x+W*0.95, y+H*0.5, W*0.3, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ── Master draw call ─────────────────────────────────────────────────────
+function drawBattlecruisers(ctx, W, H, tY, camX, t, zoom, d){
+  if(!BC_CFG.count) return;
+  const skyH = tY;
+  const worldW = GRID_COLS * TILE_PX;
+
+  // ── Tick (dt managed outside — use t delta)
+  if(drawBattlecruisers._lastT === undefined) drawBattlecruisers._lastT = t;
+  const dt = Math.min(t - drawBattlecruisers._lastT, 100);
+  drawBattlecruisers._lastT = t;
+  tickBattlecruisers(dt, worldW);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  // ── Draw cruisers ────────────────────────────────────────────────────────
+  for(const bc of BATTLECRUISERS){
+    // Convert world-x to screen-x using parallax (far layer)
+    const sx = bc.wx * zoom * BC_CFG.parallax - camX * BC_CFG.parallax;
+    const sy = skyH * bc.yFrac;
+    const scale = BC_CFG.scale * zoom * 0.45;
+    if(sx < -300 * scale || sx > W + 300 * scale) continue;
+    _drawBattlecruiser(ctx, sx, sy, scale, BC_CFG.alpha, bc.dir, bc.thrusterPhase, d);
+  }
+
+  // ── Draw dropship swarms ─────────────────────────────────────────────────
+  for(const sw of DROPSHIP_SWARMS){
+    if(sw.progress < 0) continue; // stagger delay
+    const sx = sw.wx * zoom * BC_CFG.parallax - camX * BC_CFG.parallax
+               + sw.progress * sw.dir * 380 * zoom * 0.3;
+    const sy = skyH * sw.yFrac + sw.y;
+    const scale = BC_CFG.scale * sw.scale * zoom * 0.22;
+    if(sx < -80 || sx > W + 80) continue;
+    _drawDropshipMini(ctx, sx, sy, scale, sw.alpha, sw.dir);
+  }
+
+  ctx.restore();
+}
+
+function draw(){
+  try{
+    // ── Delta time ───────────────────────────────────────────────────────────
+    const now=performance.now(), dt=Math.min(now-lastFrameTime, 100); lastFrameTime=now;
+    const t=now;
+    // Smooth zoom lerp — 14× per second gives snappy but butter-smooth feel
+    zoom += (zoomTarget - zoom) * Math.min(1.0, (dt / 1000) * 14);
+
+    // ── Player movement (merged into draw loop — single RAF) ─────────────────
+    const dtS = dt / 1000; // seconds
+    PLAYER.moving = false;
+    if(keys['a']||keys['A']||keys['ArrowLeft']){
+      PLAYER.worldX -= PLAYER.SPEED * dtS;
+      PLAYER.facing  = 'left';
+      PLAYER.moving  = true;
+    }
+    if(keys['d']||keys['D']||keys['ArrowRight']){
+      PLAYER.worldX += PLAYER.SPEED * dtS;
+      PLAYER.facing  = 'right';
+      PLAYER.moving  = true;
+    }
+    const worldW = GRID_COLS * TILE_PX;
+    PLAYER.worldX = Math.max(20, Math.min(worldW - 20, PLAYER.worldX));
+    // Camera follows player
+    const targetCamX = PLAYER.worldX * zoom - (cv.width * 0.45);
+    camX += (targetCamX - camX) * Math.min(1, dtS * 8);
+    camX  = Math.max(0, camX);
+    scrollX = camX;
+
+    const W=cv.width,H=cv.height;if(W<4||H<4){requestAnimationFrame(draw);return;}
+    const ts=TILE_PX*zoom,tY=H*(1-TERRAIN_H);
+
+    // ── Update systems ───────────────────────────────────────────────────────
+    updateDayNight(dt);
+    tickPlanet(dt);
+    updateWeather(dt, W, H, tY);
+    tickGrass();  // regen grass if tiles changed
+    tickRocks();  // regen rocks if tiles changed
+
+    ctx.clearRect(0,0,W,H);ctx.imageSmoothingEnabled=false;
+
+    // ── Sky gradient — cached, only rebuilt when DN state changes ──────────────
+    const d=DN.darkness;
+    if(!draw._skyCache || draw._skyLastD !== Math.round(d*100) || draw._skyLastW !== W || draw._skyLastH !== H) {
+      // Rebuild sky gradient onto an offscreen canvas — reused until phase changes
+      if(!draw._skyOC || draw._skyOC.width!==W || draw._skyOC.height!==H) {
+        draw._skyOC = document.createElement('canvas');
+        draw._skyOC.width=W; draw._skyOC.height=H;
+      }
+      const sc = draw._skyOC.getContext('2d');
+      function lerpC(a,b,t){return Math.round(a+(b-a)*t);}
+      const duskF=1-Math.abs(d-0.5)*2;
+      const dayTop=[120,38,8],nightTop=[8,4,22],duskTop=[180,55,10];
+      const dayBottom=[200,90,20],nightBottom=[12,6,30],duskBottom=[220,100,15];
+      function skyC(day,dusk,night,t,df){const preDusk=lerpC(day,dusk,df);return lerpC(preDusk,night,t);}
+      const skyTop    =`rgb(${skyC(dayTop[0],duskTop[0],nightTop[0],d,duskF)},${skyC(dayTop[1],duskTop[1],nightTop[1],d,duskF)},${skyC(dayTop[2],duskTop[2],nightTop[2],d,duskF)})`;
+      const skyQ1     =`rgb(${skyC(160,140,14,d,duskF)},${skyC(55,40,8,d,duskF)},${skyC(10,6,38,d,duskF)})`;
+      const skyMid    =`rgb(${skyC(180,165,18,d,duskF)},${skyC(70,55,10,d,duskF)},${skyC(12,8,48,d,duskF)})`;
+      const skyQ3     =`rgb(${skyC(195,175,22,d,duskF)},${skyC(80,62,12,d,duskF)},${skyC(14,10,52,d,duskF)})`;
+      const skyBottom =`rgb(${skyC(dayBottom[0],duskBottom[0],nightBottom[0],d,duskF)},${skyC(dayBottom[1],duskBottom[1],nightBottom[1],d,duskF)},${skyC(dayBottom[2],duskBottom[2],nightBottom[2],d,duskF)})`;
+      const sg=sc.createLinearGradient(0,0,0,tY);
+      sg.addColorStop(0,skyTop); sg.addColorStop(0.30,skyQ1);
+      sg.addColorStop(0.60,skyMid); sg.addColorStop(0.82,skyQ3);
+      sg.addColorStop(1,skyBottom);
+      sc.fillStyle=sg; sc.fillRect(0,0,W,H);
+      draw._skyCache=true; draw._skyLastD=Math.round(d*100);
+      draw._skyLastW=W; draw._skyLastH=H;
+    }
+    ctx.drawImage(draw._skyOC, 0, 0);
+
+    // ── Sun ───────────────────────────────────────────────────────────────────
+    drawCelestials(ctx, W, tY, t, zoom);
+
+    // ── Stars ─────────────────────────────────────────────────────────────────
+    drawStars(ctx, W, tY, t, zoom);
+
+    // ── FAR parallax layer (gas giant sits behind MID mountains) ────────────────
+    ['FAR'].forEach(slot=>{
+      const st=LS[slot];if(!st.visible||!st.img||!st.img.complete||!st.img.naturalWidth)return;
+      const layZoom = Math.max(0.3, Math.min(zoom, 3.0));
+      const dH=tY*1.05*layZoom,dW=dH*(st.img.naturalWidth/st.img.naturalHeight);
+      const drawY = tY - dH + (st.yOff || 0);
+      const off=-(scrollX*st.speed)%dW;
+      for(let x=off-dW;x<W+dW;x+=dW)ctx.drawImage(st.img,x,drawY,dW,dH);
+    });
+
+    // ── Gas giant — behind MID mountains, in front of FAR layer ──────────────
+    ctx.globalAlpha = 1;
+    drawPlanet(ctx, W, tY, camX, t, zoom);
+    ctx.globalAlpha = 1;
+
+    // ── MID + NEAR parallax layers (in front of gas giant) ───────────────────
+    ['MID','NEAR'].forEach(slot=>{
+      const st=LS[slot];if(!st.visible||!st.img||!st.img.complete||!st.img.naturalWidth)return;
+      const layZoom = Math.max(0.3, Math.min(zoom, 3.0));
+      const dH=tY*1.05*layZoom,dW=dH*(st.img.naturalWidth/st.img.naturalHeight);
+      const drawY = tY - dH + (st.yOff || 0);
+      const off=-(scrollX*st.speed)%dW;
+      for(let x=off-dW;x<W+dW;x+=dW)ctx.drawImage(st.img,x,drawY,dW,dH);
+    });
+
+    // ── Moon — in front of everything ────────────────────────────────────────
+    drawMoon(ctx, W, tY, t, zoom);
+    drawSecondMoon(ctx, W, tY, t, zoom);
+
+    // ── Clouds ────────────────────────────────────────────────────────────────
+    drawClouds(ctx, W, tY, camX, t, zoom);
+    // ── BATTLECRUISERS — behind clouds layer, above planet ─────────────────
+    drawBattlecruisers(ctx, W, H, tY, camX, t, zoom, d);
+
+    // ── Ambient haze (weather) ─────────────────────────────────────────────────
+    drawAmbientHaze(ctx, W, H, tY);
+    // ── Night overlay — darkens background layers ────────────────────────────
+    drawNightOverlay(ctx, W, H, tY);
+    drawSearchlights(ctx, W, tY, camX, t);
+
+    // ── BG PASS — once per frame, not once per column ──────────────────────────
+    drawTrees(ctx, camX, tY, W, zoom, true);
+    drawRocks(ctx, camX, tY, W, zoom, true);
+    drawGrass(ctx, camX, tY, W, zoom, true);
+
+    // ── TERRAIN TILES ─────────────────────────────────────────────────────────
+    const s0=Math.max(0,Math.floor(camX/ts)-1),e0=Math.min(GRID_COLS-1,Math.ceil((camX+W)/ts)+1);
+    for(let c=s0;c<=e0;c++){
+      for(let r=0;r<GRID_ROWS;r++){
+        const key=tilesMap[c+','+r];if(!key)continue;
+        const tx=c*ts-camX,ty=tY+r*ts,img=tileImgs[key];
+        if(img&&img.complete&&img.naturalWidth)ctx.drawImage(img,tx,ty,ts+0.5,ts+0.5);
+        else{const t=r/Math.max(1,GRID_ROWS-1);ctx.fillStyle=`rgb(${(65-t*63)|0},${(35-t*34)|0},0)`;ctx.fillRect(tx,ty,ts+0.5,ts+0.5);}
+      }
+    }
+    if(fadeDepth>0.02){
+      const terrH=H-tY,fs=tY+terrH*0.04;
+      const fg=ctx.createLinearGradient(0,fs,0,H);
+      fg.addColorStop(0,'rgba(0,0,0,0)');
+      fg.addColorStop(0.18,`rgba(0,0,0,${Math.min(1,fadeDepth*0.55).toFixed(3)})` );
+      fg.addColorStop(0.40,`rgba(0,0,0,${Math.min(1,fadeDepth*0.80).toFixed(3)})` );
+      fg.addColorStop(0.65,`rgba(0,0,0,${Math.min(1,fadeDepth*1.00).toFixed(3)})` );
+      fg.addColorStop(1.00,`rgba(0,0,0,${Math.min(1,fadeDepth*1.10).toFixed(3)})` );
+      ctx.fillStyle=fg;ctx.fillRect(0,fs,W,H-fs+1);
+    }
+    // ── STRUCTURES — drawn after terrain, before FG props ──────────────────
+    drawStructures(ctx, W, tY, camX, t, zoom, d);
+    drawUnits(ctx, W, tY, t, zoom, d);
+
+    // ── FG draw order: Trees behind → Rocks → Grass on top ────────────────
+    // Trees are tallest — drawn first so rocks + grass can overlap their bases
+    drawTrees(ctx, camX, tY, W, zoom, false);
+
+    // ── ROCKS — sit in front of tree bases ───────────────────────────────────
+    drawRocks(ctx, camX, tY, W, zoom, false);
+
+    // ── GRASS — smallest, always frontmost at ground level ───────────────────
+    drawGrass(ctx, camX, tY, W, zoom, false);
+
+    // ── NIGHT TERRAIN DARKENING — drawn after all props so orange tiles go dark ─
+    drawNightTerrainOverlay(ctx, W, H, tY);
+    drawBugEyes(ctx, W, tY, camX, t, zoom);
+
+    // ── MOONLIGHT TERRAIN WASH — cold light over all ground props ────────────
+    drawMoonlightOnTerrain(ctx, W, H, tY);
+
+    // ── PLAYER CHARACTER ─────────────────────────────────────────────────────
+    drawPlayer(ctx, camX, tY, W, zoom);
+
+    // ── Sand/weather particles ───────────────────────────────────────────────
+    drawWeatherParticles(ctx);
+
+    // ── Phase label (HUD corner) ──────────────────────────────────────────────
+    ctx.save();
+    ctx.font='bold 11px monospace';
+    ctx.fillStyle=`rgba(255,200,150,${0.5+d*0.5})`;
+    const phaseLabel={day:'☀ DAY',dusk:'🌅 DUSK',night:'🌙 NIGHT',dawn:'🌄 DAWN'}[DN.phase];
+    ctx.fillText(phaseLabel, W-80, 18);
+    if(WEATHER.mode!=='calm') ctx.fillText({sand:'🌬 SAND',storm:'🌪 STORM'}[WEATHER.mode], W-80, 32);
+    ctx.restore();
+
+    if(showGrid){
+      ctx.strokeStyle='rgba(255,100,20,0.07)';ctx.lineWidth=0.5;
+      for(let c=s0;c<=e0+1;c++){const x=c*ts-camX;ctx.beginPath();ctx.moveTo(x,tY);ctx.lineTo(x,H);ctx.stroke();}
+      for(let r=0;r<=GRID_ROWS;r++){const y=tY+r*ts;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+      ctx.strokeStyle='rgba(249,115,22,0.45)';ctx.lineWidth=1;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.moveTo(0,tY);ctx.lineTo(W,tY);ctx.stroke();ctx.setLineDash([]);
+    }
+    if(hover){
+      const hx=hover.c*ts-camX,hy=tY+hover.r*ts,er=tool==='erase'||paintBtn===2;
+      ctx.fillStyle=er?'rgba(255,40,40,0.15)':'rgba(255,180,50,0.13)';
+      ctx.strokeStyle=er?'rgba(255,60,60,0.8)':'rgba(255,210,60,0.8)';
+      ctx.lineWidth=1.2;ctx.fillRect(hx,hy,ts,ts);ctx.strokeRect(hx+.5,hy+.5,ts-1,ts-1);
+    }
+  }catch(e){console.error('DRAW:',e);}
+  requestAnimationFrame(draw);
+}
+
+function cellAt(mx,my){
+  const ts=TILE_PX*zoom,tY=cv.height*(1-TERRAIN_H);
+  if(my<tY)return null;
+  const c=Math.floor((mx+camX)/ts),r=Math.floor((my-tY)/ts);
+  if(c<0||c>=GRID_COLS||r<0||r>=GRID_ROWS)return null;
+  return{c,r};
+}
+function applyTool(cell,btn){
+  if(!cell)return;
+  const key=cell.c+','+cell.r;
+  if(btn===2||tool==='erase')delete tilesMap[key];
+  else if(tool==='fill')for(let cc=0;cc<GRID_COLS;cc++)tilesMap[cc+','+cell.r]=activeTileId;
+  else tilesMap[key]=activeTileId;
+  if(cell.r===0) grassInvalidate(); // surface row changed — regen grass
+  if(cell.r===0) rockInvalidate();
+}
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('mousedown',e=>{
+  const r=cv.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  const tY2=cv.height*(1-TERRAIN_H);
+  if(structureTool){
+    if(e.button===2){ removeStructureAt(mx, my); }
+    else {
+      const ts=TILE_PX*zoom;
+      const worldX=Math.floor((mx+camX)/ts)*ts/zoom;
+      placeStructure(worldX, structureTool);
+    }
+    return;
+  }
+  if(unitTool){
+    if(e.button===2){ removeUnitAt(mx, my, tY2); }
+    else {
+      const worldX=(mx+camX)/zoom;
+      placeUnit(worldX, unitTool);
+    }
+    return;
+  }
+  painting=true;paintBtn=e.button;applyTool(cellAt(mx,my),e.button);
+});
+cv.addEventListener('mousemove',e=>{
+  const r=cv.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  if(structureTool){
+    const ts=TILE_PX*zoom;
+    const wx=Math.floor((mx+camX)/ts)*ts/zoom;
+    structHover={wx}; hover=null; return;
+  }
+  if(unitTool){
+    const wx=(mx+camX)/zoom;
+    structHover={wx}; hover=null; return;
+  }
+  structHover=null;
+  hover=cellAt(mx,my);
+  if(painting)applyTool(hover,paintBtn);
+});
+cv.addEventListener('mouseup',()=>painting=false);
+cv.addEventListener('mouseleave',()=>{painting=false;hover=null;});
+
+// ── WHEEL = ZOOM (always), no modifier needed ────────────────────────────────
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  e.stopPropagation();
+  const r=cv.getBoundingClientRect();
+  const mx=e.clientX-r.left;
+  const raw=e.deltaMode===1?e.deltaY*30:e.deltaY;
+  const factor=Math.pow(0.9975,raw);
+  const newZoom=Math.max(0.15,Math.min(8,zoomTarget*factor));
+  camX=Math.max(0,mx-(mx-camX)*(newZoom/zoom));
+  zoomTarget=newZoom;
+  scrollX=camX;
+  updateZoomLabel();
+},{passive:false,capture:true});
+
+// ── KEYBOARD ─────────────────────────────────────────────────────────────────
+const keys={};
+window.addEventListener('keydown',e=>{
+  if(e.target.tagName==='SELECT'||(e.target.tagName==='INPUT'&&e.target.type!=='range'&&e.target.type!=='checkbox'&&e.target.type!=='button')) return;
+  keys[e.key]=true;
+  if(e.key==='='||e.key==='+'){e.preventDefault();adjustZoom(0.25);}
+  if(e.key==='-'||e.key==='_'){e.preventDefault();adjustZoom(-0.25);}
+  if(e.key==='0'){e.preventDefault();resetZoom();}
+});
+window.addEventListener('keyup',e=>{delete keys[e.key];});
+
+// Smooth pan loop — runs every frame
+// lastPanTime removed
+
+// ── PLAYER STATE ────────────────────────────────────────────────────────────
+const PLAYER = {
+  worldX: 800,       // world-space X (pixels)
+  facing: 'right',   // 'right' | 'left'
+  moving: false,
+  SPEED:  220,       // px/s
+  WIDTH:  52,        // display width at zoom=1
+  HEIGHT: 88,        // display height at zoom=1
+};
+
+// panLoop removed — movement merged into draw()
+
+function updateZoomLabel(){
+  const pct=Math.round(zoomTarget*100)+'%';
+  const a=document.getElementById('zoom-lbl'); if(a)a.textContent=pct;
+  const b=document.getElementById('zoom-lbl-top'); if(b)b.textContent=pct;
+}
+function setTool(t){
+  tool=t;
+  ['paint','erase','fill'].forEach(id=>document.getElementById('t-'+id)?.classList.toggle('active',id===t));
+  document.getElementById('hud-tool').textContent=t;
+}
+function toggleGrid(){showGrid=!showGrid;document.getElementById('t-grid').classList.toggle('active',showGrid);}
+function adjustZoom(d){zoomTarget=Math.max(0.15,Math.min(8,zoomTarget+d));updateZoomLabel();}
+function resetZoom(){zoom=1;zoomTarget=1;camX=0;scrollX=0;updateZoomLabel();}
+
+function autoFill(){
+  tilesMap={};
+  const pd=TERRAIN_PRESETS[activePreset];
+  for(let c=0;c<GRID_COLS;c++){
+    const v4=c%4, vs=c%pd.surf.length, vu=c%pd.upper.length;
+    tilesMap[c+',0'] =pd.surf[vs];
+    tilesMap[c+',1'] =pd.upper[vu];
+    tilesMap[c+',2'] =pd.upper[(vu+2)%pd.upper.length];
+    tilesMap[c+',3'] =pd.upper[(vu+4)%pd.upper.length];
+    tilesMap[c+',4'] =pd.mid[v4];
+    tilesMap[c+',5'] =pd.mid[(v4+1)%4];
+    tilesMap[c+',6'] =pd.mid[(v4+2)%4];
+    tilesMap[c+',7'] =pd.trans[v4];
+    tilesMap[c+',8'] =pd.deep[v4];
+    tilesMap[c+',9'] =pd.deep[(v4+1)%4];
+    tilesMap[c+',10']=pd.deep[(v4+2)%4];
+    tilesMap[c+',11']=pd.bed[v4];
+    tilesMap[c+',12']=pd.bed[(v4+1)%4];
+    tilesMap[c+',13']=pd.bed[(v4+2)%4];
+    tilesMap[c+',14']=pd.bed[(v4+3)%4];
+    tilesMap[c+',15']=pd.bed[v4];
+    tilesMap[c+',16']=pd.bed[(v4+1)%4];
+    tilesMap[c+',17']=pd.bed[(v4+2)%4];
+  }
+
+  grassInvalidate();
+  rockInvalidate();}
+function clearAll(){if(confirm('Clear all tiles?'))tilesMap={};}
+function exportJSON(){
+  const b=new Blob([JSON.stringify({tiles:tilesMap,preset:activePreset,cols:GRID_COLS,rows:GRID_ROWS,fadeDepth},null,2)],{type:'application/json'});
+  Object.assign(document.createElement('a'),{href:URL.createObjectURL(b),download:'level.json'}).click();
+}
+autoFill();
+window.addEventListener('load',()=>{resize();grassInvalidate();rockInvalidate();requestAnimationFrame(draw);});
+if(document.readyState==='complete'){resize();requestAnimationFrame(draw);}
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     ENV ADMIN PANEL
+═══════════════════════════════════════════════════════════════════════════ -->
+<style>
+#env-panel {
+  position:fixed; top:48px; right:10px; width:270px;
+  background:rgba(4,8,18,0.97); border:1px solid #1a4060;
+  border-radius:6px; z-index:9999; font-family:'Courier New',monospace;
+  font-size:11px; color:#a0cfef; box-shadow:0 4px 24px rgba(0,0,0,0.7);
+  user-select:none; display:none; max-height:calc(100vh - 60px); overflow-y:auto;
+}
+#env-panel.open { display:block; }
+#env-panel-header {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:7px 10px; background:#061020; border-bottom:1px solid #1a4060;
+  cursor:move; border-radius:6px 6px 0 0;
+}
+#env-panel-header span { color:#7ad4ff; font-weight:bold; font-size:12px; }
+#env-panel-header button { background:none; border:none; color:#7ad4ff; cursor:pointer; font-size:14px; }
+.env-section {
+  border-bottom:1px solid #0d2030; overflow:hidden;
+}
+.env-section-hdr {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:5px 10px; cursor:pointer; background:rgba(10,30,50,0.6);
+  color:#5ab4e0; font-weight:bold; font-size:10px; letter-spacing:1px;
+}
+.env-section-hdr:hover { background:rgba(20,50,80,0.8); }
+.env-section-hdr .arrow { transition:transform 0.2s; }
+.env-section-hdr.collapsed .arrow { transform:rotate(-90deg); }
+.env-body { padding:6px 10px 8px; display:flex; flex-direction:column; gap:5px; }
+.env-body.collapsed { display:none; }
+.env-row {
+  display:flex; align-items:center; justify-content:space-between; gap:6px;
+}
+.env-row label { color:#80b0d0; min-width:90px; font-size:10px; }
+.env-row input[type=range] {
+  flex:1; accent-color:#3a8fc0; cursor:pointer; height:14px;
+}
+.env-row .val {
+  color:#f0d060; min-width:36px; text-align:right; font-size:10px;
+}
+.env-row button {
+  font-size:9px; padding:2px 5px; border-radius:3px; cursor:pointer;
+  background:#0a2030; border:1px solid #2a6b8b; color:#7ad4ff;
+}
+.env-divider { border:none; border-top:1px solid #0d2030; margin:3px 0; }
+</style>
+
+<div id="env-panel">
+  <div id="env-panel-header">
+    <span>🌍 ENV ADMIN</span>
+    <button onclick="toggleEnvPanel()" title="Close">✕</button>
+  </div>
+
+  <!-- ── CLOUDS ─────────────────────────────────────────────────── -->
+  <div class="env-section" id="sec-clouds">
+    <div class="env-section-hdr" onclick="toggleSection('clouds')">
+      <span>☁ CLOUDS</span><span class="arrow">▾</span>
+    </div>
+    <div class="env-body" id="body-clouds">
+      <div class="env-row">
+        <label>Height Scale</label>
+        <input type="range" min="10" max="600" value="100"
+          oninput="cloudScale=this.value/100;envVal(this,'x',2)">
+        <span class="val">1.00x</span>
+      </div>
+      <div class="env-row">
+        <label>Master Alpha</label>
+        <input type="range" min="0" max="100" value="100"
+          oninput="cloudAlpha=this.value/100;envVal(this,'',2)">
+        <span class="val">1.00</span>
+      </div>
+      <div class="env-row">
+        <label>Drift Speed</label>
+        <input type="range" min="0" max="400" value="100"
+          oninput="cloudDrift=this.value/100;envVal(this,'x',2)">
+        <span class="val">1.00x</span>
+      </div>
+      <hr class="env-divider">
+      <div class="env-row">
+        <label>L1 (Far) Y</label>
+        <input type="range" min="-50" max="50" value="0"
+          oninput="cloudYOff[0]=this.value/100;envVal(this,'',2)">
+        <span class="val">0.00</span>
+      </div>
+      <div class="env-row">
+        <label>L2 (Mid) Y</label>
+        <input type="range" min="-50" max="50" value="0"
+          oninput="cloudYOff[1]=this.value/100;envVal(this,'',2)">
+        <span class="val">0.00</span>
+      </div>
+      <div class="env-row">
+        <label>L3 (Near) Y</label>
+        <input type="range" min="-50" max="50" value="0"
+          oninput="cloudYOff[2]=this.value/100;envVal(this,'',2)">
+        <span class="val">0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SUN ────────────────────────────────────────────────────── -->
+  <div class="env-section" id="sec-sun">
+    <div class="env-section-hdr" onclick="toggleSection('sun')">
+      <span>☀ SUN</span><span class="arrow">▾</span>
+    </div>
+    <div class="env-body" id="body-sun">
+      <div class="env-row">
+        <label>Size</label>
+        <input type="range" min="20" max="400" value="100"
+          oninput="sunScale=this.value/100;envVal(this,'x',2)">
+        <span class="val">1.00x</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MOON ───────────────────────────────────────────────────── -->
+  <div class="env-section" id="sec-moon">
+    <div class="env-section-hdr" onclick="toggleSection('moon')">
+      <span>🌕 MOON</span><span class="arrow">▾</span>
+    </div>
+    <div class="env-body" id="body-moon">
+      <div class="env-row">
+        <label>Size</label>
+        <input type="range" min="20" max="400" value="100"
+          oninput="moonScale=this.value/100;envVal(this,'x',2)">
+        <span class="val">1.00x</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── GAS GIANT ──────────────────────────────────────────────── -->
+  <div class="env-section" id="sec-planet">
+    <div class="env-section-hdr" onclick="toggleSection('planet')">
+      <span>🪐 GAS GIANT</span><span class="arrow">▾</span>
+    </div>
+    <div class="env-body" id="body-planet">
+      <div class="env-row">
+        <label>Size</label>
+        <input type="range" min="20" max="400" value="100"
+          oninput="planetScale=this.value/100;envVal(this,'x',2)">
+        <span class="val">1.00x</span>
+      </div>
+      <div class="env-row">
+        <label>Orbit Speed</label>
+        <input type="range" min="0" max="1000" value="100"
+          oninput="planetSpeed=this.value/100;envVal(this,'x',2)">
+        <span class="val">1.00x</span>
+      </div>
+      <div class="env-row">
+        <label>Rotation</label>
+        <input type="range" min="0" max="500" value="15"
+          oninput="planetRotSpeed=this.value/100;envVal(this,'°/s',2)">
+        <span class="val">0.15°/s</span>
+      </div>
+      <div class="env-row">
+        <label>Y Position</label>
+        <input type="range" min="-30" max="60" value="0"
+          oninput="planetYPos=this.value/100;envVal(this,'',2)">
+        <span class="val">0.00</span>
+      </div>
+      <div class="env-row">
+        <label>Opacity</label>
+        <input type="range" min="0" max="100" value="94"
+          oninput="planetAlpha=this.value/100;envVal(this,'',2)">
+        <span class="val">0.94</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STARS ──────────────────────────────────────────────────── -->
+  <div class="env-section" id="sec-stars">
+    <div class="env-section-hdr" onclick="toggleSection('stars')">
+      <span>✦ STARS</span><span class="arrow">▾</span>
+    </div>
+    <div class="env-body" id="body-stars">
+      <div class="env-row">
+        <label>Brightness</label>
+        <input type="range" min="0" max="200" value="100"
+          oninput="starBrightness=this.value/100;envVal(this,'x',2)">
+        <span class="val">1.00x</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── VEGETATION & ROCKS ─────────────────────────────────────── -->
+  <div class="env-section" id="sec-props">
+    <div class="env-section-hdr" onclick="toggleSection('props')">
+      <span>🌿 PROPS</span><span class="arrow">▾</span>
+    </div>
+    <div class="env-body" id="body-props">
+      <div class="env-row">
+        <label>Tree Density</label>
+        <input type="range" min="0" max="300" value="100"
+          oninput="treeDensity=this.value/100;envVal(this,'x',2)">
+        <span class="val">1.00x</span>
+      </div>
+      <div class="env-row">
+        <label>Rock Density</label>
+        <input type="range" min="0" max="300" value="100"
+          oninput="setRockDensity(this.value/100);envVal(this,'x',2)">
+        <span class="val">1.00x</span>
+      </div>
+      <div class="env-row">
+        <label>Grass Density</label>
+        <input type="range" min="0" max="200" value="100"
+          oninput="setGrassDensity(this.value/100);envVal(this,'x',2)">
+        <span class="val">1.00x</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CYCLE ──────────────────────────────────────────────────── -->
+  <div class="env-section" id="sec-dn">
+    <div class="env-section-hdr" onclick="toggleSection('dn')">
+      <span>🌗 DAY / NIGHT</span><span class="arrow">▾</span>
+    </div>
+    <div class="env-body" id="body-dn">
+      <div class="env-row">
+        <label>Cycle Speed</label>
+        <input type="range" min="5" max="300" value="100" step="5"
+          oninput="DN.speed=this.value/100;envVal(this,'x',2)">
+        <span class="val">1.00x</span>
+      </div>
+      <div class="env-row">
+        <label>Sky Fade</label>
+        <input type="range" min="0" max="130" value="82"
+          oninput="fadeDepth=Math.min(1.3,this.value/100);envVal(this,'',2)">
+        <span class="val">0.82</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RESET ──────────────────────────────────────────────────── -->
+
+  <!-- ── BATTLECRUISER ──────────────────────────────────────────── -->
+  <div class="env-section" id="sec-bc">
+    <div class="env-section-hdr" onclick="toggleSection('bc')">
+      <span>🚀 BATTLECRUISER</span><span class="arrow">▾</span>
+    </div>
+    <div class="env-body" id="body-bc">
+      <div class="env-row">
+        <label>Speed</label>
+        <input type="range" min="0" max="400" value="80" step="5"
+          oninput="BC_CFG.speedPx=this.value/10;envVal(this,'px/s',1)">
+        <span class="val">8.0px/s</span>
+      </div>
+      <div class="env-row">
+        <label>Scale</label>
+        <input type="range" min="20" max="200" value="100" step="5"
+          oninput="BC_CFG.scale=this.value/100;envVal(this,'x',2)">
+        <span class="val">1.00x</span>
+      </div>
+      <div class="env-row">
+        <label>Opacity</label>
+        <input type="range" min="10" max="100" value="92" step="2"
+          oninput="BC_CFG.alpha=this.value/100;envVal(this,'',2)">
+        <span class="val">0.92</span>
+      </div>
+      <div class="env-row">
+        <label>Height</label>
+        <input type="range" min="2" max="50" value="18" step="1"
+          oninput="BC_CFG.yFrac=this.value/100;BATTLECRUISERS.forEach((b,i)=>b.yFrac=BC_CFG.yFrac+i*0.06);envVal(this,'%',0)">
+        <span class="val">18%</span>
+      </div>
+      <div class="env-row">
+        <label>Count</label>
+        <input type="range" min="0" max="4" value="2" step="1"
+          oninput="BC_CFG.count=parseInt(this.value);envVal(this,'',0)">
+        <span class="val">2</span>
+      </div>
+      <div class="env-row">
+        <label>Swarm Rate</label>
+        <input type="range" min="5" max="120" value="28" step="1"
+          oninput="BC_CFG.swarmInterval=this.value*1000;envVal(this,'s',0)">
+        <span class="val">28s</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="padding:8px 10px;">
+    <button onclick="envReset()"
+      style="width:100%;background:#1a0820;border:1px solid #6b2060;color:#ff80c0;
+             padding:5px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">
+      ↺ RESET ALL TO DEFAULTS
+    </button>
+  </div>
+</div>
+
+<script>
+// ── ENV PANEL LOGIC ──────────────────────────────────────────────────────────
+function toggleEnvPanel(){
+  const p = document.getElementById('env-panel');
+  p.classList.toggle('open');
+}
+
+function envVal(input, suffix, decimals){
+  // Update the sibling .val span — all sliders store raw ints, display as /100
+  const row = input.closest('.env-row');
+  if(!row) return;
+  const val = row.querySelector('.val');
+  if(!val) return;
+  const n = parseFloat(input.value) / 100;
+  val.textContent = n.toFixed(decimals) + suffix;
+}
+
+function toggleSection(id){
+  const hdr  = document.querySelector(`#sec-${id} .env-section-hdr`);
+  const body = document.getElementById(`body-${id}`);
+  hdr.classList.toggle('collapsed');
+  body.classList.toggle('collapsed');
+}
+
+function envReset(){
+  cloudScale=1; cloudAlpha=1; cloudDrift=1;
+  cloudYOff=[0,0,0]; sunScale=1; moonScale=1;
+  planetScale=1; planetSpeed=1; planetYPos=0; planetAlpha=0.94; planetRotSpeed=0.15;
+  starBrightness=1; treeDensity=1;
+  setRockDensity(1); setGrassDensity(1);
+  DN.speed=1; fadeDepth=0.82;
+  // Sync all sliders back to defaults
+  document.querySelectorAll('#env-panel input[type=range]').forEach(sl => {
+    sl.value = sl.defaultValue;
+    const ev = new Event('input'); sl.dispatchEvent(ev);
+  });
+}
+
+// ── Draggable panel ──────────────────────────────────────────────────────────
+(function(){
+  const panel = document.getElementById('env-panel');
+  const hdr   = document.getElementById('env-panel-header');
+  let drag=false, ox=0, oy=0;
+  hdr.addEventListener('mousedown', e=>{
+    drag=true; ox=e.clientX-panel.offsetLeft; oy=e.clientY-panel.offsetTop;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e=>{
+    if(!drag) return;
+    panel.style.right='auto';
+    panel.style.left = (e.clientX-ox)+'px';
+    panel.style.top  = (e.clientY-oy)+'px';
+  });
+  document.addEventListener('mouseup', ()=>drag=false);
+})();
+</script>
+
+</body>
+</html>
