@@ -2205,37 +2205,21 @@ function drawClouds(ctx, W, tY, camX, t, zoom) {
       ctx.drawImage(img, x, dy, dw, dh);
     }
 
-    // ── 2. Colour tint overlay — use source-in on a temp canvas to isolate tint ─
-    //    source-atop would tint ALL previously drawn content (sky, stars, etc)
-    //    Using a temp canvas ensures tint only affects cloud pixels
-    if(d > 0.05 || duskF > 0.08) {
-      if(!drawClouds._oc) drawClouds._oc = document.createElement('canvas');
-      const oc = drawClouds._oc;
-      oc.width = W; oc.height = dh;
-      const ocx = oc.getContext('2d');
-      ocx.clearRect(0, 0, W, dh);
-      // Re-draw clouds onto temp canvas
-      ocx.globalAlpha = baseAlpha;
-      for(let x = -tileOffset; x < W + dw; x += dw) {
-        ocx.drawImage(img, x, 0, dw, dh);
-      }
-      // Apply tint via source-in (only affects non-transparent pixels)
-      if(d > 0.05) {
-        ocx.globalCompositeOperation = 'source-atop';
-        ocx.globalAlpha = Math.min(0.30, moonlitBoost * 0.55);
-        ocx.fillStyle = 'rgba(120,145,220,1)';
-        ocx.fillRect(0, 0, W, dh);
-      }
-      if(duskF > 0.08) {
-        ocx.globalCompositeOperation = 'source-atop';
-        ocx.globalAlpha = Math.min(0.25, duskBoost * 0.6);
-        ocx.fillStyle = 'rgba(220,95,15,1)';
-        ocx.fillRect(0, 0, W, dh);
-      }
-      // Composite tinted clouds onto main canvas
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.globalAlpha = 1;
-      ctx.drawImage(oc, 0, dy);
+    // ── 2. Subtle tint pass — draw tinted rect OVER the cloud band (source-over)
+    // No offscreen canvas — just a semi-transparent rect clipped to cloud band.
+    // Cloud PNGs have transparent backgrounds so the rect only tints sky, not
+    // "cloud pixels" directly, but the effect reads the same at these low alphas.
+    if(d > 0.15) {
+      // Night: cold blue wash over cloud band
+      ctx.globalAlpha = Math.min(0.14, moonlitBoost * 0.25);
+      ctx.fillStyle = 'rgba(80,110,200,1)';
+      ctx.fillRect(0, dy, W, dh);
+    }
+    if(duskF > 0.15) {
+      // Dusk/dawn: warm amber at horizon band only
+      ctx.globalAlpha = Math.min(0.12, duskBoost * 0.4);
+      ctx.fillStyle = 'rgba(200,80,10,1)';
+      ctx.fillRect(0, dy, W, dh);
     }
 
     ctx.restore();
