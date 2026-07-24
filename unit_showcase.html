@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<title>Star Troop — Unit Showcase</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#1a0d05;color:#fff;font-family:monospace;display:flex;flex-direction:column;align-items:center;padding:20px;}
+h1{color:#f97316;font-size:14px;letter-spacing:.2em;margin-bottom:20px;}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+.card{background:#0d0600;border:1px solid #3a1800;border-radius:8px;padding:15px;display:flex;flex-direction:column;align-items:center;}
+.card h2{color:#f97316;font-size:11px;letter-spacing:.1em;margin-bottom:10px;}
+canvas{image-rendering:pixelated;background:#2a1505;border:1px solid #3a1800;border-radius:4px;}
+.label{color:#a05020;font-size:9px;margin-top:8px;text-align:center;line-height:1.5;}
+</style>
+</head>
+<body>
+<h1>VULCAN — CANVAS-DRAWN UNIT SHOWCASE</h1>
+<div class="grid">
+  <div class="card">
+    <h2>NPC TROOPER — IDLE</h2>
+    <canvas id="cv-trooper-idle" width="240" height="300"></canvas>
+    <div class="label">Dark armor, cyan visor, rifle</div>
+  </div>
+  <div class="card">
+    <h2>NPC TROOPER — SHOOTING</h2>
+    <canvas id="cv-trooper-shoot" width="600" height="300"></canvas>
+    <div class="label">Muzzle flash + beam tracer</div>
+  </div>
+  <div class="card">
+    <h2>NPC TROOPER — WALKING</h2>
+    <canvas id="cv-trooper-walk" width="240" height="300"></canvas>
+    <div class="label">Leg animation + torso lean</div>
+  </div>
+  <div class="card">
+    <h2>WARRIOR BUG</h2>
+    <canvas id="cv-warrior" width="400" height="220"></canvas>
+    <div class="label">6 legs, claws, amber eyes</div>
+  </div>
+  <div class="card">
+    <h2>HOPPER BUG</h2>
+    <canvas id="cv-hopper" width="360" height="280"></canvas>
+    <div class="label">Wings, green eyes, hover</div>
+  </div>
+  <div class="card">
+    <h2>TROOPER — NIGHT MODE</h2>
+    <canvas id="cv-trooper-night" width="240" height="300"></canvas>
+    <div class="label">Visor glow + night tint</div>
+  </div>
+</div>
+<script>
+function _drawNPCTrooper(ctx, sx, sy, sw, sh, darkness, t, flip, unitState, shootTimer){
+  const phase=(sx*0.0137)%(Math.PI*2);
+  const tCycle=(t*0.001+phase);
+  const SHOOT_INTERVAL=2200, FLASH_DUR=180;
+  const isShooting=(unitState==='shoot')&&(shootTimer!==undefined)&&((shootTimer%SHOOT_INTERVAL)<FLASH_DUR);
+  const shootPhaseMs=isShooting?(shootTimer%SHOOT_INTERVAL):0;
+  const flashT=isShooting?shootPhaseMs/FLASH_DUR:0;
+  const flashAlpha=isShooting?(flashT<0.3?flashT/0.3:1-(flashT-0.3)/0.7):0;
+  const isWalking=(unitState==='patrol'||unitState==='alert');
+  const walkCycle=isWalking?Math.sin(tCycle*6):0;
+  const bobY=isWalking?Math.abs(Math.sin(tCycle*6))*sh*0.035:Math.sin(tCycle*1.8)*sh*0.02;
+  const PW=sw/8, PH=sh/12;
+  function px(lx,ly,lw,lh,color,alpha){
+    ctx.save();
+    if(alpha!==undefined)ctx.globalAlpha=alpha;
+    ctx.fillStyle=color;
+    const rx=flip?sx+(8-lx-lw)*PW:sx+lx*PW;
+    const ry=sy+ly*PH+bobY;
+    ctx.fillRect(rx,ry,lw*PW+0.5,lh*PH+0.5);
+    ctx.restore();
+  }
+  const DARK='#18191f',ARMOR='#23262e',ARMHL='#353a46',BOOT='#161618',RIFLE='#28292f',RIFHL='#484d58',STRAP='#30333c',VISOR='#00ddff';
+  const nightFade=Math.min(0.42,darkness*0.5);
+  const bootOffL=isWalking?Math.round(walkCycle*1.0):0;
+  const bootOffR=isWalking?Math.round(-walkCycle*1.0):0;
+  px(1,10+bootOffL,2,2,BOOT);
+  px(5,10+bootOffR,2,2,BOOT);
+  const legSwayL=isWalking?walkCycle*0.3:0;
+  const legSwayR=isWalking?-walkCycle*0.3:0;
+  px(1+legSwayL,8,2,2,ARMOR);
+  px(5+legSwayR,8,2,2,ARMOR);
+  px(1+legSwayL,8,2,1,ARMHL);
+  px(5+legSwayR,8,2,1,ARMHL);
+  const torsoLean=isWalking?(flip?-0.3:0.3):0;
+  px(1+torsoLean,5,6,3,ARMOR);
+  px(1+torsoLean,5,6,1,ARMHL);
+  px(2+torsoLean,6,1,1,STRAP);
+  px(5+torsoLean,6,1,1,STRAP);
+  px(0,4,2,2,ARMHL);
+  px(6,4,2,2,ARMHL);
+  px(2,1,4,4,ARMOR);
+  px(1,2,1,2,ARMOR);
+  px(6,2,1,2,ARMOR);
+  px(2,1,4,1,ARMHL);
+  ctx.save();
+  const visorX=flip?sx+2*PW:sx+3*PW;
+  const visorY=sy+2.5*PH+bobY;
+  ctx.fillStyle=VISOR;
+  ctx.globalAlpha=darkness>0.3?Math.min(1.0,0.7+darkness*0.5):0.55;
+  ctx.fillRect(visorX,visorY,3*PW,PH*0.65);
+  ctx.restore();
+  if(darkness>0.3){
+    ctx.save();
+    ctx.globalAlpha=Math.min(0.55,darkness*0.65);
+    const vx=(flip?sx+3.5*PW:sx+4.5*PW);
+    const vy=sy+2.8*PH+bobY;
+    const vg=ctx.createRadialGradient(vx,vy,0,vx,vy,PW*2.8);
+    vg.addColorStop(0,'rgba(0,210,255,0.9)');
+    vg.addColorStop(1,'rgba(0,100,200,0)');
+    ctx.fillStyle=vg;
+    ctx.fillRect(vx-PW*3,vy-PH,PW*6,PH*2.5);
+    ctx.restore();
+  }
+  if(!flip){px(3,5,1,2,ARMOR);px(6,5,1,2,ARMOR);}
+  else{px(4,5,1,2,ARMOR);px(1,5,1,2,ARMOR);}
+  const rifleRow=isShooting?5.0:5.5;
+  const rifleRecoil=isShooting?(flashT<0.3?flashT*1.5:0):0;
+  if(!flip){
+    const rc=rifleRecoil;
+    px(4-rc,rifleRow,4,1,RIFLE);
+    px(7-rc,rifleRow,1,1,RIFHL);
+    px(4-rc,rifleRow+1,2,0.8,RIFLE);
+    px(5-rc,rifleRow-0.4,2,0.4,RIFHL);
+  } else {
+    const rc=rifleRecoil;
+    px(0+rc,rifleRow,4,1,RIFLE);
+    px(0+rc,rifleRow,1,1,RIFHL);
+    px(2+rc,rifleRow+1,2,0.8,RIFLE);
+    px(1+rc,rifleRow-0.4,2,0.4,RIFHL);
+  }
+  if(isShooting&&flashAlpha>0.01){
+    ctx.save();
+    ctx.globalAlpha=flashAlpha;
+    const muzzleOffset=rifleRecoil*PW;
+    const muzzleX=flip?sx+0.2*PW+muzzleOffset:sx+7.8*PW-muzzleOffset;
+    const muzzleY=sy+rifleRow*PH+bobY+PH*0.5;
+    const fDir=flip?-1:1;
+    const beamLen=sw*3.8;
+    const beamX=fDir>0?muzzleX:muzzleX-beamLen;
+    const bg=ctx.createLinearGradient(beamX,muzzleY,beamX+beamLen,muzzleY);
+    bg.addColorStop(0,'rgba(255,255,200,1.0)');
+    bg.addColorStop(0.12,'rgba(255,220,60,0.9)');
+    bg.addColorStop(0.45,'rgba(255,140,10,0.45)');
+    bg.addColorStop(1,'rgba(255,60,0,0)');
+    ctx.fillStyle=bg;
+    ctx.fillRect(beamX,muzzleY-PH*0.35,beamLen,PH*0.7);
+    const outerR=PW*2.6;
+    const og=ctx.createRadialGradient(muzzleX,muzzleY,0,muzzleX,muzzleY,outerR*2.0);
+    og.addColorStop(0,'rgba(255,255,180,0.85)');
+    og.addColorStop(0.3,'rgba(255,180,40,0.5)');
+    og.addColorStop(0.7,'rgba(255,80,0,0.2)');
+    og.addColorStop(1,'rgba(200,20,0,0)');
+    ctx.fillStyle=og;
+    ctx.beginPath();ctx.arc(muzzleX,muzzleY,outerR*2.0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,240,130,0.95)';
+    const spikeAngles=[0,Math.PI*0.33,Math.PI*0.66,Math.PI,Math.PI*1.33,Math.PI*1.66];
+    for(const ang of spikeAngles){
+      const sLen=outerR*(1.4+(Math.sin(t*0.05+ang)*0.3));
+      ctx.save();ctx.translate(muzzleX,muzzleY);ctx.rotate(ang);
+      ctx.fillRect(-PW*0.25,-sLen,PW*0.5,sLen);
+      ctx.restore();
+    }
+    ctx.fillStyle='rgba(255,255,255,1.0)';
+    ctx.beginPath();ctx.arc(muzzleX,muzzleY,PW*0.85,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+  if(darkness>0.35){
+    ctx.save();
+    ctx.globalAlpha=nightFade;
+    ctx.fillStyle='rgba(10,15,40,1)';
+    ctx.fillRect(sx,sy+bobY,sw,sh);
+    ctx.restore();
+  }
+}
+
+function _drawWarriorBug(ctx,sx,sy,sw,sh,darkness,t,flip){
+  const phase=(sx*0.019+sy*0.007)%(Math.PI*2);
+  const tCycle=t*0.0015+phase;
+  const walkOff=Math.sin(tCycle*4)*sh*0.03;
+  const PW=sw/10, PH=sh/8;
+  function r(lx,ly,lw,lh,col,a){
+    ctx.save();
+    if(a!==undefined)ctx.globalAlpha=a;
+    ctx.fillStyle=col;
+    const rx=flip?sx+(10-lx-lw)*PW:sx+lx*PW;
+    ctx.fillRect(rx,sy+ly*PH+walkOff,lw*PW+0.5,lh*PH+0.5);
+    ctx.restore();
+  }
+  const DARK='#150e04',CHIT='#2c1a07',MID='#412610',HI='#5e3818',EDGE='#7a4c22',CLAW='#1a1005',EYE='#ff8800',EYEG='#ffcc44',LEG='#251508',LEGH='#3d2210';
+  r(0,5,1,3,LEG);r(0,5,1,1,LEGH);
+  r(9,5,1,3,LEG);r(9,5,1,1,LEGH);
+  r(1,5.5,1,2.5,LEG);r(8,5.5,1,2.5,LEG);
+  r(1,5.5,1,0.8,LEGH);r(8,5.5,1,0.8,LEGH);
+  r(2,5,1.5,2,LEG);r(6.5,5,1.5,2,LEG);
+  r(2,5,1,0.8,LEGH);r(7,5,1,0.8,LEGH);
+  r(5,2,5,4,DARK);
+  r(5,2,5,3,CHIT);
+  r(5,2,5,1,MID);
+  r(6,2.5,3,0.5,HI);
+  r(9,3,1,2,DARK);
+  r(3,2.5,3,3.5,CHIT);
+  r(3,2.5,3,1,MID);
+  r(3.5,3,2,0.5,HI);
+  r(0,3,4,3,CHIT);
+  r(0,3,4,1,MID);
+  r(0.5,3.2,3,0.6,HI);
+  if(!flip){r(0,3.5,1.5,1,CLAW);r(0,4.2,1,1,CLAW);}
+  else{r(8.5,3.5,1.5,1,CLAW);r(9,4.2,1,1,CLAW);}
+  r(0,2.8,0.8,0.5,EDGE);
+  r(0,4.5,0.8,0.5,EDGE);
+  const eyeLX=flip?sx+7.5*PW:sx+1.0*PW;
+  const eyeRX=flip?sx+8.5*PW:sx+2.0*PW;
+  const eyeY=sy+3.5*PH+walkOff;
+  const eyePulse=0.75+Math.sin(tCycle*2.1)*0.25;
+  ctx.save();
+  ctx.globalAlpha=0.55*eyePulse;
+  const eg=ctx.createRadialGradient(eyeLX,eyeY,0,eyeLX,eyeY,PW*1.8);
+  eg.addColorStop(0,'rgba(255,140,0,0.9)');eg.addColorStop(1,'rgba(255,80,0,0)');
+  ctx.fillStyle=eg;
+  ctx.fillRect(eyeLX-PW*1.8,eyeY-PH,PW*3.6,PH*2);
+  ctx.restore();
+  ctx.save();
+  ctx.fillStyle=EYE;ctx.globalAlpha=eyePulse;
+  ctx.fillRect(eyeLX,eyeY,PW*0.9,PH*0.7);
+  ctx.fillRect(eyeRX,eyeY,PW*0.9,PH*0.7);
+  ctx.fillStyle=EYEG;ctx.globalAlpha=eyePulse*0.8;
+  ctx.fillRect(eyeLX+PW*0.1,eyeY,PW*0.35,PH*0.3);
+  ctx.fillRect(eyeRX+PW*0.1,eyeY,PW*0.35,PH*0.3);
+  ctx.restore();
+  if(Math.sin(tCycle*0.7)>0.6){
+    ctx.save();
+    ctx.globalAlpha=0.6+Math.sin(tCycle*3)*0.2;
+    ctx.fillStyle='#44ff44';
+    ctx.beginPath();
+    ctx.arc(sx+sw*0.5,sy+sh+PH*0.3,PW*0.5,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+  if(darkness>0.35){
+    ctx.save();
+    ctx.globalAlpha=Math.min(0.4,darkness*0.45);
+    ctx.fillStyle='rgba(5,10,25,1)';
+    ctx.fillRect(sx,sy+walkOff,sw,sh);
+    ctx.restore();
+  }
+}
+
+function _drawHopperBug(ctx,sx,sy,sw,sh,darkness,t,flip){
+  const phase=(sx*0.023+sy*0.011)%(Math.PI*2);
+  const tCycle=t*0.002+phase;
+  const hoverY=Math.sin(tCycle*3.5)*sh*0.08;
+  const wingFlap=Math.sin(tCycle*12);
+  const PW=sw/10, PH=sh/10;
+  function r(lx,ly,lw,lh,col,a){
+    ctx.save();
+    if(a!==undefined)ctx.globalAlpha=a;
+    ctx.fillStyle=col;
+    const rx=flip?sx+(10-lx-lw)*PW:sx+lx*PW;
+    ctx.fillRect(rx,sy+ly*PH+hoverY,lw*PW+0.5,lh*PH+0.5);
+    ctx.restore();
+  }
+  const DARK='#1a1a08',BODY='#2e2e0e',MID='#3e3a14',HI='#5a541e',EDGE='#7a7028',LEG='#282810',LEGH='#484020',EYE='#00ff88',EYEG='#aaffcc';
+  const wingSpread=0.8+Math.abs(wingFlap)*0.4;
+  const wAlpha=0.25+Math.abs(wingFlap)*0.15;
+  ctx.save();
+  ctx.globalAlpha=wAlpha;
+  ctx.fillStyle='rgba(180,210,160,1)';
+  const uwLX=flip?sx+6*PW:sx-PW*wingSpread*1.5;
+  ctx.fillRect(uwLX,sy+hoverY+PH,PW*3.5*wingSpread,PH*2.5);
+  const uwRX=flip?sx-PW*wingSpread*1.5:sx+6*PW;
+  ctx.fillRect(uwRX+(flip?PW:0),sy+hoverY+PH,PW*3.5*wingSpread,PH*2.5);
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha=wAlpha*0.65;
+  ctx.fillStyle='rgba(180,210,160,1)';
+  const lwLX=flip?sx+5*PW:sx-PW*wingSpread;
+  ctx.fillRect(lwLX,sy+hoverY+3*PH,PW*2.5*wingSpread,PH*1.8);
+  const lwRX=flip?sx-PW*wingSpread:sx+5*PW;
+  ctx.fillRect(lwRX,sy+hoverY+3*PH,PW*2.5*wingSpread,PH*1.8);
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha=wAlpha*0.5;
+  ctx.strokeStyle='rgba(160,200,140,0.8)';
+  ctx.lineWidth=0.7;
+  for(let i=0;i<3;i++){
+    const vx=flip?sx+(6+i)*PW:sx+(-1.5+i*0.8)*PW;
+    ctx.beginPath();
+    ctx.moveTo(vx,sy+hoverY+PH);
+    ctx.lineTo(vx-(flip?-1:1)*PW*1.2,sy+hoverY+PH*3.5);
+    ctx.stroke();
+  }
+  ctx.restore();
+  r(2,6,0.8,2.5,LEG);r(7.2,6,0.8,2.5,LEG);
+  r(3.5,5.5,0.8,2,LEG);r(5.7,5.5,0.8,2,LEG);
+  r(4,5,1,1.5,LEG);r(5,5,1,1.5,LEG);
+  r(4,4,2,5,DARK);
+  r(4.2,4,1.6,5,BODY);
+  r(4.2,4,1.6,1,MID);
+  for(let seg=1;seg<4;seg++){r(4.2,4+seg*1.2,1.6,0.2,DARK);}
+  r(3,3,4,2.5,BODY);
+  r(3,3,4,0.8,MID);
+  r(3.5,3.3,3,0.4,HI);
+  r(3,1,4,2.5,BODY);
+  r(3,1,4,0.7,MID);
+  const eyeLX=flip?sx+6*PW:sx+2*PW;
+  const eyeRX=flip?sx+2*PW:sx+6*PW;
+  const eyeY=sy+1.5*PH+hoverY;
+  const eyePulse=0.7+Math.sin(tCycle*1.8)*0.3;
+  ctx.save();
+  ctx.globalAlpha=0.5*eyePulse;
+  const eg=ctx.createRadialGradient(eyeLX,eyeY,0,eyeLX,eyeY,PW*2);
+  eg.addColorStop(0,'rgba(0,255,130,0.9)');eg.addColorStop(1,'rgba(0,180,80,0)');
+  ctx.fillStyle=eg;ctx.fillRect(eyeLX-PW*2,eyeY-PH,PW*4,PH*2);
+  const eg2=ctx.createRadialGradient(eyeRX,eyeY,0,eyeRX,eyeY,PW*2);
+  eg2.addColorStop(0,'rgba(0,255,130,0.9)');eg2.addColorStop(1,'rgba(0,180,80,0)');
+  ctx.fillStyle=eg2;ctx.fillRect(eyeRX-PW*2,eyeY-PH,PW*4,PH*2);
+  ctx.restore();
+  ctx.save();
+  ctx.fillStyle=EYE;ctx.globalAlpha=eyePulse;
+  ctx.fillRect(eyeLX,eyeY,PW*1.2,PH*1.2);
+  ctx.fillRect(eyeRX,eyeY,PW*1.2,PH*1.2);
+  ctx.fillStyle=EYEG;ctx.globalAlpha=eyePulse*0.7;
+  ctx.fillRect(eyeLX,eyeY,PW*0.5,PH*0.5);
+  ctx.fillRect(eyeRX,eyeY,PW*0.5,PH*0.5);
+  ctx.restore();
+  ctx.save();
+  ctx.strokeStyle=MID;ctx.lineWidth=1.2;ctx.globalAlpha=0.85;
+  const aBaseX=flip?sx+6.5*PW:sx+3.5*PW;
+  const aY=sy+PH+hoverY;
+  const antSway=Math.sin(tCycle*2.5)*PW;
+  ctx.beginPath();ctx.moveTo(aBaseX,aY);
+  ctx.lineTo(aBaseX-(flip?-2:2)*PW+antSway,aY-PH*2.5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(aBaseX+PW,aY);
+  ctx.lineTo(aBaseX+(flip?-3:3)*PW+antSway,aY-PH*2);ctx.stroke();
+  ctx.restore();
+  if(darkness>0.35){
+    ctx.save();
+    ctx.globalAlpha=Math.min(0.38,darkness*0.42);
+    ctx.fillStyle='rgba(5,10,25,1)';
+    ctx.fillRect(sx,sy+hoverY,sw,sh);
+    ctx.restore();
+  }
+}
+
+function renderAll(){
+  const t=performance.now();
+  let cv,ctx;
+  cv=document.getElementById('cv-trooper-idle');
+  ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cv.width,cv.height);
+  _drawNPCTrooper(ctx,50,30,140,210,0,t,false,'idle',0);
+
+  cv=document.getElementById('cv-trooper-shoot');
+  ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cv.width,cv.height);
+  _drawNPCTrooper(ctx,50,30,140,210,0,t,false,'shoot',50);
+
+  cv=document.getElementById('cv-trooper-walk');
+  ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cv.width,cv.height);
+  _drawNPCTrooper(ctx,50,30,140,210,0,t,false,'patrol',0);
+
+  cv=document.getElementById('cv-warrior');
+  ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cv.width,cv.height);
+  _drawWarriorBug(ctx,40,30,320,160,0,t,false);
+
+  cv=document.getElementById('cv-hopper');
+  ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cv.width,cv.height);
+  _drawHopperBug(ctx,40,30,280,220,0,t,false);
+
+  cv=document.getElementById('cv-trooper-night');
+  ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cv.width,cv.height);
+  _drawNPCTrooper(ctx,50,30,140,210,0.7,t,false,'alert',0);
+
+  requestAnimationFrame(renderAll);
+}
+requestAnimationFrame(renderAll);
+</script>
+</body>
+</html>
