@@ -113,6 +113,7 @@ body{background:#1a0800;color:#fff;font-family:monospace;display:flex;flex-direc
   <button class="btn green" onclick="autoFill()">AUTO-FILL</button>
   <button class="btn red"   onclick="clearAll()">CLEAR</button>
   <button class="btn blue"  onclick="exportJSON()">EXPORT</button>
+  <label class="btn blue" style="cursor:pointer;">IMPORT<input type="file" accept=".json" style="display:none" onchange="importJSON(this)"/></label>
   <div class="spacer"></div>
   <span id="zoom-lbl-top" style="color:#555;font-size:10px;">100%</span>
 </div>
@@ -1043,12 +1044,19 @@ function updateDayNight(dt){
 function updateWeather(dt,W,tY){
   const rate={calm:0.03,sand:0.3,storm:0.8}[WEATHER.mode]*WEATHER.intensity;
   if(Math.random()<rate*(dt/16)) spawnSandParticle(W,tY);
-  if(WEATHER.particles.length>600) WEATHER.particles.splice(0,80);
-  for(let i=WEATHER.particles.length-1;i>=0;i--){
+  // Cap particles — remove excess by truncating (O(1) vs O(n) splice)
+  if(WEATHER.particles.length>600) WEATHER.particles.length=600;
+  // Update + compact in one pass (swap-and-pop instead of splice)
+  let w=0;
+  for(let i=0;i<WEATHER.particles.length;i++){
     const p=WEATHER.particles[i];
     p.x+=p.vx; p.y+=p.vy; p.vy+=0.003; p.life-=dt*0.4;
-    if(p.life<=0||p.x>W+20||p.x<-20||p.y>tY) WEATHER.particles.splice(i,1);
+    if(p.life>0&&p.x<=W+20&&p.x>=-20&&p.y<=tY){
+      if(w!==i) WEATHER.particles[w]=p;
+      w++;
+    }
   }
+  WEATHER.particles.length=w;
 }
 
 function drawStars(ctx,W,tY,t,zoom){
@@ -1243,7 +1251,18 @@ function cycleWeather(){
 function skipPhase(){ DN.phaseTime=999999; }
 
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
-function resize(){cv.width=cv.offsetWidth||cv.parentElement.clientWidth;cv.height=cv.offsetHeight||cv.parentElement.clientHeight;}
+function resize(){
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  const cssW = cv.offsetWidth || cv.parentElement.clientWidth;
+  const cssH = cv.offsetHeight || cv.parentElement.clientHeight;
+  cv.width  = Math.round(cssW * dpr);
+  cv.height = Math.round(cssH * dpr);
+  cv.style.width  = cssW + 'px';
+  cv.style.height = cssH + 'px';
+  // Reset transform to identity then scale by DPR so all drawing uses CSS coordinates
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw._skyCache = false; // invalidate sky cache on resize
+}
 resize();new ResizeObserver(resize).observe(document.getElementById('cv-wrap'));
 
 
@@ -2186,22 +2205,37 @@ function drawClouds(ctx, W, tY, camX, t, zoom) {
       ctx.drawImage(img, x, dy, dw, dh);
     }
 
-    // ── 2. Colour tint overlay — fillRect clipped to cloud shape via source-atop ─
-    //    Do NOT re-drawImage here — that causes alpha stacking / flicker.
-    //    The cloud pixels drawn in pass 1 already define the mask.
-    if(d > 0.05) {
-      // Night: cold blue-silver moonlit tint
-      ctx.globalCompositeOperation = 'source-atop';
-      ctx.globalAlpha = Math.min(0.30, moonlitBoost * 0.55);
-      ctx.fillStyle = 'rgba(120,145,220,1)';
-      ctx.fillRect(0, dy, W, dh);
-    }
-    if(duskF > 0.08) {
-      // Dusk/Dawn: warm amber backlit
-      ctx.globalCompositeOperation = 'source-atop';
-      ctx.globalAlpha = Math.min(0.25, duskBoost * 0.6);
-      ctx.fillStyle = 'rgba(220,95,15,1)';
-      ctx.fillRect(0, dy, W, dh);
+    // ── 2. Colour tint overlay — use source-in on a temp canvas to isolate tint ─
+    //    source-atop would tint ALL previously drawn content (sky, stars, etc)
+    //    Using a temp canvas ensures tint only affects cloud pixels
+    if(d > 0.05 || duskF > 0.08) {
+      if(!drawClouds._oc) drawClouds._oc = document.createElement('canvas');
+      const oc = drawClouds._oc;
+      oc.width = W; oc.height = dh;
+      const ocx = oc.getContext('2d');
+      ocx.clearRect(0, 0, W, dh);
+      // Re-draw clouds onto temp canvas
+      ocx.globalAlpha = baseAlpha;
+      for(let x = -tileOffset; x < W + dw; x += dw) {
+        ocx.drawImage(img, x, 0, dw, dh);
+      }
+      // Apply tint via source-in (only affects non-transparent pixels)
+      if(d > 0.05) {
+        ocx.globalCompositeOperation = 'source-atop';
+        ocx.globalAlpha = Math.min(0.30, moonlitBoost * 0.55);
+        ocx.fillStyle = 'rgba(120,145,220,1)';
+        ocx.fillRect(0, 0, W, dh);
+      }
+      if(duskF > 0.08) {
+        ocx.globalCompositeOperation = 'source-atop';
+        ocx.globalAlpha = Math.min(0.25, duskBoost * 0.6);
+        ocx.fillStyle = 'rgba(220,95,15,1)';
+        ocx.fillRect(0, 0, W, dh);
+      }
+      // Composite tinted clouds onto main canvas
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      ctx.drawImage(oc, 0, dy);
     }
 
     ctx.restore();
@@ -2956,6 +2990,9 @@ function tickNPCTroopers(dt){
   const dtS = dt / 1000;
   const worldW = GRID_COLS * TILE_PX;
 
+  // ── Cache bug list once per tick (avoids O(n²) scan) ──────────────────────
+  const bugs = UNITS.filter(b => b.key === 'warrior_bug' || b.key === 'hopper_bug');
+
   for(const u of UNITS){
     if(u.key !== 'trooper') continue;
 
@@ -2968,10 +3005,9 @@ function tickNPCTroopers(dt){
       u.flip       = u.dir < 0;
     }
 
-    // ── Detect nearest bug ─────────────────────────────────────────────────
+    // ── Detect nearest bug (using cached list) ──────────────────────────────
     let nearestBug = null, nearestDist = Infinity;
-    for(const b of UNITS){
-      if(b.key !== 'warrior_bug' && b.key !== 'hopper_bug') continue;
+    for(const b of bugs){
       const dist = Math.abs(b.worldX - u.worldX);
       if(dist < nearestDist){ nearestDist = dist; nearestBug = b; }
     }
@@ -3028,6 +3064,25 @@ function drawUnits(ctx, W, tY, t, zoom, darkness){
     const floatOff = (def.floatHeight||0)*sh;
     const sy = tY - sh - floatOff;
     drawUnitSprite(ctx, u.key, def, sx, sy, sw, sh, darkness, t, 1, u.flip, u.state, u.shootTimer);
+  }
+
+  // Unit ghost preview — matches structure placement UX
+  if(unitTool && structHover){
+    const def = UNIT_DEFS[unitTool];
+    if(def){
+      const sw = def.worldW * zoom, sh = def.worldH * zoom;
+      const floatOff = (def.floatHeight||0)*sh;
+      const sx = structHover.wx * zoom - camX - sw * 0.5;
+      const sy = tY - sh - floatOff;
+      drawUnitSprite(ctx, unitTool, def, sx, sy, sw, sh, darkness, t, 0.45, false, 'idle', 0);
+      ctx.save();
+      ctx.strokeStyle = '#00ffcc';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.strokeRect(sx, sy, sw, sh);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
   }
 }
 
@@ -3102,6 +3157,27 @@ function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip,
       ctx.fillStyle = vg;
       ctx.fillRect(sx, sy, sw, sh * 0.4);
       ctx.restore();
+    }
+    
+    // Muzzle flash night illumination — lights up area around shooting trooper
+    if(key === 'trooper' && unitState === 'shoot' && darkness > 0.2){
+      const SHOOT_INT = 2200, FLASH_DUR = 180;
+      const shootPhase = (shootTimer || 0) % SHOOT_INT;
+      if(shootPhase < FLASH_DUR){
+        const flashStr = shootPhase < 54 ? shootPhase / 54 : 1 - (shootPhase - 54) / (FLASH_DUR - 54);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = Math.min(0.6, flashStr * darkness * 0.8);
+        const mx = flip ? sx + sw * 0.1 : sx + sw * 0.9;
+        const my = sy + sh * 0.45;
+        const mg = ctx.createRadialGradient(mx, my, 0, mx, my, sw * 2.5);
+        mg.addColorStop(0, 'rgba(255,200,80,0.7)');
+        mg.addColorStop(0.3, 'rgba(255,140,20,0.3)');
+        mg.addColorStop(1, 'rgba(255,80,0,0)');
+        ctx.fillStyle = mg;
+        ctx.fillRect(sx - sw, sy - sh * 0.5, sw * 3, sh * 2);
+        ctx.restore();
+      }
     }
     
     // Bug eye glow at night
@@ -3447,12 +3523,15 @@ function drawStructSprite(ctx, key, sx, sy, sw, sh, darkness, t, alpha){
   ctx.restore();
 }
 
+let _structSortCache = null, _structSortHash = -1;
 function drawStructures(ctx, W, tY, camX, t, zoom, darkness){
   if(STRUCTURES.length===0 && !structHover) return;
   const ts = TILE_PX * zoom;
 
-  // Draw placed structures — sorted left to right for correct overlap
-  const sorted = [...STRUCTURES].sort((a,b)=>a.worldX - b.worldX);
+  // Cache sorted structures — only re-sort when array changes
+  const structHash = STRUCTURES.length;
+  if(_structSortHash !== structHash){_structSortCache=[...STRUCTURES].sort((a,b)=>a.worldX-b.worldX);_structSortHash=structHash;}
+  const sorted = _structSortCache || STRUCTURES;
   for(const s of sorted){
     const def = STRUCT_DEFS[s.key];
     if(!def) continue;
@@ -3764,7 +3843,7 @@ function drawBattlecruisers(ctx, W, H, tY, camX, t, zoom, d){
   if(drawBattlecruisers._lastT === undefined) drawBattlecruisers._lastT = t;
   const dt = Math.min(t - drawBattlecruisers._lastT, 100);
   drawBattlecruisers._lastT = t;
-  tickBattlecruisers(dt, worldW);
+  tickBattlecruisers(dt, worldW);;
 
   ctx.save();
   ctx.imageSmoothingEnabled = false;
@@ -3872,8 +3951,8 @@ function draw(){
     // ── Stars ─────────────────────────────────────────────────────────────────
     drawStars(ctx, W, tY, t, zoom);
 
-    // ── FAR parallax layer (gas giant sits behind MID mountains) ────────────────
-    ['FAR'].forEach(slot=>{
+    // ── FAR parallax layers (FAR2 + FAR — gas giant sits behind MID mountains) ───
+    ['FAR2','FAR'].forEach(slot=>{
       const st=LS[slot];if(!st.visible||!st.img||!st.img.complete||!st.img.naturalWidth)return;
       // Parallax layers use FIXED height — no zoom scaling (they are background, not world)
       // Scroll offset uses world-space camX (divide by zoom) for correct parallax at all zoom levels
@@ -3991,7 +4070,14 @@ function draw(){
       ctx.lineWidth=1.2;ctx.fillRect(hx,hy,ts,ts);ctx.strokeRect(hx+.5,hy+.5,ts-1,ts-1);
     }
   }catch(e){console.error('DRAW:',e);}
-  requestAnimationFrame(draw);
+  if(document.hidden){
+    // Pause when tab not visible — resume on next visibility change
+    document.addEventListener('visibilitychange',function _vr(){
+      if(!document.hidden){document.removeEventListener('visibilitychange',_vr);lastFrameTime=performance.now();requestAnimationFrame(draw);}
+    },{once:true});
+  } else {
+    requestAnimationFrame(draw);
+  }
 }
 
 function cellAt(mx,my){
@@ -4076,6 +4162,10 @@ window.addEventListener('keydown',e=>{
   if(e.key==='='||e.key==='+'){e.preventDefault();adjustZoom(0.25);}
   if(e.key==='-'||e.key==='_'){e.preventDefault();adjustZoom(-0.25);}
   if(e.key==='0'){e.preventDefault();resetZoom();}
+  if(e.key==='t'||e.key==='T'){e.preventDefault();selectUnitTool('trooper');}
+  if(e.key==='w'||e.key==='W'){e.preventDefault();selectUnitTool('warrior_bug');}
+  if(e.key==='h'||e.key==='H'){e.preventDefault();selectUnitTool('hopper_bug');}
+  if(e.key==='Escape'){e.preventDefault();selectUnitTool(null);selectStructureTool(null);setTool('paint');}
 });
 window.addEventListener('keyup',e=>{delete keys[e.key];});
 
@@ -4137,12 +4227,33 @@ function autoFill(){
   rockInvalidate();}
 function clearAll(){if(confirm('Clear all tiles?'))tilesMap={};}
 function exportJSON(){
-  const b=new Blob([JSON.stringify({tiles:tilesMap,preset:activePreset,cols:GRID_COLS,rows:GRID_ROWS,fadeDepth},null,2)],{type:'application/json'});
+  const b=new Blob([JSON.stringify({tiles:tilesMap,preset:activePreset,cols:GRID_COLS,rows:GRID_ROWS,fadeDepth,structures:STRUCTURES.map(s=>({key:s.key,worldX:s.worldX})),units:UNITS.map(u=>({key:u.key,worldX:u.worldX}))},null,2)],{type:'application/json'});
   Object.assign(document.createElement('a'),{href:URL.createObjectURL(b),download:'level.json'}).click();
 }
+function importJSON(input){
+  const file = input.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if(data.tiles) tilesMap = data.tiles;
+      if(data.preset){ activePreset = data.preset; buildAllPalettes(activePreset); }
+      if(data.fadeDepth !== undefined) { fadeDepth = data.fadeDepth; document.getElementById('fade-slider').value = Math.round(fadeDepth*100); }
+      if(data.structures){ STRUCTURES.length = 0; data.structures.forEach(s => placeStructure(s.worldX, s.key)); }
+      if(data.units){ UNITS.length = 0; data.units.forEach(u => placeUnit(u.worldX, u.key)); }
+      grassInvalidate(); rockInvalidate();
+      console.log('✅ Level imported');
+    } catch(err) { console.error('Import failed:', err); alert('Invalid level file'); }
+  };
+  reader.readAsText(file);
+}
 autoFill();
-window.addEventListener('load',()=>{resize();grassInvalidate();rockInvalidate();requestAnimationFrame(draw);});
-if(document.readyState==='complete'){resize();requestAnimationFrame(draw);}
+// Only start ONE draw loop — prevent double RAF
+if(document.readyState==='complete'||document.readyState==='interactive'){
+  resize();grassInvalidate();rockInvalidate();requestAnimationFrame(draw);
+} else {
+  window.addEventListener('load',()=>{resize();grassInvalidate();rockInvalidate();requestAnimationFrame(draw);});
+}
 </script>
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
