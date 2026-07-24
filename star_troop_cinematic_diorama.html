@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STAR TROOP — Cinematic Diorama Reel</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;background:#000;overflow:hidden;font-family:'Courier New',monospace}
+  #reel{display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+  #cinema{width:100%;max-width:1280px;aspect-ratio:2.39/1;background:#000;position:relative;overflow:hidden}
+  canvas{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+  #titlecard{position:absolute;bottom:18%;left:0;right:0;text-align:center;pointer-events:none;opacity:0;transition:opacity 0.8s ease}
+  #titlecard .title{color:#ff8c42;font-size:clamp(14px,2.5vw,28px);font-weight:bold;letter-spacing:6px;text-shadow:0 0 20px rgba(255,100,0,0.6),2px 2px 0 #000}
+  #titlecard .subtitle{color:#8a6a4a;font-size:clamp(10px,1.5vw,14px);letter-spacing:3px;margin-top:4px;text-shadow:1px 1px 0 #000}
+  #hud{position:absolute;top:8px;right:12px;color:#ff8c4230;font-size:11px;letter-spacing:2px;pointer-events:none}
+  #sceneNav{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:none}
+  .dot{width:8px;height:8px;border-radius:50%;background:#333;transition:background 0.3s}
+  .dot.active{background:#ff8c42;box-shadow:0 0 6px #ff8c42}
+  #bar{position:absolute;bottom:0;left:0;height:2px;background:#ff8c42;transition:width 0.1s linear;pointer-events:none}
+  #controls{position:absolute;top:8px;left:12px;display:flex;gap:8px;pointer-events:auto}
+  #controls button{background:rgba(20,10,5,0.8);color:#ff8c42;border:1px solid #ff8c4230;padding:4px 10px;border-radius:3px;cursor:pointer;font-family:inherit;font-size:11px;letter-spacing:1px}
+  #controls button:hover{background:rgba(40,20,10,0.9);border-color:#ff8c42}
+</style>
+</head>
+<body>
+<div id="reel">
+  <div id="cinema">
+    <canvas id="c" width="1280" height="536"></canvas>
+    <div id="titlecard"><div class="title"></div><div class="subtitle"></div></div>
+    <div id="hud">STAR TROOP</div>
+    <div id="controls">
+      <button id="prevBtn">◀ PREV</button>
+      <button id="playBtn">❚❚ PAUSE</button>
+      <button id="nextBtn">NEXT ▶</button>
+    </div>
+    <div id="sceneNav"></div>
+    <div id="bar"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// STAR TROOP — CINEMATIC DIORAMA REEL
+// 5 scenes. Canvas pixel-art cinematic. VULCAN Visual Constitution compliant.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+ctx.imageSmoothingEnabled = false;
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function lerp(a,b,t){return a+(b-a)*t}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function rand(seed){seed=seed*12.9898;return (()=>{seed=(seed*12.9898+78.233)%1;return Math.abs(seed)})()}
+function ease(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2}
+function easeOut(t){return 1-Math.pow(1-t,3)}
+
+// Pixel helper — draws a "pixel" at (x,y) with given size
+function px(x,y,s,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),s,s)}
+
+// Filled rect with pixel grid alignment
+function pRect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h))}
+
+// ── Color palettes per scene ──────────────────────────────────────────────
+const PAL = {
+  dawn:   { sky1:'#1a0a15', sky2:'#6b2a1a', sky3:'#c2501a', sky4:'#e8843a', horizon:'#ff9c5a', dust:'#c8804a', terrain1:'#A8643D', terrain2:'#8A4A2A', terrain3:'#50301A', mtn1:'#2a1418', mtn2:'#3a1a18', fg:'#1a0a0a' },
+  night:  { sky1:'#08040f', sky2:'#0f0820', sky3:'#1a1028', horizon:'#241838', dust:'#1a1228', terrain1:'#2a1a2a', terrain2:'#1a0a18', terrain3:'#0a0408', mtn1:'#080414', mtn2:'#100820', fg:'#020108' },
+  dusk:   { sky1:'#1a0810', sky2:'#4a1218', sky3:'#8a2010', sky4:'#c84020', horizon:'#e8502a', dust:'#a04030', terrain1:'#8a4020', terrain2:'#6a2818', terrain3:'#3a1808', mtn1:'#1a0808', mtn2:'#281010', fg:'#080404' },
+  day:    { sky1:'#3a2410', sky2:'#8a5028', sky3:'#c87838', sky4:'#e8a050', horizon:'#f0b868', dust:'#d09050', terrain1:'#A8643D', terrain2:'#8A4A2A', terrain3:'#50301A', mtn1:'#3a2418', mtn2:'#4a3018', fg:'#1a1208' },
+  aftermath: { sky1:'#2a1a28', sky2:'#5a3a3a', sky3:'#8a6a5a', sky4:'#c8a888', horizon:'#d0b898', dust:'#9a8870', terrain1:'#8a6048', terrain2:'#6a4028', terrain3:'#3a2010', mtn1:'#2a1a20', mtn2:'#3a2428', fg:'#1a1418' }
+};
+
+// ── Reusable drawing functions ─────────────────────────────────────────────
+
+function drawSky(p, t) {
+  const g = ctx.createLinearGradient(0, 0, 0, H * 0.7);
+  g.addColorStop(0, p.sky1);
+  g.addColorStop(0.3, p.sky2);
+  g.addColorStop(0.6, p.sky3);
+  if(p.sky4) g.addColorStop(0.9, p.sky4);
+  g.addColorStop(1, p.horizon);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H * 0.7);
+}
+
+function drawStars(count, seed, brightness, t) {
+  for(let i = 0; i < count; i++) {
+    const sx = (rand(seed + i) * W * 137) % W;
+    const sy = (rand(seed + i * 3) * H * 0.5);
+    const tw = 0.4 + 0.6 * Math.sin(t * 0.003 + i * 1.7);
+    const sz = brightness > 0.5 ? 1 : 1;
+    pRect(sx, sy, sz, sz, `rgba(255,255,240,${brightness * tw})`);
+  }
+}
+
+function drawPlanet(cx, cy, r, c1, c2, bandColor) {
+  // Giant alien planet
+  const g = ctx.createRadialGradient(cx - r*0.3, cy - r*0.3, 0, cx, cy, r);
+  g.addColorStop(0, c1);
+  g.addColorStop(0.7, c2);
+  g.addColorStop(1, bandColor);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  // Atmosphere ring
+  ctx.strokeStyle = c1 + '40';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 1.08, -0.4, Math.PI + 0.4);
+  ctx.stroke();
+}
+
+function drawMoons(moons, t) {
+  moons.forEach(m => {
+    const g = ctx.createRadialGradient(m.x - m.r*0.3, m.y - m.r*0.3, 0, m.x, m.y, m.r);
+    g.addColorStop(0, '#e0d8c8');
+    g.addColorStop(0.8, '#a09888');
+    g.addColorStop(1, '#605850');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function drawMountains(p, layer, offsetX, amp, baseY) {
+  // Parallax mountain silhouette
+  ctx.fillStyle = layer === 0 ? p.mtn1 : layer === 1 ? p.mtn2 : p.fg;
+  ctx.beginPath();
+  ctx.moveTo(-10, H);
+  const step = 40;
+  for(let x = -10; x <= W + 10; x += step) {
+    const h = baseY + Math.sin((x + offsetX) * 0.008 + layer * 2) * amp + Math.sin((x + offsetX) * 0.02 + layer) * amp * 0.4;
+    ctx.lineTo(x, h);
+  }
+  ctx.lineTo(W + 10, H);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawDeadTrees(p, trees, offsetX) {
+  trees.forEach(tree => {
+    const x = tree.x - offsetX * tree.parallax;
+    if(x < -50 || x > W + 50) return;
+    const baseY = H * 0.72;
+    // Trunk
+    pRect(x, baseY - tree.h, 4, tree.h, p.fg);
+    // Branches
+    ctx.strokeStyle = p.fg;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for(const b of tree.branches) {
+      ctx.moveTo(x, baseY - tree.h * b.h);
+      ctx.lineTo(x + b.dx * tree.spread, baseY - tree.h * b.h + b.dy);
+    }
+    ctx.stroke();
+  });
+}
+
+function drawTerrain(p) {
+  const ty = H * 0.72;
+  // Top crust
+  pRect(0, ty, W, 12, p.terrain1);
+  // Middle
+  pRect(0, ty + 12, W, 20, p.terrain2);
+  // Deep
+  pRect(0, ty + 32, W, H - ty - 32, p.terrain3);
+  // Surface texture dots
+  for(let i = 0; i < 80; i++) {
+    const dx = (i * 37 + 13) % W;
+    const dy = ty + ((i * 23) % 40);
+    pRect(dx, dy, 2, 2, p.terrain1 + '88');
+  }
+}
+
+// ── Trooper (pixel art) ─────────────────────────────────────────────────────
+function drawTrooper(x, y, scale, flip, state, t, fireT) {
+  ctx.save();
+  if(flip) { ctx.translate(x + 20*scale, y); ctx.scale(-1, 1); }
+  else { ctx.translate(x, y); }
+  const s = scale;
+  
+  // Shadow
+  pRect(2*s, 0, 16*s, 3*s, 'rgba(0,0,0,0.3)');
+  
+  // Legs
+  const legOff = state === 'walk' ? Math.sin(t*0.02) * 3*s : 0;
+  pRect(4*s, -10*s, 4*s, 10*s, '#2a3818');
+  pRect(12*s, -10*s + legOff, 4*s, 10*s, '#2a3818');
+  
+  // Body
+  pRect(3*s, -22*s, 14*s, 14*s, '#3a4a28');
+  pRect(3*s, -22*s, 14*s, 3*s, '#4a5a30'); // shoulders
+  
+  // Backpack
+  pRect(0*s, -20*s, 3*s, 8*s, '#1a2a10');
+  
+  // Helmet
+  pRect(4*s, -28*s, 10*s, 8*s, '#2a3418');
+  pRect(4*s, -28*s, 10*s, 2*s, '#3a4420');
+  
+  // Visor glow
+  const visorPulse = 0.5 + 0.5 * Math.sin(t * 0.005);
+  pRect(6*s, -25*s, 6*s, 3*s, `rgba(0,255,255,${0.6 + visorPulse * 0.4})`);
+  
+  // Rifle
+  pRect(14*s, -18*s, 8*s, 3*s, '#222');
+  pRect(14*s, -18*s, 2*s, 5*s, '#1a1a1a');
+  
+  // Muzzle flash
+  if(fireT > 0 && fireT < 0.15) {
+    const flashSize = (0.15 - fireT) / 0.15;
+    pRect(22*s, -20*s, 6*s * flashSize, 8*s * flashSize, '#ffff80');
+    pRect(23*s, -19*s, 10*s * flashSize, 6*s * flashSize, '#ffaa00');
+    // Tracer beam
+    ctx.fillStyle = `rgba(255,200,80,${flashSize * 0.6})`;
+    pRect(28*s, -18*s, 40*s, 2*s, '#ffcc44');
+  }
+  
+  ctx.restore();
+}
+
+// ── Warrior Bug (pixel art) ────────────────────────────────────────────────
+function drawWarriorBug(x, y, scale, flip, t, attacking) {
+  ctx.save();
+  if(flip) { ctx.translate(x + 24*scale, y); ctx.scale(-1, 1); }
+  else { ctx.translate(x, y); }
+  const s = scale;
+  
+  // Shadow
+  pRect(2*s, 0, 28*s, 3*s, 'rgba(0,0,0,0.4)');
+  
+  // Body (low, wide, 6 legs)
+  const legCycle = Math.sin(t * 0.015);
+  
+  // Back legs
+  pRect(2*s, -4*s, 5*s, 4*s, '#1e1208');
+  pRect(22*s, -4*s + legOff, 5*s, 4*s, '#1e1208');
+  
+  // Mid legs
+  pRect(5*s, -6*s + legCycle*2, 4*s, 6*s, '#1e1208');
+  pRect(18*s, -6*s - legCycle*2, 4*s, 6*s, '#1e1208');
+  
+  // Front legs (claws)
+  const clawY = attacking ? -8*s - Math.sin(t*0.03)*4*s : -8*s;
+  pRect(0*s, -8*s, 4*s, 8*s, '#2e1a08');
+  pRect(24*s, clawY, 4*s, 8*s, '#2e1a08');
+  // Claw tips
+  pRect(-2*s, -10*s, 4*s, 3*s, '#3a2010');
+  pRect(26*s, clawY-2*s, 4*s, 3*s, '#3a2010');
+  
+  // Main body
+  pRect(4*s, -14*s, 20*s, 10*s, '#2e1a08');
+  pRect(4*s, -14*s, 20*s, 3*s, '#5a3210'); // back highlight
+  
+  // Head
+  pRect(20*s, -16*s, 8*s, 8*s, '#1e1208');
+  
+  // Eyes (amber)
+  const eyePulse = 0.6 + 0.4 * Math.sin(t * 0.008);
+  pRect(24*s, -14*s, 3*s, 2*s, `rgba(255,136,0,${eyePulse})`);
+  pRect(24*s, -11*s, 2*s, 1*s, `rgba(255,100,0,${eyePulse * 0.8})`);
+  
+  ctx.restore();
+}
+
+// ── Hopper Bug (pixel art) ─────────────────────────────────────────────────
+function drawHopperBug(x, y, scale, flip, t, diving) {
+  ctx.save();
+  if(flip) { ctx.translate(x + 20*scale, y); ctx.scale(-1, 1); }
+  else { ctx.translate(x, y); }
+  const s = scale;
+  
+  // Body (elongated, mantis/locust)
+  pRect(4*s, -8*s, 16*s, 8*s, '#1a0e08');
+  pRect(4*s, -8*s, 16*s, 2*s, '#3a2010');
+  
+  // Wings
+  const wingFlap = Math.sin(t * 0.04) * 6 * s;
+  pRect(2*s, -10*s - Math.abs(wingFlap), 18*s, 3*s, '#0a0604');
+  pRect(4*s, -6*s + wingFlap, 14*s, 2*s, '#1a0e08');
+  
+  // Head
+  pRect(16*s, -10*s, 6*s, 5*s, '#1e1208');
+  
+  // Eyes (amber)
+  const eyePulse = 0.5 + 0.5 * Math.sin(t * 0.01);
+  pRect(19*s, -9*s, 3*s, 2*s, `rgba(255,136,0,${eyePulse})`);
+  
+  // Legs (dangling)
+  pRect(6*s, 0, 2*s, 5*s, '#1e1208');
+  pRect(12*s, 0, 2*s, 4*s, '#1e1208');
+  pRect(16*s, 0, 2*s, 5*s, '#1e1208');
+  
+  ctx.restore();
+}
+
+// ── Tanker Bug (large) ─────────────────────────────────────────────────────
+function drawTankerBug(x, y, scale, t) {
+  ctx.save();
+  ctx.translate(x, y);
+  const s = scale;
+  
+  // Shadow
+  pRect(4*s, 0, 80*s, 5*s, 'rgba(0,0,0,0.5)');
+  
+  // Massive body
+  pRect(8*s, -30*s, 72*s, 30*s, '#1a0a0a');
+  pRect(8*s, -30*s, 72*s, 6*s, '#3a2020'); // top plate
+  
+  // Body segments
+  for(let i = 0; i < 5; i++) {
+    pRect(8*s + i*15*s, -26*s, 2*s, 26*s, '#2a1818');
+  }
+  
+  // Green glow vents
+  const glow = 0.5 + 0.5 * Math.sin(t * 0.006);
+  for(let i = 0; i < 4; i++) {
+    pRect(14*s + i*16*s, -16*s, 6*s, 4*s, `rgba(80,255,80,${glow * 0.4})`);
+    pRect(15*s + i*16*s, -15*s, 4*s, 2*s, `rgba(120,255,120,${glow * 0.6})`);
+  }
+  
+  // Legs (massive, 6)
+  for(let i = 0; i < 6; i++) {
+    const lx = 10*s + i * 13*s;
+    pRect(lx, 0, 6*s, 8*s, '#0a0404');
+    pRect(lx, 6*s, 8*s, 4*s, '#1a0a0a');
+  }
+  
+  // Head
+  pRect(70*s, -24*s, 16*s, 16*s, '#0a0404');
+  pRect(74*s, -20*s, 8*s, 4*s, '#1a0808');
+  
+  // Mandibles
+  pRect(84*s, -22*s, 6*s, 4*s, '#1a0a0a');
+  pRect(84*s, -12*s, 6*s, 4*s, '#1a0a0a');
+  
+  ctx.restore();
+}
+
+// ── Searchlight beam ───────────────────────────────────────────────────────
+function drawSearchlight(x, y, angle, t, alpha) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  const g = ctx.createLinearGradient(0, 0, 300, 0);
+  g.addColorStop(0, `rgba(255,255,220,${alpha})`);
+  g.addColorStop(0.5, `rgba(255,255,220,${alpha * 0.3})`);
+  g.addColorStop(1, 'rgba(255,255,220,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(300, -30);
+  ctx.lineTo(300, 30);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+// ── Explosion ──────────────────────────────────────────────────────────────
+function drawExplosion(x, y, t, maxT, scale) {
+  const s = scale || 1;
+  if(t < 0.15) {
+    // White core
+    const r = t / 0.15 * 20 * s;
+    pRect(x - r, y - r, r*2, r*2, '#ffffe0');
+    pRect(x - r*0.6, y - r*0.6, r*1.2, r*1.2, '#ffff80');
+  } else if(t < 0.4) {
+    // Orange blast
+    const r = 20 * s + (t - 0.15) * 40 * s;
+    pRect(x - r*0.7, y - r*0.7, r*1.4, r*1.4, '#ff6600');
+    pRect(x - r*0.4, y - r*0.4, r*0.8, r*0.8, '#ffaa00');
+  } else if(t < maxT) {
+    // Dark smoke
+    const r = 40 * s + (t - 0.4) * 30 * s;
+    const a = 1 - (t - 0.4) / (maxT - 0.4);
+    pRect(x - r*0.6, y - r*0.6 - (t-0.4)*20*s, r*1.2, r*1.2, `rgba(40,30,20,${a * 0.7})`);
+  }
+}
+
+// ── Muzzle flash tracers (background) ──────────────────────────────────────
+function drawTracer(x1, y1, x2, y2, color, alpha) {
+  ctx.strokeStyle = `rgba(${color},${alpha})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}
+
+// ── Dust cloud ──────────────────────────────────────────────────────────────
+function drawDustCloud(x, y, r, alpha, p) {
+  for(let i = 0; i < 5; i++) {
+    const dx = x + (i - 2) * r * 0.4;
+    const dy = y + Math.sin(i * 1.7) * r * 0.3;
+    ctx.fillStyle = `rgba(${p.dust.match(/[0-9a-f]{2}/gi).map(c=>parseInt(c,16)).join(',')},${alpha})`;
+    ctx.beginPath();
+    ctx.arc(dx, dy, r * (0.4 + i * 0.15), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ── Letterbox bars ─────────────────────────────────────────────────────────
+function drawLetterbox() {
+  pRect(0, 0, W, 24, '#000');
+  pRect(0, H - 24, W, 24, '#000');
+}
+
+// ── Title card ──────────────────────────────────────────────────────────────
+function showTitleCard(title, subtitle) {
+  const tc = document.getElementById('titlecard');
+  tc.querySelector('.title').textContent = title;
+  tc.querySelector('.subtitle').textContent = subtitle;
+  tc.style.opacity = '1';
+  setTimeout(() => { tc.style.opacity = '0'; }, 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SCENE DEFINITIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+const SCENES = [
+  // ── Scene 1: DAWN INSERTION ──────────────────────────────────────────────
+  {
+    title: "DAWN INSERTION",
+    subtitle: "FEDERATION DROPSHIP — SECTOR 7",
+    duration: 9000,
+    init(state) {
+      state.dropshipY = -100;
+      state.troopers = [];
+      state.dust = [];
+    },
+    draw(p, t, dt, state, progress) {
+      // Sky
+      drawSky(p, t);
+      // Stars fading
+      drawStars(40, 7, Math.max(0, 1 - progress * 2), t);
+      // Giant planet rising
+      drawPlanet(W * 0.75, H * 0.35, 70, '#c8804a', '#8a4020', '#5a2010');
+      // Mountains
+      drawMountains(p, 0, t * 0.005, 40, H * 0.55);
+      drawMountains(p, 1, t * 0.01, 30, H * 0.62);
+      // Dead trees
+      const trees = [
+        {x:100, h:40, parallax:0.3, spread:1, branches:[{h:0.6,dx:-15,dy:-8},{h:0.4,dx:12,dy:-6}]},
+        {x:300, h:55, parallax:0.3, spread:1.2, branches:[{h:0.7,dx:-20,dy:-10},{h:0.5,dx:16,dy:-8},{h:0.3,dx:-8,dy:-12}]},
+        {x:600, h:45, parallax:0.3, spread:0.9, branches:[{h:0.6,dx:18,dy:-9},{h:0.4,dx:-14,dy:-7}]},
+        {x:950, h:50, parallax:0.3, spread:1, branches:[{h:0.65,dx:-16,dy:-10},{h:0.45,dx:14,dy:-8}]},
+      ];
+      drawDeadTrees(p, trees, t * 0.01);
+      drawTerrain(p);
+      
+      // Dropship descending
+      state.dropshipY = lerp(-120, H * 0.3, easeOut(clamp(progress * 1.8, 0, 1)));
+      const dsx = W * 0.5, dsy = state.dropshipY;
+      
+      // Dropship body
+      ctx.save();
+      ctx.translate(dsx, dsy);
+      // Hull
+      pRect(-40, -12, 80, 24, '#2a2a3a');
+      pRect(-45, -8, 10, 16, '#1a1a2a'); // nose
+      pRect(35, -6, 15, 12, '#1a1a2a'); // tail
+      // Cockpit glow
+      pRect(-38, -10, 8, 6, '#4488ff44');
+      // Engine glow
+      const eng = 0.6 + 0.4 * Math.sin(t * 0.02);
+      pRect(48, -6, 8, 12, `rgba(100,150,255,${eng})`);
+      pRect(52, -4, 12, 8, `rgba(150,200,255,${eng * 0.5})`);
+      // Rotors wash
+      pRect(-20, 12, 40, 6, 'rgba(200,200,200,0.15)');
+      ctx.restore();
+      
+      // Troopers on ropes (after dropship arrives)
+      if(progress > 0.3) {
+        const ropeProgress = clamp((progress - 0.3) / 0.3, 0, 1);
+        for(let i = 0; i < 4; i++) {
+          const rx = dsx - 25 + i * 18;
+          const ropeY = lerp(dsy + 12, H * 0.72 - 30, ropeProgress);
+          // Rope
+          ctx.strokeStyle = '#555';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(rx, dsy + 12);
+          ctx.lineTo(rx, ropeY);
+          ctx.stroke();
+          // Trooper sliding down
+          if(ropeProgress < 1) {
+            drawTrooper(rx - 10, ropeY + 30, 1.2, false, 'idle', t, 0);
+          }
+        }
+        // Troopers landed
+        if(ropeProgress >= 1) {
+          for(let i = 0; i < 4; i++) {
+            const rx = dsx - 25 + i * 18;
+            drawTrooper(rx - 10, H * 0.72, 1.2, false, 'walk', t, 0);
+          }
+        }
+      }
+      
+      // Dust at landing zone
+      if(progress > 0.2) {
+        const dustA = Math.min(0.5, (progress - 0.2) * 1.5);
+        drawDustCloud(dsx, H * 0.71, 50, dustA, p);
+      }
+      
+      // Dropship lifting off
+      if(progress > 0.7) {
+        state.dropshipY = lerp(H * 0.3, -120, easeOut((progress - 0.7) / 0.3));
+      }
+      
+      // FG haze
+      pRect(0, H * 0.7, W, 4, p.horizon + '30');
+    }
+  },
+
+  // ── Scene 2: THE WALL HOLDS ───────────────────────────────────────────────
+  {
+    title: "THE WALL HOLDS",
+    subtitle: "NIGHT DEFENSE — WAVE 3",
+    duration: 9000,
+    init(state) {
+      state.bugs = [];
+      state.flashes = [];
+      state.searchAngle = 0;
+      for(let i = 0; i < 8; i++) {
+        state.bugs.push({x: W + 50 + i * 60, climbing: 0, dead: false, deadT: 0});
+      }
+      state.flashTimer = 0;
+    },
+    draw(p, t, dt, state, progress) {
+      // Night sky
+      drawSky(p, t);
+      // Stars
+      drawStars(120, 42, 0.8, t);
+      // Two moons
+      drawMoons([{x: W * 0.15, y: H * 0.12, r: 22}, {x: W * 0.8, y: H * 0.08, r: 14}], t);
+      // Mountains
+      drawMountains(p, 0, 0, 30, H * 0.55);
+      drawMountains(p, 1, t * 0.003, 25, H * 0.62);
+      drawTerrain(p);
+      
+      // Fortified wall (steel barricade, tier 2)
+      const wallX = W * 0.35, wallY = H * 0.72;
+      pRect(wallX, wallY - 60, 8, 60, '#3a3a4a');
+      pRect(wallX + 8, wallY - 50, 4, 50, '#2a2a3a');
+      // Wall top
+      pRect(wallX - 4, wallY - 64, 16, 6, '#4a4a5a');
+      // Sandbags
+      for(let i = 0; i < 3; i++) {
+        pRect(wallX - 8 + i * 8, wallY - 10, 8, 8, '#3a3020');
+      }
+      
+      // Guard tower (right of wall)
+      const towerX = W * 0.7, towerY = H * 0.72;
+      pRect(towerX, towerY - 100, 20, 100, '#2a2a3a');
+      pRect(towerX - 4, towerY - 110, 28, 12, '#3a3a4a');
+      // Spotlight on tower
+      pRect(towerX + 8, towerY - 108, 4, 4, '#ffcc44');
+      
+      // Searchlight sweeping
+      state.searchAngle = Math.sin(t * 0.0008) * 0.8 - 0.3;
+      drawSearchlight(towerX + 10, towerY - 100, state.searchAngle + Math.PI/2, t, 0.3);
+      drawSearchlight(wallX, wallY - 60, state.searchAngle * 0.7 + Math.PI/2 - 0.2, t, 0.2);
+      
+      // Troopers on wall and tower
+      drawTrooper(wallX - 4, wallY - 56, 1, false, 'shoot', t, state.flashTimer);
+      drawTrooper(towerX + 2, towerY - 96, 1, false, 'shoot', t, state.flashTimer + 0.05);
+      drawTrooper(towerX - 16, wallY, 1, true, 'shoot', t, state.flashTimer + 0.1);
+      
+      // Flash timer
+      state.flashTimer += dt * 0.001;
+      if(state.flashTimer > 0.3) state.flashTimer = 0;
+      
+      // Muzzle flash tracers
+      if(state.flashTimer < 0.1) {
+        drawTracer(wallX + 14, wallY - 50, W * 0.8 + Math.random()*50, H * 0.5 + Math.random()*40, '255,200,80', 0.6);
+        drawTracer(towerX + 14, towerY - 90, W * 0.85 + Math.random()*40, H * 0.45 + Math.random()*30, '255,200,80', 0.5);
+        drawTracer(towerX - 10, wallY - 10, W * 0.75 + Math.random()*40, H * 0.55 + Math.random()*30, '255,180,60', 0.4);
+      }
+      
+      // Warrior bugs climbing the wall
+      state.bugs.forEach((bug, i) => {
+        if(bug.dead) {
+          bug.deadT += dt * 0.001;
+          if(bug.deadT < 2) {
+            // Bug blood green splash
+            pRect(bug.x - 5, wallY - 40 + bug.climbing * 50, 10, 10, `rgba(80,255,80,${0.5 * (1 - bug.deadT/2)})`);
+            drawWarriorBug(bug.x, wallY - 30, 1, i % 2 === 0, t + i * 100, false);
+          }
+          return;
+        }
+        // Move bugs closer
+        bug.x -= dt * 0.015;
+        if(bug.x > wallX + 30) {
+          // Approaching
+          drawWarriorBug(bug.x, wallY, 1, true, t + i * 100, false);
+        } else if(bug.x > wallX) {
+          // Climbing wall
+          bug.climbing = Math.min(1, bug.climbing + dt * 0.0005);
+          const climbY = wallY - 60 + (1 - bug.climbing) * 60;
+          drawWarriorBug(bug.x, climbY, 1, true, t + i * 100, true);
+        } else {
+          // At top — gets shot
+          if(Math.random() < 0.02) { bug.dead = true; }
+          drawWarriorBug(bug.x, wallY - 60, 1, true, t + i * 100, true);
+        }
+      });
+      
+      // Bug blood green splashes on ground
+      for(let i = 0; i < 3; i++) {
+        const bx = W * 0.5 + i * 80;
+        pRect(bx, wallY, 8, 4, `rgba(80,255,80,${0.3 + 0.2 * Math.sin(t * 0.005 + i)})`);
+      }
+      
+      // Atmospheric fog
+      pRect(0, H * 0.68, W, 8, 'rgba(30,20,40,0.3)');
+    }
+  },
+
+  // ── Scene 3: HOPPER STRIKE ────────────────────────────────────────────────
+  {
+    title: "HOPPER STRIKE",
+    subtitle: "DUSK AIR ASSAULT — WAVE 5",
+    duration: 9000,
+    init(state) {
+      state.hoppers = [];
+      for(let i = 0; i < 6; i++) {
+        state.hoppers.push({x: W * 0.1 + i * 150, y: -50 - i * 40, vx: 0.5, vy: 0.3, diveT: i * 0.15, crashed: false});
+      }
+      state.tracers = [];
+      state.flashT = 0;
+    },
+    draw(p, t, dt, state, progress) {
+      // Dusk sky
+      drawSky(p, t);
+      drawStars(20, 99, Math.max(0, progress - 0.3), t);
+      // Red sun
+      const sunY = H * 0.4 + progress * 60;
+      const g = ctx.createRadialGradient(W * 0.6, sunY, 0, W * 0.6, sunY, 80);
+      g.addColorStop(0, '#ff4020');
+      g.addColorStop(0.5, '#c83010');
+      g.addColorStop(1, '#6a1808');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(W * 0.6, sunY, 50, 0, Math.PI * 2);
+      ctx.fill();
+      
+      drawMountains(p, 0, t * 0.005, 35, H * 0.55);
+      drawMountains(p, 1, t * 0.01, 25, H * 0.62);
+      
+      // Dead trees
+      const trees = [
+        {x:200, h:45, parallax:0.3, spread:1, branches:[{h:0.6,dx:-14,dy:-8},{h:0.4,dx:10,dy:-6}]},
+        {x:800, h:50, parallax:0.3, spread:1.1, branches:[{h:0.65,dx:-18,dy:-10},{h:0.45,dx:12,dy:-8}]},
+      ];
+      drawDeadTrees(p, trees, t * 0.01);
+      drawTerrain(p);
+      
+      // Guard tower
+      const towerX = W * 0.4, towerY = H * 0.72;
+      pRect(towerX, towerY - 100, 20, 100, '#2a2a3a');
+      pRect(towerX - 4, towerY - 110, 28, 12, '#3a3a4a');
+      
+      // Troopers firing upward
+      drawTrooper(towerX + 2, towerY - 96, 1, false, 'shoot', t, state.flashT);
+      drawTrooper(towerX - 20, towerY - 96, 1, true, 'shoot', t, state.flashT + 0.05);
+      drawTrooper(towerX - 40, towerY, 1, true, 'shoot', t, state.flashT + 0.1);
+      drawTrooper(towerX + 30, towerY, 1, false, 'shoot', t, state.flashT + 0.15);
+      
+      // Flash
+      state.flashT += dt * 0.001;
+      if(state.flashT > 0.25) state.flashT = 0;
+      
+      // Tracers going up
+      if(state.flashT < 0.08) {
+        for(let i = 0; i < 4; i++) {
+          const ang = -Math.PI/2 + (Math.random() - 0.5) * 0.8;
+          const sx = towerX - 20 + i * 20;
+          const sy = towerY - 90;
+          drawTracer(sx, sy, sx + Math.cos(ang) * 300, sy + Math.sin(ang) * 300, '255,200,80', 0.5 - i * 0.05);
+        }
+      }
+      
+      // Hoppers diving
+      state.hoppers.forEach((h, i) => {
+        if(h.crashed) return;
+        
+        h.diveT += dt * 0.0003;
+        if(h.diveT > 0.3) {
+          h.y += dt * 0.08 * (h.diveT);
+          h.x += dt * 0.03;
+        } else {
+          h.y += dt * 0.01;
+        }
+        
+        if(h.y > H * 0.72 - 20) {
+          h.crashed = true;
+          // Crash explosion
+          state.tracers.push({x: h.x, y: h.y, t: 0, type: 'crash'});
+        }
+        
+        if(!h.crashed) {
+          // Hopper diving at angle
+          ctx.save();
+          ctx.translate(h.x, h.y);
+          ctx.rotate(0.5 + h.diveT * 0.3);
+          drawHopperBug(0, 0, 1.5, false, t + i * 200, true);
+          ctx.restore();
+        }
+      });
+      
+      // Crash explosions
+      state.tracers = state.tracers.filter(tr => tr.t < 1);
+      state.tracers.forEach(tr => {
+        tr.t += dt * 0.001;
+        drawExplosion(tr.x, tr.y, tr.t, 1, 1.5);
+      });
+      
+      // Bug blood on tower
+      pRect(towerX + 4, towerY - 90, 6, 6, 'rgba(80,255,80,0.4)');
+      
+      // Long shadows
+      ctx.fillStyle = 'rgba(40,10,0,0.2)';
+      pRect(0, H * 0.72, W, 2, 'rgba(40,10,0,0.3)');
+    }
+  },
+
+  // ── Scene 4: TANKER BREACH ────────────────────────────────────────────────
+  {
+    title: "TANKER BREACH",
+    subtitle: "HEAVY UNITS INBOUND — WAVE 7",
+    duration: 9000,
+    init(state) {
+      state.tankerX = W + 100;
+      state.wallBroken = false;
+      state.debris = [];
+      state.retreat = 0;
+      state.flashT = 0;
+    },
+    draw(p, t, dt, state, progress) {
+      // Dawn sky
+      drawSky(p, t);
+      drawStars(15, 55, Math.max(0, 1 - progress * 1.5), t);
+      drawPlanet(W * 0.2, H * 0.15, 50, '#c8804a', '#8a4020', '#5a2010');
+      
+      drawMountains(p, 0, t * 0.005, 40, H * 0.55);
+      drawMountains(p, 1, t * 0.01, 30, H * 0.62);
+      drawTerrain(p);
+      
+      // Steel barricade wall (tier 2)
+      const wallX = W * 0.55, wallY = H * 0.72;
+      
+      // Tanker charging in
+      state.tankerX = lerp(W + 100, wallX - 40, easeOut(clamp(progress * 1.2, 0, 1)));
+      
+      if(state.tankerX < wallX + 20 && !state.wallBroken) {
+        state.wallBroken = true;
+        // Spawn debris
+        for(let i = 0; i < 12; i++) {
+          state.debris.push({x: wallX, y: wallY - 30 - Math.random() * 30, vx: -2 - Math.random() * 3, vy: -2 - Math.random() * 4, t: 0});
+        }
+      }
+      
+      // Draw wall (if not broken, or partially)
+      if(!state.wallBroken || progress < 0.45) {
+        const breakProgress = state.wallBroken ? clamp((progress - 0.4) * 5, 0, 1) : 0;
+        pRect(wallX, wallY - 60 * (1 - breakProgress * 0.5), 10, 60 * (1 - breakProgress * 0.5), '#3a3a4a');
+        pRect(wallX + 10, wallY - 50 * (1 - breakProgress * 0.7), 5, 50 * (1 - breakProgress * 0.7), '#2a2a3a');
+      }
+      
+      // Tanker bug
+      drawTankerBug(state.tankerX, wallY, 1.2, t);
+      
+      // Debris flying
+      state.debris.forEach(d => {
+        d.t += dt * 0.001;
+        d.x += d.vx * dt * 0.05;
+        d.y += d.vy * dt * 0.05;
+        d.vy += dt * 0.003;
+        if(d.t < 1.5) {
+          pRect(d.x, d.y, 4, 4, '#3a3a4a');
+        }
+      });
+      
+      // Explosion at breach point
+      if(state.wallBroken) {
+        const expT = (progress - 0.4) * 3;
+        if(expT < 1) {
+          drawExplosion(wallX + 5, wallY - 30, expT, 1, 2);
+        }
+      }
+      
+      // Troopers retreating (after breach)
+      state.retreat = state.wallBroken ? Math.min(1, state.retreat + dt * 0.0003) : 0;
+      const retreatX = lerp(W * 0.35, W * 0.15, state.retreat);
+      
+      // Firing troopers
+      state.flashT += dt * 0.001;
+      if(state.flashT > 0.2) state.flashT = 0;
+      
+      drawTrooper(retreatX, wallY, 1, true, 'shoot', t, state.flashT);
+      drawTrooper(retreatX + 25, wallY, 1, true, 'shoot', t, state.flashT + 0.05);
+      drawTrooper(retreatX + 50, wallY, 1, true, 'shoot', t, state.flashT + 0.1);
+      
+      // Tracers at tanker
+      if(state.flashT < 0.08) {
+        drawTracer(retreatX, wallY - 20, state.tankerX + 40, wallY - 20, '255,200,80', 0.5);
+        drawTracer(retreatX + 25, wallY - 25, state.tankerX + 40, wallY - 30, '255,200,80', 0.4);
+      }
+      
+      // Bug blood green splashes on tanker
+      for(let i = 0; i < 3; i++) {
+        const bx = state.tankerX + 20 + i * 20;
+        pRect(bx, wallY - 20, 6, 6, `rgba(80,255,80,${0.3 + 0.2 * Math.sin(t * 0.01 + i)})`);
+      }
+      
+      // Dust from tanker charge
+      drawDustCloud(state.tankerX + 60, wallY, 40, 0.4, p);
+      drawDustCloud(state.tankerX + 100, wallY, 30, 0.3, p);
+    }
+  },
+
+  // ── Scene 5: AFTER THE BATTLE ────────────────────────────────────────────
+  {
+    title: "AFTER THE BATTLE",
+    subtitle: "DAWN — SECTOR 7 SECURED",
+    duration: 9000,
+    init(state) {
+      state.smokeT = 0;
+      state.windT = 0;
+    },
+    draw(p, t, dt, state, progress) {
+      // Pale dawn sky
+      drawSky(p, t);
+      drawStars(10, 13, Math.max(0, 0.5 - progress), t);
+      // Giant planet rising
+      drawPlanet(W * 0.8, H * 0.2, 60, '#d0a888', '#9a7858', '#6a5040');
+      // Moons setting
+      drawMoons([{x: W * 0.25, y: H * 0.35, r: 16}], t);
+      
+      drawMountains(p, 0, t * 0.003, 35, H * 0.55);
+      drawMountains(p, 1, t * 0.006, 28, H * 0.62);
+      
+      // Dead trees
+      const trees = [
+        {x:150, h:50, parallax:0.3, spread:1.2, branches:[{h:0.6,dx:-18,dy:-10},{h:0.4,dx:14,dy:-8}]},
+        {x:850, h:45, parallax:0.3, spread:1, branches:[{h:0.65,dx:-16,dy:-9},{h:0.45,dx:12,dy:-7}]},
+        {x:1050, h:55, parallax:0.3, spread:1.1, branches:[{h:0.7,dx:20,dy:-12},{h:0.5,dx:-14,dy:-9},{h:0.3,dx:8,dy:-14}]},
+      ];
+      drawDeadTrees(p, trees, t * 0.008);
+      drawTerrain(p);
+      
+      // Command Post (damaged, smoking)
+      const cpX = W * 0.5, cpY = H * 0.72;
+      // Bunker structure
+      pRect(cpX - 40, cpY - 50, 80, 50, '#2a2a2a');
+      pRect(cpX - 45, cpY - 55, 90, 10, '#3a3a3a');
+      // Comms mast (broken, leaning)
+      ctx.save();
+      ctx.translate(cpX + 20, cpY - 55);
+      ctx.rotate(0.15);
+      pRect(0, -40, 3, 40, '#4a4a4a');
+      pRect(-5, -35, 13, 6, '#3a3a3a');
+      ctx.restore();
+      // Flag (tattered)
+      pRect(cpX - 35, cpY - 70, 2, 15, '#333');
+      pRect(cpX - 33, cpY - 68, 10, 6, '#4a3a2a');
+      // Damage holes
+      pRect(cpX - 10, cpY - 30, 12, 10, '#0a0a0a');
+      pRect(cpX + 15, cpY - 40, 8, 8, '#0a0a0a');
+      
+      // Smoke from command post
+      state.smokeT += dt * 0.0005;
+      for(let i = 0; i < 5; i++) {
+        const sx = cpX - 20 + i * 12;
+        const sy = cpY - 55 - (state.smokeT * 20 + i * 15) % 100;
+        const sa = 0.3 * (1 - ((state.smokeT * 20 + i * 15) % 100) / 100);
+        ctx.fillStyle = `rgba(60,50,45,${sa})`;
+        ctx.beginPath();
+        ctx.arc(sx + Math.sin(t * 0.002 + i) * 8, sy, 12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // Dead bugs scattered on terrain
+      const deadBugs = [
+        {x: 100, y: cpY, type: 'warrior', flip: false, rot: 0.3},
+        {x: 220, y: cpY, type: 'warrior', flip: true, rot: -0.2},
+        {x: 340, y: cpY, type: 'hopper', flip: false, rot: 0.5},
+        {x: 700, y: cpY, type: 'warrior', flip: true, rot: 0.4},
+        {x: 820, y: cpY, type: 'hopper', flip: true, rot: -0.3},
+        {x: 980, y: cpY, type: 'warrior', flip: false, rot: 0.6},
+        {x: 1100, y: cpY, type: 'warrior', flip: true, rot: -0.4},
+      ];
+      deadBugs.forEach(db => {
+        ctx.save();
+        ctx.translate(db.x, db.y);
+        ctx.rotate(db.rot);
+        if(db.type === 'warrior') {
+          drawWarriorBug(0, 0, 0.9, db.flip, t, false);
+        } else {
+          drawHopperBug(0, 0, 0.9, db.flip, t, false);
+        }
+        ctx.restore();
+      });
+      
+      // Bug blood pools
+      deadBugs.forEach(db => {
+        pRect(db.x - 15, db.y, 30, 4, 'rgba(80,255,80,0.2)');
+      });
+      
+      // Lone trooper standing guard
+      state.windT += dt * 0.001;
+      const trooperX = W * 0.3 + Math.sin(state.windT * 0.5) * 2;
+      drawTrooper(trooperX, cpY, 1.1, false, 'idle', t, 0);
+      
+      // Wind-blown dust
+      for(let i = 0; i < 3; i++) {
+        const dx = (t * 0.1 + i * 400) % (W + 100) - 50;
+        const dy = cpY - 10 + Math.sin(t * 0.003 + i) * 5;
+        pRect(dx, dy, 30, 2, 'rgba(200,180,150,0.08)');
+      }
+      
+      // Morning light haze
+      pRect(0, H * 0.7, W, 4, p.horizon + '20');
+      
+      // Vignette
+      const vg = ctx.createRadialGradient(W/2, H/2, W*0.3, W/2, H/2, W*0.6);
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(1, 'rgba(0,0,0,0.4)');
+      ctx.fillStyle = vg;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MASTER REEL CONTROLLER
+// ═══════════════════════════════════════════════════════════════════════════
+
+let currentScene = 0;
+let sceneTime = 0;
+let playing = true;
+let lastT = performance.now();
+let sceneStates = [];
+
+// Initialize all scene states
+SCENES.forEach((s, i) => { sceneStates[i] = {}; s.init(sceneStates[i]); });
+
+// Scene nav dots
+const navDiv = document.getElementById('sceneNav');
+SCENES.forEach((s, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  navDiv.appendChild(d);
+});
+const dots = navDiv.querySelectorAll('.dot');
+
+// Palette mapping per scene
+const scenePalettes = [PAL.dawn, PAL.night, PAL.dusk, PAL.day, PAL.aftermath];
+
+function updateDots() {
+  dots.forEach((d, i) => d.classList.toggle('active', i === currentScene));
+}
+
+function startScene(idx) {
+  currentScene = idx;
+  sceneTime = 0;
+  sceneStates[idx] = {};
+  SCENES[idx].init(sceneStates[idx]);
+  showTitleCard(SCENES[idx].title, SCENES[idx].subtitle);
+  updateDots();
+}
+
+// Start first scene
+startScene(0);
+
+function loop() {
+  const now = performance.now();
+  const dt = Math.min(now - lastT, 50);
+  lastT = now;
+  
+  if(playing) {
+    sceneTime += dt;
+  }
+  
+  const scene = SCENES[currentScene];
+  const palette = scenePalettes[currentScene];
+  const state = sceneStates[currentScene];
+  const progress = clamp(sceneTime / scene.duration, 0, 1);
+  
+  // Clear
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  
+  // Draw scene
+  scene.draw(palette, now, dt, state, progress);
+  
+  // Letterbox
+  drawLetterbox();
+  
+  // Progress bar
+  document.getElementById('bar').style.width = (progress * 100) + '%';
+  
+  // Auto-advance
+  if(progress >= 1) {
+    const next = (currentScene + 1) % SCENES.length;
+    startScene(next);
+  }
+  
+  requestAnimationFrame(loop);
+}
+
+// Controls
+document.getElementById('playBtn').onclick = function() {
+  playing = !playing;
+  this.textContent = playing ? '❚❚ PAUSE' : '▶ PLAY';
+};
+document.getElementById('prevBtn').onclick = function() {
+  startScene((currentScene - 1 + SCENES.length) % SCENES.length);
+};
+document.getElementById('nextBtn').onclick = function() {
+  startScene((currentScene + 1) % SCENES.length);
+};
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
