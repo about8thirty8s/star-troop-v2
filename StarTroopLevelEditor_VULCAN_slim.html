@@ -224,15 +224,15 @@ body{background:#1a0800;color:#fff;font-family:monospace;display:flex;flex-direc
       <div style="color:#f97316;font-size:9px;font-weight:bold;padding:4px 0 2px;letter-spacing:.08em;">UNITS</div>
       <button id="ub-trooper" class="unit-btn" onclick="selectUnitTool('trooper')"
         style="padding:5px 6px;background:#1a2a1a;border:1px solid #2a5a2a;color:#a0e090;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
-        🪖 TROOPER
+        🪖 TROOPER <span id="cnt-trooper" style="opacity:0.5;font-size:9px;">(0)</span>
       </button>
       <button id="ub-warrior_bug" class="unit-btn" onclick="selectUnitTool('warrior_bug')"
         style="padding:5px 6px;background:#1a2a1a;border:1px solid #2a5a2a;color:#a0e090;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
-        🐛 WARRIOR BUG
+        🐛 WARRIOR BUG <span id="cnt-warrior_bug" style="opacity:0.5;font-size:9px;">(0)</span>
       </button>
       <button id="ub-hopper_bug" class="unit-btn" onclick="selectUnitTool('hopper_bug')"
         style="padding:5px 6px;background:#1a2a1a;border:1px solid #2a5a2a;color:#a0e090;font-size:10px;font-weight:bold;cursor:pointer;font-family:monospace;border-radius:3px;text-align:left;">
-        🦟 HOPPER BUG
+        🦟 HOPPER BUG <span id="cnt-hopper_bug" style="opacity:0.5;font-size:9px;">(0)</span>
       </button>
       <hr style="border:none;border-top:1px solid #1a0800;margin:4px 0;">
       <button onclick="STRUCTURES.length=0;UNITS.length=0;" style="padding:4px 6px;background:#2d0808;border:1px solid #7f1d1d;color:#fca5a5;font-size:9px;cursor:pointer;font-family:monospace;border-radius:3px;">
@@ -956,6 +956,8 @@ function onLoad(){
   document.getElementById('load-pct').textContent=p+'%';
   if(doneLoad>=totalLoad){const el=document.getElementById('loading');el.style.opacity='0';setTimeout(()=>el.style.display='none',500);}
 }
+// Safety net: force-hide loading after 4 seconds even if some assets fail
+setTimeout(()=>{const el=document.getElementById('loading');if(el&&el.style.display!=='none'){el.style.opacity='0';setTimeout(()=>el.style.display='none',500);console.warn('⚠️ Loading timeout — some assets may have failed');}},4000);
 Object.entries(LAYER_LIBRARY).forEach(([slot,entries])=>{
   libImgs[slot]=[];
   entries.forEach((entry,i)=>{
@@ -1120,16 +1122,21 @@ function drawNightTerrainOverlay(ctx,W,H,tY){
 function drawSearchlights(ctx, W, tY, camX, t){
   if(DN.darkness < 0.4) return;
   const alpha = Math.min(0.22, (DN.darkness - 0.4) * 0.36);
+  // Beams anchored to world-space positions — they stay fixed when camera pans
+  // World X positions spread across the 3840px world
   const beams = [
-    { bx: W * 0.22, sweep: 0.6, spd: 0.00035 },
-    { bx: W * 0.38, sweep: 0.5, spd: 0.00028 },
-    { bx: W * 0.55, sweep: 0.7, spd: 0.00042 },
+    { wx: 0.22 * GRID_COLS * TILE_PX, sweep: 0.6, spd: 0.00035 },
+    { wx: 0.38 * GRID_COLS * TILE_PX, sweep: 0.5, spd: 0.00028 },
+    { wx: 0.55 * GRID_COLS * TILE_PX, sweep: 0.7, spd: 0.00042 },
   ];
   ctx.save();
   for(const b of beams){
+    // Convert world-space X to screen-space
+    const bx = b.wx * zoom - camX;
+    if(bx < -200 || bx > W + 200) continue; // cull offscreen beams
     const angle = Math.sin(t * b.spd) * b.sweep - Math.PI * 0.5 + 0.3;
     const len = tY * 1.4;
-    const ex = b.bx + Math.cos(angle) * len;
+    const ex = bx + Math.cos(angle) * len;
     const ey = tY  + Math.sin(angle) * len;
     const beam = ctx.createLinearGradient(b.bx, tY, ex, ey);
     beam.addColorStop(0, `rgba(240,240,200,${(alpha*0.9).toFixed(3)})`);
@@ -1138,13 +1145,38 @@ function drawSearchlights(ctx, W, tY, camX, t){
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'lighter';
     ctx.beginPath();
-    ctx.moveTo(b.bx, tY);
-    ctx.lineTo(b.bx + Math.cos(angle - 0.05)*len, ey + Math.sin(angle-0.05)*len*0.1);
-    ctx.lineTo(b.bx + Math.cos(angle + 0.05)*len, ey + Math.sin(angle+0.05)*len*0.1);
+    ctx.moveTo(bx, tY);
+    ctx.lineTo(bx + Math.cos(angle - 0.05)*len, ey + Math.sin(angle-0.05)*len*0.1);
+    ctx.lineTo(bx + Math.cos(angle + 0.05)*len, ey + Math.sin(angle+0.05)*len*0.1);
     ctx.closePath();
     ctx.fillStyle = beam;
     ctx.fill();
   }
+  // ── Tower-anchored searchlights — emanate from placed guard towers ──────
+  for(const s of STRUCTURES){
+    if(s.key !== 'tower') continue;
+    const tx = s.worldX * zoom - camX;
+    if(tx < -300 || tx > W + 300) continue;
+    const ty = tY - 5 * TILE_PX * zoom * 0.08; // tower top
+    const sweep2 = Math.sin(t * 0.0005 + s.worldX * 0.001) * 0.7;
+    const angle2 = sweep2 - Math.PI * 0.5 + 0.3;
+    const len2 = tY * 2.2;
+    const ex2 = tx + Math.cos(angle2) * len2;
+    const ey2 = tY + Math.sin(angle2) * len2;
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'lighter';
+    const beam2 = ctx.createLinearGradient(tx, ty, ex2, ey2);
+    beam2.addColorStop(0, `rgba(255,255,210,${(alpha*0.7).toFixed(3)})`);
+    beam2.addColorStop(0.25, `rgba(220,220,180,${(alpha*0.35).toFixed(3)})`);
+    beam2.addColorStop(1, 'rgba(200,200,160,0)');
+    ctx.fillStyle = beam2;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(tx + Math.cos(angle2 - 0.04)*len2, ey2);
+    ctx.lineTo(tx + Math.cos(angle2 + 0.04)*len2, ey2);
+    ctx.closePath(); ctx.fill();
+  }
+
   ctx.restore();
 }
 
@@ -1171,7 +1203,7 @@ function drawBugEyes(ctx, W, tY, camX, t, zoom){
   // World width: match the full scrollable tile world so eyes are locked to world space
   const WORLD_PX = GRID_COLS * TILE_PX; // total world width in world-pixels
   ctx.save();
-  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalCompositeOperation = 'lighter';
   let _eyeGlowCount = 0;
   for(const eye of BUG_EYES){
     // wx = world-space X position, scrolled at exactly camX * zoom — same as terrain
@@ -2666,6 +2698,14 @@ const UNIT_DEFS = {
   },
 };
 
+function updateUnitCounts(){
+  const counts = {trooper:0, warrior_bug:0, hopper_bug:0};
+  for(const u of UNITS) if(counts[u.key] !== undefined) counts[u.key]++;
+  for(const [k,v] of Object.entries(counts)){
+    const el = document.getElementById('cnt-'+k);
+    if(el) el.textContent = '('+v+')';
+  }
+}
 function placeUnit(worldX, key){
   const def = UNIT_DEFS[key];
   if(!def) return;
