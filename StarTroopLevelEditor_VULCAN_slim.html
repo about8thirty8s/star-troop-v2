@@ -235,7 +235,7 @@ body{background:#1a0800;color:#fff;font-family:monospace;display:flex;flex-direc
         🦟 HOPPER BUG <span id="cnt-hopper_bug" style="opacity:0.5;font-size:9px;">(0)</span>
       </button>
       <hr style="border:none;border-top:1px solid #1a0800;margin:4px 0;">
-      <button onclick="STRUCTURES.length=0;UNITS.length=0;" style="padding:4px 6px;background:#2d0808;border:1px solid #7f1d1d;color:#fca5a5;font-size:9px;cursor:pointer;font-family:monospace;border-radius:3px;">
+      <button onclick="STRUCTURES.length=0;UNITS.length=0;updateUnitCounts();" style="padding:4px 6px;background:#2d0808;border:1px solid #7f1d1d;color:#fca5a5;font-size:9px;cursor:pointer;font-family:monospace;border-radius:3px;">
         🗑 CLEAR ALL
       </button>
     </div>
@@ -2710,6 +2710,7 @@ function placeUnit(worldX, key){
   const def = UNIT_DEFS[key];
   if(!def) return;
   UNITS.push({ key, worldX, flip: false });
+  updateUnitCounts();
 }
 
 function removeUnitAt(screenX, screenY, tY){
@@ -2721,7 +2722,7 @@ function removeUnitAt(screenX, screenY, tY){
     const floatOff = (def.floatHeight||0)*sh;
     const uy=tY-sh-floatOff;
     if(screenX>=sx && screenX<=sx+sw && screenY>=uy && screenY<=tY){
-      UNITS.splice(i,1); return true;
+      UNITS.splice(i,1); updateUnitCounts(); return true;
     }
   }
   return false;
