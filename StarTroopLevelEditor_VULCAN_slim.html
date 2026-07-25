@@ -3121,6 +3121,13 @@ function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip,
   ctx.globalAlpha = alpha;
   ctx.imageSmoothingEnabled = false;
 
+  // ── VULCAN: Painted trooper sprites — bypass sprite sheet, use AI art ──
+  if(key === 'trooper'){
+    _drawNPCTrooper(ctx, sx, sy, sw, sh, darkness, t, flip, unitState, shootTimer);
+    ctx.restore();
+    return;
+  }
+
   // ── SPRITE SHEET RENDERER v2.0 ──────────────────────────────────────────
   const ssImg = STRUCT_IMGS[def.assetKey];
   
