@@ -1,51 +1,64 @@
 <!DOCTYPE html>
 <html>
-<head><title>Bug Test</title></head>
+<head><title>VULCAN Bug Test</title>
+<style>
+  body{margin:0;padding:0;overflow:hidden;background:#000}
+  iframe{width:100vw;height:100vh;border:0}
+  #status{position:fixed;top:10px;left:10px;z-index:9999;background:rgba(0,0,0,0.8);
+    color:#0f0;font-family:monospace;padding:8px 12px;border-radius:4px;font-size:13px}
+</style>
+</head>
 <body>
-<iframe id="ed" style="width:100vw;height:100vh;border:0;" src="https://about8thirty8s.github.io/star-troop-v2/StarTroopLevelEditor_VULCAN_slim.html?cb=20260725b"></iframe>
+<div id="status">Loading editor...</div>
+<iframe id="ed" src="https://about8thirty8s.github.io/star-troop-v2/StarTroopLevelEditor_VULCAN_slim.html?cb=20260725g"></iframe>
 <script>
-window.addEventListener('message', function(e){
-  console.log('msg:', e.data);
-});
+// Since CORS blocks iframe access to cross-origin content,
+// we'll use a different approach: inject a script tag into the page
+// by navigating the iframe to a data: URL that loads the editor and adds units
 
+// Actually, let's just create a page that includes all the needed code inline
+// But that's too complex. Instead, let's use window.open and pass commands
+
+// Simplest approach: use postMessage and have the editor listen for it
+// But the editor doesn't have a postMessage listener...
+
+// Let's just load the editor directly and use the fact that same-origin
+// policy doesn't apply to data: URLs. Wait, it does.
+
+// OK, let's just use a redirect approach
+var status = document.getElementById('status');
+
+// Try to access the iframe after it loads
 document.getElementById('ed').addEventListener('load', function(){
-  setTimeout(function(){
-    var f = document.getElementById('ed');
-    var w = f.contentWindow;
-    // Auto-fill terrain
-    if(w.autoFill) w.autoFill();
-    // Place units after terrain fills
-    setTimeout(function(){
-      if(w.placeUnit){
-        w.placeUnit(200, 'trooper');
-        w.placeUnit(320, 'trooper');
-        w.placeUnit(440, 'trooper');
-        w.placeUnit(560, 'trooper');
-        w.placeUnit(250, 'warrior_bug');
-        w.placeUnit(300, 'warrior_bug');
-        w.placeUnit(380, 'warrior_bug');
-        w.placeUnit(450, 'warrior_bug');
-        w.placeUnit(520, 'warrior_bug');
-        w.placeUnit(600, 'warrior_bug');
-        w.placeUnit(400, 'hopper_bug');
-        if(w.updateUnitCounts) w.updateUnitCounts();
-      }
-      // Check asset status
-      setTimeout(function(){
-        var w2 = f.contentWindow;
-        var status = {
-          warrior_f0: w2.STRUCT_IMGS['warrior_painted_f0'] ? 'LOADED('+w2.STRUCT_IMGS['warrior_painted_f0'].naturalWidth+')' : 'UNDEF',
-          warrior_f1: w2.STRUCT_IMGS['warrior_painted_f1'] ? 'LOADED('+w2.STRUCT_IMGS['warrior_painted_f1'].naturalWidth+')' : 'UNDEF',
-          hopper_f0: w2.STRUCT_IMGS['hopper_painted_f0'] ? 'LOADED('+w2.STRUCT_IMGS['hopper_painted_f0'].naturalWidth+')' : 'UNDEF',
-          hopper_f1: w2.STRUCT_IMGS['hopper_painted_f1'] ? 'LOADED('+w2.STRUCT_IMGS['hopper_painted_f1'].naturalWidth+')' : 'UNDEF',
-          trooper: w2.STRUCT_IMGS['trooper_idle'] ? 'LOADED('+w2.STRUCT_IMGS['trooper_idle'].naturalWidth+')' : 'UNDEF',
-          units: w2.UNITS ? w2.UNITS.length : 'no UNITS',
-        };
-        document.title = JSON.stringify(status);
-        console.log('ASSET STATUS:', status);
-      }, 3000);
-    }, 2000);
-  }, 3000);
+  status.textContent = 'Editor loaded. Attempting to inject units...';
+  
+  // Try to inject via the iframe's contentWindow
+  try {
+    var w = document.getElementById('ed').contentWindow;
+    status.textContent = 'Cross-origin access: ' + typeof w.placeUnit;
+    
+    if (typeof w.placeUnit === 'function') {
+      w.placeUnit(200, 'trooper');
+      w.placeUnit(320, 'trooper');
+      w.placeUnit(440, 'trooper');
+      w.placeUnit(560, 'trooper');
+      w.placeUnit(250, 'warrior_bug');
+      w.placeUnit(300, 'warrior_bug');
+      w.placeUnit(380, 'warrior_bug');
+      w.placeUnit(450, 'warrior_bug');
+      w.placeUnit(520, 'warrior_bug');
+      w.placeUnit(600, 'warrior_bug');
+      w.placeUnit(400, 'hopper_bug');
+      w.updateUnitCounts();
+      w.zoomTarget = 3.5;
+      w.PLAYER.worldX = 380;
+      status.textContent = 'Units placed! Count: ' + w.UNITS.length;
+    } else {
+      status.textContent = 'placeUnit not accessible (CORS). Manual test needed.';
+    }
+  } catch(e) {
+    status.textContent = 'CORS blocked: ' + e.message;
+  }
 });
 </script>
 </body>
