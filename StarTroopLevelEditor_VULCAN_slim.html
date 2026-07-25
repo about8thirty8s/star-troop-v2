@@ -4402,6 +4402,19 @@ function importJSON(input){
   reader.readAsText(file);
 }
 autoFill();
+// VULCAN auto-test: place units for visual verification
+if(new URLSearchParams(location.search).get("test")==="bugs"){
+  setTimeout(function(){
+    placeUnit(200,"trooper");placeUnit(320,"trooper");placeUnit(440,"trooper");placeUnit(560,"trooper");
+    placeUnit(250,"warrior_bug");placeUnit(300,"warrior_bug");placeUnit(380,"warrior_bug");
+    placeUnit(450,"warrior_bug");placeUnit(520,"warrior_bug");placeUnit(600,"warrior_bug");
+    placeUnit(400,"hopper_bug");
+    if(typeof updateUnitCounts==="function")updateUnitCounts();
+    if(typeof zoomTarget!=="undefined")zoomTarget=3.5;
+    if(typeof PLAYER!=="undefined")PLAYER.worldX=380;
+    console.log("VULCAN auto-test: units placed");
+  },1500);
+}
 // Only start ONE draw loop — prevent double RAF
 if(document.readyState==='complete'||document.readyState==='interactive'){
   resize();grassInvalidate();rockInvalidate();requestAnimationFrame(draw);
