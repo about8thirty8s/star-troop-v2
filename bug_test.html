@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head><title>Bug Test</title></head>
+<body>
+<iframe id="ed" style="width:100vw;height:100vh;border:0;" src="https://about8thirty8s.github.io/star-troop-v2/StarTroopLevelEditor_VULCAN_slim.html?cb=20260725b"></iframe>
+<script>
+window.addEventListener('message', function(e){
+  console.log('msg:', e.data);
+});
+
+document.getElementById('ed').addEventListener('load', function(){
+  setTimeout(function(){
+    var f = document.getElementById('ed');
+    var w = f.contentWindow;
+    // Auto-fill terrain
+    if(w.autoFill) w.autoFill();
+    // Place units after terrain fills
+    setTimeout(function(){
+      if(w.placeUnit){
+        w.placeUnit(200, 'trooper');
+        w.placeUnit(320, 'trooper');
+        w.placeUnit(440, 'trooper');
+        w.placeUnit(560, 'trooper');
+        w.placeUnit(250, 'warrior_bug');
+        w.placeUnit(300, 'warrior_bug');
+        w.placeUnit(380, 'warrior_bug');
+        w.placeUnit(450, 'warrior_bug');
+        w.placeUnit(520, 'warrior_bug');
+        w.placeUnit(600, 'warrior_bug');
+        w.placeUnit(400, 'hopper_bug');
+        if(w.updateUnitCounts) w.updateUnitCounts();
+      }
+      // Check asset status
+      setTimeout(function(){
+        var w2 = f.contentWindow;
+        var status = {
+          warrior_f0: w2.STRUCT_IMGS['warrior_painted_f0'] ? 'LOADED('+w2.STRUCT_IMGS['warrior_painted_f0'].naturalWidth+')' : 'UNDEF',
+          warrior_f1: w2.STRUCT_IMGS['warrior_painted_f1'] ? 'LOADED('+w2.STRUCT_IMGS['warrior_painted_f1'].naturalWidth+')' : 'UNDEF',
+          hopper_f0: w2.STRUCT_IMGS['hopper_painted_f0'] ? 'LOADED('+w2.STRUCT_IMGS['hopper_painted_f0'].naturalWidth+')' : 'UNDEF',
+          hopper_f1: w2.STRUCT_IMGS['hopper_painted_f1'] ? 'LOADED('+w2.STRUCT_IMGS['hopper_painted_f1'].naturalWidth+')' : 'UNDEF',
+          trooper: w2.STRUCT_IMGS['trooper_idle'] ? 'LOADED('+w2.STRUCT_IMGS['trooper_idle'].naturalWidth+')' : 'UNDEF',
+          units: w2.UNITS ? w2.UNITS.length : 'no UNITS',
+        };
+        document.title = JSON.stringify(status);
+        console.log('ASSET STATUS:', status);
+      }, 3000);
+    }, 2000);
+  }, 3000);
+});
+</script>
+</body>
+</html>
