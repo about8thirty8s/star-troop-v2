@@ -2600,6 +2600,11 @@ const STRUCT_ASSET_URLS = {
   trooper_sheet_v2: 'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/trooper_sheet_v2.png',
   warrior_sheet_v2: 'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/warrior_sheet_v2.png',
   hopper_sheet_v2: 'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/hopper_sheet_v2.png',
+  // ── VULCAN: Painted trooper sprite poses (AI-generated, de-fringed) ──
+  trooper_idle:   'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/diorama_trooper_idle.png',
+  trooper_shoot:   'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/diorama_trooper_shoot.png',
+  trooper_walk:    'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/diorama_trooper_walk.png',
+  trooper_rappel:  'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/diorama_trooper_rappel.png',
 };
 (function loadStructAssets(){
   Object.entries(STRUCT_ASSET_URLS).forEach(([key, url])=>{
@@ -3244,141 +3249,103 @@ function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip,
 
 // ── NPC TROOPER — canvas pixel art matching reference (dark armor, chunky pixel style) ──
 function _drawNPCTrooper(ctx, sx, sy, sw, sh, darkness, t, flip, unitState, shootTimer){
-  // Pseudo-random phase per trooper (based on screen x)
+  // ── VULCAN: Sprite-based trooper renderer ──────────────────────────────
+  // Select sprite based on state
+  const SPRITE_MAP = {
+    idle:   'trooper_idle',
+    patrol: 'trooper_walk',
+    alert:  'trooper_walk',
+    shoot:  'trooper_shoot',
+    dead:   'trooper_idle',
+  };
+  const spriteKey = SPRITE_MAP[unitState] || 'trooper_idle';
+  const img = STRUCT_IMGS[spriteKey];
+
+  // Walk animation — subtle bob
   const phase  = (sx * 0.0137) % (Math.PI * 2);
   const tCycle = (t * 0.001 + phase);
+  const isWalking = (unitState === 'patrol' || unitState === 'alert');
+  const bobY = isWalking ? Math.abs(Math.sin(tCycle * 6)) * sh * 0.025 : Math.sin(tCycle * 1.8) * sh * 0.015;
 
-  // Shoot timing — driven by AI state, not a fixed timer
+  // Shoot timing — driven by AI state
   const SHOOT_INTERVAL = 2200, FLASH_DUR = 180;
   const isShooting = (unitState === 'shoot') && (shootTimer !== undefined) && ((shootTimer % SHOOT_INTERVAL) < FLASH_DUR);
   const shootPhaseMs = isShooting ? (shootTimer % SHOOT_INTERVAL) : 0;
-  const flashT       = isShooting ? shootPhaseMs / FLASH_DUR : 0;
-  const flashAlpha   = isShooting ? (flashT < 0.3 ? flashT/0.3 : 1-(flashT-0.3)/0.7) : 0;
+  const flashT     = isShooting ? shootPhaseMs / FLASH_DUR : 0;
+  const flashAlpha = isShooting ? (flashT < 0.3 ? flashT/0.3 : 1-(flashT-0.3)/0.7) : 0;
 
-  // Walk animation — leg movement when patrolling or alert
-  const isWalking = (unitState === 'patrol' || unitState === 'alert');
-  const walkCycle = isWalking ? Math.sin(tCycle * 6) : 0;
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
 
-  // Idle vertical bob — more pronounced when walking
-  const bobY = isWalking ? Math.abs(Math.sin(tCycle * 6)) * sh * 0.035 : Math.sin(tCycle * 1.8) * sh * 0.02;
+  // ── Draw sprite ─────────────────────────────────────────────────────────
+  if(img && img.complete && img.naturalWidth > 0){
+    const aspect = img.naturalWidth / img.naturalHeight;
+    let dw = sw, dh = sh;
+    // Scale to fit height, preserve aspect
+    dh = sh;
+    dw = sh * aspect;
+    // Clamp width to not exceed 1.6x height
+    if(dw > sw * 1.6) { dw = sw * 1.6; dh = dw / aspect; }
 
-  // Logical pixel grid: 8 cols × 12 rows
-  const PW = sw / 8;
-  const PH = sh / 12;
+    const dx = flip ? sx + sw - dw : sx;
+    const dy = sy + sh - dh + bobY;
 
-  // Helper — draws a rectangle in logical pixel coords, respects flip
-  function px(lx, ly, lw, lh, color, alpha){
-    ctx.save();
-    if(alpha !== undefined) ctx.globalAlpha = alpha;
-    ctx.fillStyle = color;
-    const rx = flip ? sx + (8 - lx - lw) * PW : sx + lx * PW;
-    const ry = sy + ly * PH + bobY;
-    ctx.fillRect(rx, ry, lw * PW + 0.5, lh * PH + 0.5);
-    ctx.restore();
-  }
+    if(flip){
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, -(dx + dw), dy, dw, dh);
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, dx, dy, dw, dh);
+    }
 
-  // ── Palette ──────────────────────────────────────────────────────────────
-  const DARK  = '#18191f';
-  const ARMOR = '#23262e';
-  const ARMHL = '#353a46';
-  const BOOT  = '#161618';
-  const RIFLE = '#28292f';
-  const RIFHL = '#484d58';
-  const STRAP = '#30333c';
-  const VISOR = '#00ddff';
-  const nightFade = Math.min(0.42, darkness * 0.5);
+    // Night tint overlay
+    if(darkness > 0.35){
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.globalAlpha = Math.min(0.5, darkness * 0.6);
+      ctx.fillStyle = 'rgba(25,30,70,1)';
+      ctx.fillRect(dx, dy, dw, dh);
+      ctx.globalCompositeOperation = 'source-over';
+    }
 
-  // ── BOOTS — offset by walk cycle ──────────────────────────────────────────
-  const bootOffL = isWalking ? Math.round(walkCycle * 1.0) : 0;
-  const bootOffR = isWalking ? Math.round(-walkCycle * 1.0) : 0;
-  px(1, 10 + bootOffL, 2, 2, BOOT);
-  px(5, 10 + bootOffR, 2, 2, BOOT);
-
-  // ── LEGS — slight forward/back sway when walking ─────────────────────────
-  const legSwayL = isWalking ? walkCycle * 0.3 : 0;
-  const legSwayR = isWalking ? -walkCycle * 0.3 : 0;
-  px(1 + legSwayL, 8, 2, 2, ARMOR);
-  px(5 + legSwayR, 8, 2, 2, ARMOR);
-  px(1 + legSwayL, 8, 2, 1, ARMHL);
-  px(5 + legSwayR, 8, 2, 1, ARMHL);
-
-  // ── TORSO — slight forward lean when walking ──────────────────────────────
-  const torsoLean = isWalking ? (flip ? -0.3 : 0.3) : 0;
-  px(1 + torsoLean, 5, 6, 3, ARMOR);
-  px(1 + torsoLean, 5, 6, 1, ARMHL);   // chest top edge
-  px(2 + torsoLean, 6, 1, 1, STRAP);
-  px(5 + torsoLean, 6, 1, 1, STRAP);
-
-  // ── SHOULDER PADS ────────────────────────────────────────────────────────
-  px(0, 4, 2, 2, ARMHL);
-  px(6, 4, 2, 2, ARMHL);
-
-  // ── HELMET ───────────────────────────────────────────────────────────────
-  px(2, 1, 4, 4, ARMOR);
-  px(1, 2, 1, 2, ARMOR);
-  px(6, 2, 1, 2, ARMOR);
-  px(2, 1, 4, 1, ARMHL);   // helmet top highlight
-
-  // ── VISOR SLIT ───────────────────────────────────────────────────────────
-  {
-    ctx.save();
-    const visorX = flip ? sx + 2 * PW : sx + 3 * PW;
-    const visorY = sy + 2.5 * PH + bobY;
-    ctx.fillStyle = VISOR;
-    ctx.globalAlpha = darkness > 0.3 ? Math.min(1.0, 0.7 + darkness * 0.5) : 0.55;
-    ctx.fillRect(visorX, visorY, 3 * PW, PH * 0.65);
-    ctx.restore();
-  }
-
-  // ── VISOR GLOW (night only) ───────────────────────────────────────────────
-  if(darkness > 0.3){
-    ctx.save();
-    ctx.globalAlpha = Math.min(0.55, darkness * 0.65);
-    const vx = (flip ? sx + 3.5 * PW : sx + 4.5 * PW);
-    const vy = sy + 2.8 * PH + bobY;
-    const vg = ctx.createRadialGradient(vx, vy, 0, vx, vy, PW * 2.8);
-    vg.addColorStop(0, 'rgba(0,210,255,0.9)');
-    vg.addColorStop(1, 'rgba(0,100,200,0)');
-    ctx.fillStyle = vg;
-    ctx.fillRect(vx - PW*3, vy - PH, PW*6, PH*2.5);
-    ctx.restore();
-  }
-
-  // ── ARMS ─────────────────────────────────────────────────────────────────
-  if(!flip){
-    px(3, 5, 1, 2, ARMOR);  // front arm
-    px(6, 5, 1, 2, ARMOR);  // back arm
+    // Visor glow at night — small radial on the helmet area
+    if(darkness > 0.3){
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = Math.min(0.6, darkness * 0.7);
+      const vx = flip ? dx + dw * 0.35 : dx + dw * 0.65;
+      const vy = dy + dh * 0.18;
+      const vr = dw * 0.25;
+      const vg = ctx.createRadialGradient(vx, vy, 0, vx, vy, vr);
+      vg.addColorStop(0, 'rgba(0,210,255,0.9)');
+      vg.addColorStop(1, 'rgba(0,80,180,0)');
+      ctx.fillStyle = vg;
+      ctx.beginPath(); ctx.arc(vx, vy, vr, 0, Math.PI*2); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
   } else {
-    px(4, 5, 1, 2, ARMOR);
-    px(1, 5, 1, 2, ARMOR);
+    // ── Fallback: simple colored rect if sprite hasn't loaded yet ───────
+    ctx.fillStyle = '#23262e';
+    ctx.fillRect(sx, sy + bobY, sw, sh);
+    ctx.fillStyle = '#00ddff';
+    ctx.globalAlpha = 0.6;
+    ctx.fillRect(sx + sw*0.3, sy + sh*0.2, sw*0.4, sh*0.06);
+    ctx.globalAlpha = 1;
   }
 
-  // ── RIFLE — recoil kick when shooting ─────────────────────────────────────
-  const rifleRow = isShooting ? 5.0 : 5.5;
-  const rifleRecoil = isShooting ? (flashT < 0.3 ? flashT * 1.5 : 0) : 0;
-  if(!flip){
-    // facing right — rifle extends right, recoil pushes back
-    const rc = rifleRecoil;
-    px(4 - rc, rifleRow,     4, 1,   RIFLE);
-    px(7 - rc, rifleRow,     1, 1,   RIFHL);   // muzzle highlight
-    px(4 - rc, rifleRow+1,   2, 0.8, RIFLE);   // stock
-    px(5 - rc, rifleRow-0.4, 2, 0.4, RIFHL);  // top rail
-  } else {
-    // facing left — rifle extends left, recoil pushes back
-    const rc = rifleRecoil;
-    px(0 + rc, rifleRow,     4, 1,   RIFLE);
-    px(0 + rc, rifleRow,     1, 1,   RIFHL);
-    px(2 + rc, rifleRow+1,   2, 0.8, RIFLE);
-    px(1 + rc, rifleRow-0.4, 2, 0.4, RIFHL);
-  }
+  ctx.restore();
 
-  // ── MUZZLE FLASH ─────────────────────────────────────────────────────────
+  // ── Muzzle flash (overlay, not affected by flip save/restore above) ──────
   if(isShooting && flashAlpha > 0.01){
     ctx.save();
     ctx.globalAlpha = flashAlpha;
+    ctx.imageSmoothingEnabled = true;
 
+    const PW = sw / 8;
+    const PH = sh / 12;
+    const rifleRow = 5.5;
+    const rifleRecoil = flashT < 0.3 ? flashT * 1.5 : 0;
     const muzzleOffset = rifleRecoil * PW;
-    const muzzleX = flip ? sx + 0.2 * PW + muzzleOffset : sx + 7.8 * PW - muzzleOffset;
+    const muzzleX = flip ? sx + 0.5 * PW + muzzleOffset : sx + 7.5 * PW - muzzleOffset;
     const muzzleY = sy + rifleRow * PH + bobY + PH * 0.5;
     const fDir    = flip ? -1 : 1;
 
@@ -3421,18 +3388,7 @@ function _drawNPCTrooper(ctx, sx, sy, sw, sh, darkness, t, flip, unitState, shoo
 
     ctx.restore();
   }
-
-  // ── NIGHT TINT ────────────────────────────────────────────────────────────
-  if(darkness > 0.35){
-    ctx.save();
-    ctx.globalAlpha = nightFade;
-    ctx.fillStyle = 'rgba(10,15,40,1)';
-    // Tint only the body pixels, not the whole rect — approximate with full rect at low alpha
-    ctx.fillRect(sx, sy + bobY, sw, sh);
-    ctx.restore();
-  }
 }
-
 
 function selectUnitTool(key){
   unitTool = key;
