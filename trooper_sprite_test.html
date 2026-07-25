@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html><head><title>Trooper Sprite Test</title>
+<style>
+body{background:#1a1a2e;color:#fff;font-family:monospace;display:flex;flex-wrap:wrap;gap:20px;padding:20px}
+.sprite-box{background:#0d0d1a;border:2px solid #333;padding:10px;text-align:center;border-radius:8px}
+.sprite-box img{image-rendering:pixelated;image-rendering:crisp-edges;max-width:300px;max-height:400px;display:block;margin:0 auto}
+.sprite-box canvas{image-rendering:pixelated;display:block;margin:0 auto}
+h2{font-size:14px;color:#ff8c00}
+.scene{background:linear-gradient(180deg,#2a1a0a 0%,#3a2a1a 40%,#1a1a2e 100%);border:2px solid #444;border-radius:8px;padding:20px;width:100%}
+</style></head><body>
+<div class="scene">
+<h1 style="color:#ff8c00;text-align:center">PAINTED TROOPER SPRITE VERIFICATION</h1>
+<div style="display:flex;justify-content:center;gap:30px;flex-wrap:wrap;margin-top:20px">
+<div class="sprite-box"><h2>IDLE</h2><img id="img-idle" src="https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@latest/diorama_trooper_idle.png" crossorigin="anonymous"><p id="info-idle"></p></div>
+<div class="sprite-box"><h2>WALK</h2><img id="img-walk" src="https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@latest/diorama_trooper_walk.png" crossorigin="anonymous"><p id="info-walk"></p></div>
+<div class="sprite-box"><h2>SHOOT</h2><img id="img-shoot" src="https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@latest/diorama_trooper_shoot.png" crossorigin="anonymous"><p id="info-shoot"></p></div>
+<div class="sprite-box"><h2>RAPPEL</h2><img id="img-rappel" src="https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@latest/diorama_trooper_rappel.png" crossorigin="anonymous"><p id="info-rappel"></p></div>
+</div>
+<div style="margin-top:30px">
+<h2 style="color:#ff8c00">IN-GAME SCALE PREVIEW (zoom=3x)</h2>
+<canvas id="preview" width="800" height="200" style="image-rendering:pixelated;background:linear-gradient(180deg,#2a1a0a 0%,#3a2a1a 40%,#1a1a2e 100%)"></canvas>
+</div>
+</div>
+<script>
+const SPRITES=['idle','walk','shoot','rappel'];const imgs={};let loaded=0;
+SPRITES.forEach(key=>{const img=document.getElementById('img-'+key);
+img.onload=()=>{document.getElementById('info-'+key).textContent=img.naturalWidth+'x'+img.naturalHeight;imgs[key]=img;loaded++;if(loaded===4)drawPreview();};
+img.onerror=()=>{document.getElementById('info-'+key).textContent='FAILED';};});
+function drawPreview(){const cv=document.getElementById('preview');const cx=cv.getContext('2d');cx.imageSmoothingEnabled=false;
+cx.fillStyle='#3a2a1a';cx.fillRect(0,170,800,30);
+const ORDER=['idle','walk','shoot','rappel'];
+ORDER.forEach((key,i)=>{const img=imgs[key];if(!img)return;
+const aspect=img.naturalWidth/img.naturalHeight;const dh=144;let dw=dh*aspect;if(dw>96*1.6)dw=96*1.6;
+const dx=50+i*190;const dy=170-dh;
+cx.fillStyle='rgba(0,0,0,0.3)';cx.beginPath();cx.ellipse(dx+dw/2,172,dw*0.3,4,0,0,Math.PI*2);cx.fill();
+cx.drawImage(img,dx,dy,dw,dh);cx.fillStyle='#ff8c00';cx.font='12px monospace';cx.fillText(key.toUpperCase(),dx,190);});}
+</script>
+</body></html>
