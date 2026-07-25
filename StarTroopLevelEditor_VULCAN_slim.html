@@ -2605,6 +2605,11 @@ const STRUCT_ASSET_URLS = {
   trooper_shoot:   'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@d9735f13ca8b9fb7c1ac98ab0dc9f695d54ccdc1/diorama_trooper_shoot.png',
   trooper_walk:    'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@d9735f13ca8b9fb7c1ac98ab0dc9f695d54ccdc1/diorama_trooper_walk.png',
   trooper_rappel:  'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@d9735f13ca8b9fb7c1ac98ab0dc9f695d54ccdc1/diorama_trooper_rappel.png',
+  // ── VULCAN: Painted bug sprite frames (AI-generated, de-fringed) ──
+  warrior_painted_f0:  'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@cf14a4b9c01c9125c71cf00e736d232939d7cc8c/diorama_warrior_f0.png',
+  warrior_painted_f1:  'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@cf14a4b9c01c9125c71cf00e736d232939d7cc8c/diorama_warrior_f1.png',
+  hopper_painted_f0:   'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@cf14a4b9c01c9125c71cf00e736d232939d7cc8c/diorama_hopper_f0.png',
+  hopper_painted_f1:   'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@cf14a4b9c01c9125c71cf00e736d232939d7cc8c/diorama_hopper_f1.png',
 };
 (function loadStructAssets(){
   Object.entries(STRUCT_ASSET_URLS).forEach(([key, url])=>{
@@ -3122,6 +3127,17 @@ function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip,
   ctx.imageSmoothingEnabled = false;
 
   // ── VULCAN: Painted trooper sprites — bypass sprite sheet, use AI art ──
+  // ── VULCAN: Painted bug sprites — bypass canvas-drawn, use AI art ──
+  if(key === 'warrior_bug'){
+    _drawPaintedWarriorBug(ctx, sx, sy, sw, sh, darkness, t, flip, unitState);
+    ctx.restore();
+    return;
+  }
+  if(key === 'hopper_bug'){
+    _drawPaintedHopperBug(ctx, sx, sy, sw, sh, darkness, t, flip, unitState);
+    ctx.restore();
+    return;
+  }
   if(key === 'trooper'){
     _drawNPCTrooper(ctx, sx, sy, sw, sh, darkness, t, flip, unitState, shootTimer);
     ctx.restore();
@@ -3136,6 +3152,7 @@ function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip,
     let animDef = null, frameIdx = 0;
     const animTime = (shootTimer || 0) + t * 0.001;
     
+  }
     if(key === 'trooper'){
       if(unitState === 'shoot' && def.animShoot){
         animDef = def.animShoot;
@@ -3240,12 +3257,13 @@ function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip,
     }
   } else {
     // ── Fallback: canvas-drawn versions (while sheets load) ──────────────────
+  }
     if(key === 'trooper'){
       _drawNPCTrooper(ctx, sx, sy, sw, sh, darkness, t, flip, unitState, shootTimer);
     } else if(key === 'warrior_bug'){
-      _drawWarriorBug(ctx, sx, sy, sw, sh, darkness, t, flip);
+      _drawPaintedWarriorBug(ctx, sx, sy, sw, sh, darkness, t, flip, unitState);
     } else if(key === 'hopper_bug'){
-      _drawHopperBug(ctx, sx, sy, sw, sh, darkness, t, flip);
+      _drawPaintedHopperBug(ctx, sx, sy, sw, sh, darkness, t, flip, unitState);
     } else {
       ctx.fillStyle = '#2a3a50';
       ctx.fillRect(sx, sy, sw, sh);
@@ -3396,6 +3414,154 @@ function _drawNPCTrooper(ctx, sx, sy, sw, sh, darkness, t, flip, unitState, shoo
     ctx.restore();
   }
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VULCAN: PAINTED BUG RENDERERS — AI-generated sprites, code-animated
+// Replaces canvas-drawn _drawWarriorBug / _drawHopperBug
+// ═══════════════════════════════════════════════════════════════════════════
+function _drawPaintedWarriorBug(ctx, sx, sy, sw, sh, darkness, t, flip, unitState){
+  const phase  = (sx * 0.019 + sy * 0.007) % (Math.PI * 2);
+  const tCycle = t * 0.0015 + phase;
+  const bobY   = Math.sin(tCycle * 4) * sh * 0.025;  // body bob while crawling
+
+  // 2-frame animation cycle
+  const ANIM_FPS = 6;
+  const frameIdx = Math.floor((t * 0.001 * ANIM_FPS) % 2);
+  const spriteKey = `warrior_painted_f${frameIdx}`;
+  const img = STRUCT_IMGS[spriteKey];
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  if(img && img.complete && img.naturalWidth > 0){
+    const aspect = img.naturalWidth / img.naturalHeight;
+    let dw = sw, dh = sh;
+    // Scale to fit height, preserve aspect
+    dh = sh * 0.85;  // bugs are wider than tall
+    dw = dh * aspect;
+    // Clamp width
+    if(dw > sw * 1.4) { dw = sw * 1.4; dh = dw / aspect; }
+
+    const dx = flip ? sx + sw - dw : sx;
+    const dy = sy + sh - dh + bobY;
+
+    if(flip){
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, -(dx + dw), dy, dw, dh);
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, dx, dy, dw, dh);
+    }
+
+    // Night tint overlay
+    if(darkness > 0.35){
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.globalAlpha = Math.min(0.5, darkness * 0.6);
+      ctx.fillStyle = 'rgba(25,30,70,1)';
+      ctx.fillRect(dx, dy, dw, dh);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // Eye glow at night — amber/orange
+    if(darkness > 0.3){
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = Math.min(0.55, darkness * 0.65);
+      const ex = flip ? dx + dw * 0.22 : dx + dw * 0.78;
+      const ey = dy + dh * 0.35;
+      const er = dw * 0.18;
+      const eg = ctx.createRadialGradient(ex, ey, 0, ex, ey, er);
+      eg.addColorStop(0, 'rgba(255,140,0,0.85)');
+      eg.addColorStop(1, 'rgba(255,60,0,0)');
+      ctx.fillStyle = eg;
+      ctx.beginPath(); ctx.arc(ex, ey, er, 0, Math.PI*2); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  } else {
+    // Fallback: dark rect
+    ctx.fillStyle = '#2c1a07';
+    ctx.fillRect(sx, sy + bobY, sw, sh * 0.7);
+    ctx.fillStyle = '#ff8800';
+    ctx.globalAlpha = 0.6;
+    ctx.fillRect(sx + sw*0.7, sy + sh*0.25 + bobY, sw*0.1, sh*0.08);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+}
+
+function _drawPaintedHopperBug(ctx, sx, sy, sw, sh, darkness, t, flip, unitState){
+  const phase  = (sx * 0.023 + sy * 0.011) % (Math.PI * 2);
+  const tCycle = t * 0.002 + phase;
+  const hoverY = Math.sin(tCycle * 3.5) * sh * 0.06;  // hover bob
+
+  // 2-frame wing flap animation
+  const ANIM_FPS = 10;
+  const frameIdx = Math.floor((t * 0.001 * ANIM_FPS) % 2);
+  const spriteKey = `hopper_painted_f${frameIdx}`;
+  const img = STRUCT_IMGS[spriteKey];
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  if(img && img.complete && img.naturalWidth > 0){
+    const aspect = img.naturalWidth / img.naturalHeight;
+    let dw = sw, dh = sh;
+    // Hoppers are wider due to wings
+    dh = sh * 0.9;
+    dw = dh * aspect;
+    // Clamp width
+    if(dw > sw * 1.5) { dw = sw * 1.5; dh = dw / aspect; }
+
+    const dx = flip ? sx + sw - dw : sx;
+    const dy = sy + sh - dh + hoverY;
+
+    if(flip){
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, -(dx + dw), dy, dw, dh);
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, dx, dy, dw, dh);
+    }
+
+    // Night tint overlay
+    if(darkness > 0.35){
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.globalAlpha = Math.min(0.5, darkness * 0.6);
+      ctx.fillStyle = 'rgba(25,30,70,1)';
+      ctx.fillRect(dx, dy, dw, dh);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // Eye glow at night — acid green
+    if(darkness > 0.3){
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = Math.min(0.55, darkness * 0.65);
+      const ex = flip ? dx + dw * 0.25 : dx + dw * 0.75;
+      const ey = dy + dh * 0.25;
+      const er = dw * 0.15;
+      const eg = ctx.createRadialGradient(ex, ey, 0, ex, ey, er);
+      eg.addColorStop(0, 'rgba(0,255,130,0.85)');
+      eg.addColorStop(1, 'rgba(0,180,80,0)');
+      ctx.fillStyle = eg;
+      ctx.beginPath(); ctx.arc(ex, ey, er, 0, Math.PI*2); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  } else {
+    // Fallback: dark olive rect
+    ctx.fillStyle = '#2e2e0e';
+    ctx.fillRect(sx, sy + hoverY, sw, sh * 0.7);
+    ctx.fillStyle = '#00ff88';
+    ctx.globalAlpha = 0.6;
+    ctx.fillRect(sx + sw*0.65, sy + sh*0.15 + hoverY, sw*0.1, sh*0.08);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+}
+
 
 function selectUnitTool(key){
   unitTool = key;
