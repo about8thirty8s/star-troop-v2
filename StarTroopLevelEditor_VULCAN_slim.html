@@ -2764,6 +2764,7 @@ function placeUnit(worldX, key){
   if(!def) return;
   const hp = key === 'trooper' ? 150 : key === 'warrior_bug' ? 350 : 180;  // VULCAN: warrior 350, hopper 180
   UNITS.push({ key, worldX, flip: false, hp, maxHp: hp, alive: true, fadeTimer: 0, attackCD: 0 });
+  invalidateUnitCache();
   updateUnitCounts();
 }
 
@@ -2776,7 +2777,7 @@ function removeUnitAt(screenX, screenY, tY){
     const floatOff = (def.floatHeight||0)*sh;
     const uy=tY-sh-floatOff;
     if(screenX>=sx && screenX<=sx+sw && screenY>=uy && screenY<=tY){
-      UNITS.splice(i,1); updateUnitCounts(); return true;
+      UNITS.splice(i,1); updateUnitCounts(); invalidateUnitCache(); return true;
     }
   }
   return false;
@@ -3134,6 +3135,7 @@ function tickNPCTroopers(dt){
               nearestBug.hp = 0;
               nearestBug.alive = false;
               nearestBug.fadeTimer = 0;
+              invalidateUnitCache();  // VULCAN: rebuild cached arrays
             }
           }
         }
@@ -3178,7 +3180,7 @@ const HOPPER_FLY_SPEED    = 85;  // VULCAN: increased from 55 — hoppers are FA
 function tickBugs(dt){
   const dtS = dt / 1000;
   const worldW = GRID_COLS * TILE_PX;
-  const troopers = UNITS.filter(t => t.key === 'trooper' && t.alive !== false);  // VULCAN: filter dead troopers at source
+  const troopers = getLivingTroopers();  // VULCAN: use cached array
 
   for(const u of UNITS){
     if(u.key !== 'warrior_bug' && u.key !== 'hopper_bug') continue;
@@ -3229,6 +3231,7 @@ function tickBugs(dt){
             nearestTrooper.alive = false;
             nearestTrooper.fadeTimer = 0;
             nearestTrooper.state = 'dead';
+            invalidateUnitCache();  // VULCAN: rebuild cached arrays
           }
         }
       }
@@ -3248,19 +3251,27 @@ function tickBugs(dt){
 
 // ── Dead unit cleanup — remove after 3s fade ──────────────────────────────
 function cleanupDeadUnits(){
+  let removed = false;
   for(let i = UNITS.length - 1; i >= 0; i--){
     const u = UNITS[i];
     if(u.alive === false && (u.fadeTimer || 0) > 3000){
       UNITS.splice(i, 1);
-      updateUnitCounts();
+      removed = true;
     }
+  }
+  if(removed){
+    updateUnitCounts();
+    invalidateUnitCache();
   }
 }
 
 function drawUnits(ctx, W, tY, t, zoom, darkness){
   if(UNITS.length===0 && !unitTool) return;
 
-  for(const u of UNITS){
+  // VULCAN: Z-sort by worldX — rightmost units render on top for natural depth
+  const sorted = UNITS.slice().sort((a, b) => a.worldX - b.worldX);
+
+  for(const u of sorted){
     const def = UNIT_DEFS[u.key];
     if(!def) continue;
     const sw = def.worldW * zoom, sh = def.worldH * zoom;
@@ -3313,6 +3324,23 @@ function drawUnits(ctx, W, tY, t, zoom, darkness){
       ctx.restore();
     }
   }
+}
+
+// ── VULCAN: Pre-rendered glow sprites — avoids createRadialGradient every frame ──
+let _glowCache = {};
+function getGlowSprite(type, color1, color2, size){
+  const key = type + '_' + color1 + '_' + color2 + '_' + size;
+  if(_glowCache[key]) return _glowCache[key];
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const cx = c.getContext('2d');
+  const g = cx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  g.addColorStop(0, color1);
+  g.addColorStop(1, color2);
+  cx.fillStyle = g;
+  cx.fillRect(0, 0, size, size);
+  _glowCache[key] = c;
+  return c;
 }
 
 function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip, unitState, shootTimer){
@@ -3394,58 +3422,48 @@ function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip,
       ctx.globalAlpha = alpha;
     }
     
-    // Trooper visor glow at night
+    // Trooper visor glow at night — VULCAN: uses cached glow sprite
     if(key === 'trooper' && darkness > 0.3){
+      const glow = getGlowSprite('visor', 'rgba(0,210,255,0.7)', 'rgba(0,100,200,0)', 32);
       ctx.save();
       ctx.globalAlpha = Math.min(0.5, darkness * 0.6);
-      const vg = ctx.createRadialGradient(sx+sw*0.55, sy+sh*0.22, 0, sx+sw*0.55, sy+sh*0.22, sw*0.35);
-      vg.addColorStop(0, 'rgba(0,210,255,0.7)');
-      vg.addColorStop(1, 'rgba(0,100,200,0)');
-      ctx.fillStyle = vg;
-      ctx.fillRect(sx, sy, sw, sh * 0.4);
+      ctx.drawImage(glow, sx + sw*0.55 - sw*0.35, sy + sh*0.22 - sw*0.35, sw*0.7, sw*0.7);
       ctx.restore();
     }
     
-    // Muzzle flash night illumination — lights up area around shooting trooper
+    // Muzzle flash night illumination — VULCAN: uses cached glow sprite
     if(key === 'trooper' && unitState === 'shoot' && darkness > 0.2){
-      const SHOOT_INT = 1600, FLASH_DUR = 180;  // VULCAN: synced with NPC_SHOOT_COOLDOWN
+      const SHOOT_INT = 1600, FLASH_DUR = 180;
       const shootPhase = (shootTimer || 0) % SHOOT_INT;
       if(shootPhase < FLASH_DUR){
         const flashStr = shootPhase < 54 ? shootPhase / 54 : 1 - (shootPhase - 54) / (FLASH_DUR - 54);
+        const glow = getGlowSprite('muzzle', 'rgba(255,200,80,0.7)', 'rgba(255,80,0,0)', 64);
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         ctx.globalAlpha = Math.min(0.6, flashStr * darkness * 0.8);
         const mx = flip ? sx + sw * 0.1 : sx + sw * 0.9;
         const my = sy + sh * 0.45;
-        const mg = ctx.createRadialGradient(mx, my, 0, mx, my, sw * 2.5);
-        mg.addColorStop(0, 'rgba(255,200,80,0.7)');
-        mg.addColorStop(0.3, 'rgba(255,140,20,0.3)');
-        mg.addColorStop(1, 'rgba(255,80,0,0)');
-        ctx.fillStyle = mg;
-        ctx.fillRect(sx - sw, sy - sh * 0.5, sw * 3, sh * 2);
+        const gr = sw * 2.5;
+        ctx.drawImage(glow, mx - gr, my - gr, gr * 2, gr * 2);
         ctx.restore();
       }
     }
     
-    // Bug eye glow at night
+    // Bug eye glow at night — VULCAN: uses cached glow sprite
     if(key === 'warrior_bug' && darkness > 0.2){
+      const glow = getGlowSprite('warrior_eye', 'rgba(255,140,0,0.6)', 'rgba(255,80,0,0)', 24);
       ctx.save();
       ctx.globalAlpha = Math.min(0.4, darkness * 0.5);
-      const eg = ctx.createRadialGradient(sx+sw*0.15, sy+sh*0.4, 0, sx+sw*0.15, sy+sh*0.4, sw*0.2);
-      eg.addColorStop(0, 'rgba(255,140,0,0.6)');
-      eg.addColorStop(1, 'rgba(255,80,0,0)');
-      ctx.fillStyle = eg;
-      ctx.fillRect(sx, sy, sw*0.4, sh*0.6);
+      const gr = sw * 0.2;
+      ctx.drawImage(glow, sx + sw*0.15 - gr, sy + sh*0.4 - gr, gr * 2, gr * 2);
       ctx.restore();
     }
     if(key === 'hopper_bug' && darkness > 0.2){
+      const glow = getGlowSprite('hopper_eye', 'rgba(0,255,130,0.5)', 'rgba(0,180,80,0)', 24);
       ctx.save();
       ctx.globalAlpha = Math.min(0.4, darkness * 0.5);
-      const eg = ctx.createRadialGradient(sx+sw*0.35, sy+sh*0.25, 0, sx+sw*0.35, sy+sh*0.25, sw*0.25);
-      eg.addColorStop(0, 'rgba(0,255,130,0.5)');
-      eg.addColorStop(1, 'rgba(0,180,80,0)');
-      ctx.fillStyle = eg;
-      ctx.fillRect(sx, sy, sw*0.5, sh*0.5);
+      const gr = sw * 0.25;
+      ctx.drawImage(glow, sx + sw*0.35 - gr, sy + sh*0.25 - gr, gr * 2, gr * 2);
       ctx.restore();
     }
   } else {
@@ -4645,7 +4663,7 @@ function importJSON(input){
       if(data.preset){ activePreset = data.preset; buildAllPalettes(activePreset); }
       if(data.fadeDepth !== undefined) { fadeDepth = data.fadeDepth; document.getElementById('fade-slider').value = Math.round(fadeDepth*100); }
       if(data.structures){ STRUCTURES.length = 0; data.structures.forEach(s => placeStructure(s.worldX, s.key)); }
-      if(data.units){ UNITS.length = 0; data.units.forEach(u => placeUnit(u.worldX, u.key)); }
+      if(data.units){ UNITS.length = 0; invalidateUnitCache(); data.units.forEach(u => placeUnit(u.worldX, u.key)); }
       grassInvalidate(); rockInvalidate();
       console.log('✅ Level imported');
     } catch(err) { console.error('Import failed:', err); alert('Invalid level file'); }
