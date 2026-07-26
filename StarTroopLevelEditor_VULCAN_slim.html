@@ -2753,7 +2753,7 @@ const UNIT_DEFS = {
 
 function updateUnitCounts(){
   const counts = {trooper:0, warrior_bug:0, hopper_bug:0};
-  for(const u of UNITS) if(counts[u.key] !== undefined) counts[u.key]++;
+  for(const u of UNITS) if(counts[u.key] !== undefined && u.alive !== false) counts[u.key]++;  // VULCAN: exclude dead
   for(const [k,v] of Object.entries(counts)){
     const el = document.getElementById('cnt-'+k);
     if(el) el.textContent = '('+v+')';
@@ -2762,7 +2762,7 @@ function updateUnitCounts(){
 function placeUnit(worldX, key){
   const def = UNIT_DEFS[key];
   if(!def) return;
-  const hp = key === 'trooper' ? 150 : key === 'warrior_bug' ? 120 : 60;
+  const hp = key === 'trooper' ? 150 : key === 'warrior_bug' ? 250 : 120;  // VULCAN: warrior 250, hopper 120
   UNITS.push({ key, worldX, flip: false, hp, maxHp: hp, alive: true, fadeTimer: 0, attackCD: 0 });
   updateUnitCounts();
 }
@@ -3061,9 +3061,9 @@ function _drawHopperBug(ctx, sx, sy, sw, sh, darkness, t, flip){
 // ── NPC TROOPER AI ────────────────────────────────────────────────────────────
 // Each trooper has: state ('idle'|'patrol'|'alert'|'shoot'), dir, shootTimer, alertTimer
 const NPC_PATROL_SPEED = 28;   // px/sec world space
-const NPC_DETECT_RANGE = 380;  // world px — distance to detect a bug unit
-const NPC_SHOOT_RANGE  = 320;
-const NPC_SHOOT_COOLDOWN = 1400; // ms between shots
+const NPC_DETECT_RANGE = 350;  // VULCAN: reduced from 380
+const NPC_SHOOT_RANGE  = 250;  // VULCAN: reduced from 320 — bugs can close distance
+const NPC_SHOOT_COOLDOWN = 1600; // VULCAN: increased from 1400 — bugs get more time to close
 
 function tickNPCTroopers(dt){
   const dtS = dt / 1000;
@@ -3071,6 +3071,8 @@ function tickNPCTroopers(dt){
 
   // ── Cache bug list once per tick (avoids O(n²) scan) ──────────────────────
   const bugs = UNITS.filter(b => b.key === 'warrior_bug' || b.key === 'hopper_bug');
+  // VULCAN: Target coordination — track which bugs are currently being engaged
+  const engagedBugs = new Map();
 
   for(const u of UNITS){
     if(u.key !== 'trooper') continue;
@@ -3091,10 +3093,27 @@ function tickNPCTroopers(dt){
     }
 
     // ── Detect nearest bug (using cached list) ──────────────────────────────
+    // VULCAN: Target coordination — don't all shoot the same bug
     let nearestBug = null, nearestDist = Infinity;
     for(const b of bugs){
+      if(b.alive === false) continue;
+      if(engagedBugs.has(b) && engagedBugs.get(b) !== u) continue; // skip bugs already targeted by another trooper
       const dist = Math.abs(b.worldX - u.worldX);
       if(dist < nearestDist){ nearestDist = dist; nearestBug = b; }
+    }
+    // Fallback: if all bugs are engaged, target nearest alive bug anyway
+    if(!nearestBug){
+      for(const b of bugs){
+        if(b.alive === false) continue;
+        const dist = Math.abs(b.worldX - u.worldX);
+        if(dist < nearestDist){ nearestDist = dist; nearestBug = b; }
+      }
+    }
+    // Register engagement
+    if(nearestBug) engagedBugs.set(nearestBug, u);
+    // Clear old engagement for this trooper
+    for(const [b, shooter] of engagedBugs) {
+      if(shooter === u && b !== nearestBug) engagedBugs.delete(b);
     }
 
     // ── State machine ──────────────────────────────────────────────────────
@@ -3109,7 +3128,8 @@ function tickNPCTroopers(dt){
         if(u.shootTimer >= NPC_SHOOT_COOLDOWN){
           u.shootTimer = 0;
           if(nearestBug && nearestBug.alive !== false){
-            nearestBug.hp -= 35;
+            nearestBug.hp -= 25;  // VULCAN: reduced from 35
+            nearestBug.hitFlash = 150;  // VULCAN: hit flash duration in ms
             if(nearestBug.hp <= 0){
               nearestBug.hp = 0;
               nearestBug.alive = false;
@@ -3149,11 +3169,11 @@ function tickNPCTroopers(dt){
 }
 
 // ── BUG AI ────────────────────────────────────────────────────────────────────
-const BUG_MELEE_RANGE   = 28;
-const BUG_ATTACK_CD     = 1000;
-const BUG_DMG           = 12;
-const WARRIOR_CRAWL_SPEED = 30;
-const HOPPER_FLY_SPEED    = 55;
+const BUG_MELEE_RANGE   = 32;   // VULCAN: slightly larger melee reach
+const BUG_ATTACK_CD     = 800;  // VULCAN: faster attacks from 1000
+const BUG_DMG           = 18;   // VULCAN: increased from 12 — bugs are dangerous
+const WARRIOR_CRAWL_SPEED = 55;  // VULCAN: increased from 30 — bugs actually close distance
+const HOPPER_FLY_SPEED    = 85;  // VULCAN: increased from 55 — hoppers are FAST
 
 function tickBugs(dt){
   const dtS = dt / 1000;
@@ -3168,6 +3188,8 @@ function tickBugs(dt){
       u.fadeTimer = (u.fadeTimer || 0) + dt;
       continue;
     }
+    // VULCAN: Decay hit flash
+    if(u.hitFlash) u.hitFlash = Math.max(0, u.hitFlash - dt);
 
     // Init state
     if(!u.state){
@@ -3247,6 +3269,16 @@ function drawUnits(ctx, W, tY, t, zoom, darkness){
     // Fade dead units
     const unitAlpha = u.alive === false ? Math.max(0, 1 - (u.fadeTimer || 0) / 3000) : 1;
     drawUnitSprite(ctx, u.key, def, sx, sy, sw, sh, darkness, t, unitAlpha, u.flip, u.state, u.shootTimer);
+
+    // VULCAN: Hit flash — white overlay when bug takes damage
+    if(u.alive !== false && u.hitFlash && u.hitFlash > 0){
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.7, u.hitFlash / 150 * 0.7);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(255,255,255,1)';
+      ctx.fillRect(sx, sy, sw, sh);
+      ctx.restore();
+    }
 
     // HP bar for damaged units
     if(u.alive !== false && u.hp !== undefined && u.hp < u.maxHp){
@@ -3374,7 +3406,7 @@ function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip,
     
     // Muzzle flash night illumination — lights up area around shooting trooper
     if(key === 'trooper' && unitState === 'shoot' && darkness > 0.2){
-      const SHOOT_INT = 2200, FLASH_DUR = 180;
+      const SHOOT_INT = 1600, FLASH_DUR = 180;  // VULCAN: synced with NPC_SHOOT_COOLDOWN
       const shootPhase = (shootTimer || 0) % SHOOT_INT;
       if(shootPhase < FLASH_DUR){
         const flashStr = shootPhase < 54 ? shootPhase / 54 : 1 - (shootPhase - 54) / (FLASH_DUR - 54);
@@ -3451,7 +3483,7 @@ function _drawNPCTrooper(ctx, sx, sy, sw, sh, darkness, t, flip, unitState, shoo
   const bobY = isWalking ? Math.abs(Math.sin(tCycle * 6)) * sh * 0.025 : Math.sin(tCycle * 1.8) * sh * 0.015;
 
   // Shoot timing — driven by AI state
-  const SHOOT_INTERVAL = 2200, FLASH_DUR = 180;
+  const SHOOT_INTERVAL = 1600, FLASH_DUR = 180;  // VULCAN: synced with NPC_SHOOT_COOLDOWN
   const isShooting = (unitState === 'shoot') && (shootTimer !== undefined) && ((shootTimer % SHOOT_INTERVAL) < FLASH_DUR);
   const shootPhaseMs = isShooting ? (shootTimer % SHOOT_INTERVAL) : 0;
   const flashT     = isShooting ? shootPhaseMs / FLASH_DUR : 0;
@@ -4622,13 +4654,15 @@ autoFill();
 // Auto-fill demo: places a balanced encounter when user clicks AUTO-FILL
 // Players can also manually place units via the BUILD panel
 function autoFillDemo(){
+  // VULCAN: Balanced encounter — bugs are a real threat now
   // 4 troopers in a firing line
-  placeUnit(180,"trooper");placeUnit(280,"trooper");placeUnit(380,"trooper");placeUnit(480,"trooper");
-  // 3 warrior bugs approaching from the right
-  placeUnit(700,"warrior_bug");placeUnit(780,"warrior_bug");placeUnit(860,"warrior_bug");
-  // 1 hopper flying in
-  placeUnit(950,"hopper_bug");
-  console.log('Auto-fill demo: balanced encounter placed');
+  placeUnit(200,"trooper");placeUnit(300,"trooper");placeUnit(400,"trooper");placeUnit(500,"trooper");
+  // 6 warrior bugs approaching from both sides
+  placeUnit(700,"warrior_bug");placeUnit(760,"warrior_bug");placeUnit(820,"warrior_bug");
+  placeUnit(80,"warrior_bug");placeUnit(140,"warrior_bug");
+  // 3 hoppers flying in from above
+  placeUnit(600,"hopper_bug");placeUnit(350,"hopper_bug");placeUnit(880,"hopper_bug");
+  console.log('VULCAN: Demo battle deployed — 4 troopers vs 8 bugs + 3 hoppers');
 }
 // Only start ONE draw loop — prevent double RAF
 if(document.readyState==='complete'||document.readyState==='interactive'){
