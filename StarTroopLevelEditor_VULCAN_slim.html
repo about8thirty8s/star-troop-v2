@@ -4987,30 +4987,43 @@ function envReset(){
 
 <script>
 window.addEventListener('load', function(){
-  setTimeout(function(){
+  function analyzeBands() {
     var c = document.querySelector('canvas');
-    if(!c) { console.log('NO CANVAS'); return; }
+    if(!c) return;
     var ctx = c.getContext('2d');
     var W = c.width, H = c.height;
-    // Sample every 3px vertically at center X
-    var samples = [];
-    for(var y = 0; y < H; y += 3) {
+    var bands = [];
+    var prev = null;
+    for(var y = 0; y < H; y += 2) {
       try {
         var px = ctx.getImageData(Math.floor(W/2), y, 1, 1).data;
-        samples.push({y: y, r: px[0], g: px[1], b: px[2], a: px[3]});
+        if(prev) {
+          var diff = Math.abs(px[0]-prev[0]) + Math.abs(px[1]-prev[1]) + Math.abs(px[2]-prev[2]);
+          if(diff > 10) bands.push(y+':'+diff+':'+px[0]+','+px[1]+','+px[2]);
+        }
+        prev = [px[0], px[1], px[2], px[3]];
       } catch(e) {}
     }
-    // Find sharp transitions (diff > 10 between adjacent samples)
-    var bands = [];
-    for(var i = 1; i < samples.length; i++) {
-      var s0 = samples[i-1], s1 = samples[i];
-      var diff = Math.abs(s1.r-s0.r) + Math.abs(s1.g-s0.g) + Math.abs(s1.b-s0.b);
-      if(diff > 10) {
-        bands.push({y: s1.y, diff: diff, from: s0.r+','+s0.g+','+s0.b, to: s1.r+','+s1.g+','+s1.b});
-      }
+    // Also sample full column for reference
+    var col = [];
+    for(var y = 0; y < H; y += 10) {
+      try {
+        var px = ctx.getImageData(Math.floor(W/2), y, 1, 1).data;
+        col.push(y+':'+px[0]+','+px[1]+','+px[2]+','+px[3]);
+      } catch(e) {}
     }
-    console.log('VULCAN_BANDS:' + JSON.stringify({total: bands.length, bands: bands.slice(0, 40)}));
-  }, 5000);
+    var el = document.getElementById('vulcan-debug');
+    if(!el) {
+      el = document.createElement('div');
+      el.id = 'vulcan-debug';
+      el.style.cssText = 'position:fixed;top:0;right:0;width:400px;max-height:600px;overflow:auto;background:rgba(0,0,0,0.95);color:#0f0;font:10px monospace;z-index:99999;padding:8px;border:1px solid #f60;';
+      document.body.appendChild(el);
+    }
+    el.innerHTML = '<b>BANDS (diff>10):</b><br>' + bands.join('<br>') + '<br><br><b>SAMPLES (every 10px):</b><br>' + col.join('<br>');
+  }
+  // Run every 3 seconds
+  setInterval(analyzeBands, 3000);
+  setTimeout(analyzeBands, 2000);
 });
 </script>
 
