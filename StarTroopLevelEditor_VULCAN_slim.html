@@ -4551,19 +4551,22 @@ function importJSON(input){
   reader.readAsText(file);
 }
 autoFill();
-// VULCAN TEMP TEST: balanced combat encounter (remove after testing)
+// VULCAN TEMP TEST: swarm overwhelm test (remove after testing)
 window.addEventListener('load', function(){
   setTimeout(function(){
     try {
       // 4 troopers in a firing line
       placeUnit(180,"trooper");placeUnit(280,"trooper");placeUnit(380,"trooper");placeUnit(480,"trooper");
-      // 3 warrior bugs approaching from the right — gives troopers time to shoot
-      placeUnit(700,"warrior_bug");placeUnit(780,"warrior_bug");placeUnit(860,"warrior_bug");
-      // 1 hopper bug flying in from far right
-      placeUnit(950,"hopper_bug");
-      if(typeof zoomTarget!=="undefined")zoomTarget=3.5;
+      // 10 warrior bugs in a swarm wave from the right
+      placeUnit(680,"warrior_bug");placeUnit(720,"warrior_bug");placeUnit(760,"warrior_bug");
+      placeUnit(800,"warrior_bug");placeUnit(840,"warrior_bug");placeUnit(880,"warrior_bug");
+      placeUnit(920,"warrior_bug");placeUnit(960,"warrior_bug");placeUnit(1000,"warrior_bug");
+      placeUnit(1040,"warrior_bug");
+      // 2 hoppers flying in from far right
+      placeUnit(1100,"hopper_bug");placeUnit(1150,"hopper_bug");
+      if(typeof zoomTarget!=="undefined")zoomTarget=3.0;
       if(typeof PLAYER!=="undefined")PLAYER.worldX=330;
-      console.log('VULCAN TEMP TEST: balanced encounter placed, count=' + UNITS.length);
+      console.log('VULCAN TEMP TEST: swarm test placed, count=' + UNITS.length);
     } catch(e) {
       console.error('VULCAN TEMP TEST ERROR:', e.message);
     }
