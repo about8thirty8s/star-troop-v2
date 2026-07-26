@@ -2719,7 +2719,8 @@ function updateUnitCounts(){
 function placeUnit(worldX, key){
   const def = UNIT_DEFS[key];
   if(!def) return;
-  UNITS.push({ key, worldX, flip: false });
+  const hp = key === 'trooper' ? 100 : key === 'warrior_bug' ? 200 : 80;
+  UNITS.push({ key, worldX, flip: false, hp, maxHp: hp, alive: true, fadeTimer: 0, attackCD: 0 });
   updateUnitCounts();
 }
 
@@ -3031,6 +3032,12 @@ function tickNPCTroopers(dt){
   for(const u of UNITS){
     if(u.key !== 'trooper') continue;
 
+    // Dead troopers skip AI — just accumulate fade
+    if(u.alive === false){
+      u.fadeTimer = (u.fadeTimer || 0) + dt;
+      continue;
+    }
+
     // Init state if missing
     if(!u.state){
       u.state      = 'patrol';
@@ -3056,7 +3063,18 @@ function tickNPCTroopers(dt){
       if(nearestDist < NPC_SHOOT_RANGE){
         u.state = 'shoot';
         u.shootTimer += dt;
-        // shootTimer drives muzzle flash — already handled in _drawNPCTrooper via t
+        if(u.shootTimer >= NPC_SHOOT_COOLDOWN){
+          u.shootTimer = 0;
+          if(nearestBug && nearestBug.alive !== false){
+            nearestBug.hp -= 25;
+            if(nearestBug.hp <= 0){
+              nearestBug.hp = 0;
+              nearestBug.alive = false;
+              nearestBug.fadeTimer = 0;
+            }
+          }
+        }
+        // shootTimer also drives muzzle flash in _drawNPCTrooper
       } else {
         u.state = 'alert'; // walk toward bug
         u.worldX += u.dir * NPC_PATROL_SPEED * 0.6 * dtS;
@@ -3087,6 +3105,91 @@ function tickNPCTroopers(dt){
   }
 }
 
+// ── BUG AI ────────────────────────────────────────────────────────────────────
+const BUG_MELEE_RANGE   = 32;
+const BUG_ATTACK_CD     = 1000;
+const BUG_DMG           = 15;
+const WARRIOR_CRAWL_SPEED = 30;
+const HOPPER_FLY_SPEED    = 55;
+
+function tickBugs(dt){
+  const dtS = dt / 1000;
+  const worldW = GRID_COLS * TILE_PX;
+  const troopers = UNITS.filter(u => u.key === 'trooper' && u.alive !== false);
+
+  for(const u of UNITS){
+    if(u.key !== 'warrior_bug' && u.key !== 'hopper_bug') continue;
+
+    // Dead bugs freeze and fade
+    if(u.alive === false){
+      u.fadeTimer = (u.fadeTimer || 0) + dt;
+      continue;
+    }
+
+    // Init state
+    if(!u.state){
+      u.state = u.key === 'warrior_bug' ? 'crawl' : 'fly';
+      u.dir = (Math.random() > 0.5) ? 1 : -1;
+      u.flip = u.dir < 0;
+      u.attackCD = 0;
+    }
+
+    const speed = u.key === 'warrior_bug' ? WARRIOR_CRAWL_SPEED : HOPPER_FLY_SPEED;
+
+    // Find nearest alive trooper
+    let nearestTrooper = null, nearestDist = Infinity;
+    for(const tr of troopers){
+      const dist = Math.abs(tr.worldX - u.worldX);
+      if(dist < nearestDist){ nearestDist = dist; nearestTrooper = tr; }
+    }
+
+    if(nearestTrooper){
+      u.dir = nearestTrooper.worldX > u.worldX ? 1 : -1;
+      u.flip = u.dir < 0;
+
+      if(nearestDist > BUG_MELEE_RANGE){
+        u.worldX += u.dir * speed * dtS;
+        u.state = u.key === 'warrior_bug' ? 'crawl' : 'fly';
+      } else {
+        // Attack trooper
+        u.state = 'attack';
+        u.attackCD = (u.attackCD || 0) + dt;
+        if(u.attackCD >= BUG_ATTACK_CD){
+          u.attackCD = 0;
+          nearestTrooper.hp -= BUG_DMG;
+          if(nearestTrooper.hp <= 0){
+            nearestTrooper.hp = 0;
+            nearestTrooper.alive = false;
+            nearestTrooper.fadeTimer = 0;
+            nearestTrooper.state = 'dead';
+          }
+        }
+      }
+    } else {
+      // No trooper — wander
+      u.state = u.key === 'warrior_bug' ? 'crawl' : 'fly';
+      u.worldX += u.dir * speed * dtS;
+      if(u.worldX < 32 || u.worldX > worldW - 32){
+        u.dir *= -1;
+        u.flip = u.dir < 0;
+      }
+    }
+
+    u.worldX = Math.max(16, Math.min(worldW - 16, u.worldX));
+  }
+}
+
+// ── Dead unit cleanup — remove after 3s fade ──────────────────────────────
+function cleanupDeadUnits(){
+  for(let i = UNITS.length - 1; i >= 0; i--){
+    const u = UNITS[i];
+    if(u.alive === false && (u.fadeTimer || 0) > 3000){
+      UNITS.splice(i, 1);
+      updateUnitCounts();
+    }
+  }
+}
+
 function drawUnits(ctx, W, tY, t, zoom, darkness){
   if(UNITS.length===0 && !unitTool) return;
 
@@ -3098,7 +3201,21 @@ function drawUnits(ctx, W, tY, t, zoom, darkness){
     if(sx > W+sw || sx+sw < 0) continue;
     const floatOff = (def.floatHeight||0)*sh;
     const sy = tY - sh - floatOff;
-    drawUnitSprite(ctx, u.key, def, sx, sy, sw, sh, darkness, t, 1, u.flip, u.state, u.shootTimer);
+    // Fade dead units
+    const unitAlpha = u.alive === false ? Math.max(0, 1 - (u.fadeTimer || 0) / 3000) : 1;
+    drawUnitSprite(ctx, u.key, def, sx, sy, sw, sh, darkness, t, unitAlpha, u.flip, u.state, u.shootTimer);
+
+    // HP bar for damaged units
+    if(u.alive !== false && u.hp !== undefined && u.hp < u.maxHp){
+      const barW = sw * 0.7;
+      const barH = 3;
+      const barX = sx + (sw - barW) / 2;
+      const barY = sy - barH - 2;
+      ctx.fillStyle = '#400';
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.fillStyle = u.hp > u.maxHp * 0.5 ? '#0c0' : u.hp > u.maxHp * 0.25 ? '#cc0' : '#c00';
+      ctx.fillRect(barX, barY, barW * (u.hp / u.maxHp), barH);
+    }
   }
 
   // Unit ghost preview — matches structure placement UX
@@ -4064,6 +4181,8 @@ function draw(){
     updateDayNight(dt);
     tickPlanet(dt);
     tickNPCTroopers(dt);
+    tickBugs(dt);
+    cleanupDeadUnits();
     updateWeather(dt, W, H, tY);
     tickGrass();  // regen grass if tiles changed
     tickRocks();  // regen rocks if tiles changed
