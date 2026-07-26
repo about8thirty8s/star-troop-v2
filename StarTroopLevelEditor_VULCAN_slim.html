@@ -303,18 +303,18 @@ body{background:#1a0800;color:#fff;font-family:monospace;display:flex;flex-direc
 <script>
 const LAYER_LIBRARY = {
   'FAR': [
-    {label:'Alien Mesa (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_far_day_v2.png'},
-    {label:'Alien Mesa (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_far_night_v2.png'},
+    {label:'Alien Mesa (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_far_day_v3.png'},
+    {label:'Alien Mesa (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_far_night_v3.png'},
     {label:'Legacy Mountains', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0000.png'},
   ],
   'MID': [
-    {label:'Dead Forest (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_mid_day_v2.png'},
-    {label:'Dead Forest (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_mid_night_v2.png'},
+    {label:'Dead Forest (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_mid_day_v3.png'},
+    {label:'Dead Forest (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_mid_night_v3.png'},
     {label:'Legacy Midground', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0002.png'},
   ],
   'NEAR': [
-    {label:'Ground Scrub (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_near_day_v2.png'},
-    {label:'Ground Scrub (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_near_night_v2.png'},
+    {label:'Ground Scrub (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_near_day_v3.png'},
+    {label:'Ground Scrub (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_near_night_v3.png'},
     {label:'Legacy Ground Fog', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0003.png'},
   ],
 };
@@ -2640,9 +2640,9 @@ const STRUCT_ASSET_URLS = {
   workshop:      'https://base44.app/api/apps/6a07d557e104123d6d54764f/files/mp/public/6a07d557e104123d6d54764f/efee9dc5c_workshop_clean.png',
   wall_turret:   'https://base44.app/api/apps/6a07d557e104123d6d54764f/files/mp/public/6a07d557e104123d6d54764f/3234ccd4d_wall_turret_clean.png',
   trooper_sheet: 'https://base44.app/api/apps/6a07d557e104123d6d54764f/files/mp/public/6a07d557e104123d6d54764f/7f53e9762_trooper_idle.png',
-  trooper_sheet_v2: 'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/trooper_sheet_v2.png',
-  warrior_sheet_v2: 'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/warrior_sheet_v2.png',
-  hopper_sheet_v2: 'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/hopper_sheet_v2.png',
+  trooper_sheet_v2: 'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/trooper_sheet_v3.png',
+  warrior_sheet_v2: 'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/warrior_sheet_v3.png',
+  hopper_sheet_v2: 'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/hopper_sheet_v3.png',
   // ── VULCAN: Painted trooper sprite poses (AI-generated, de-fringed) ──
   trooper_idle:   'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@d9735f13ca8b9fb7c1ac98ab0dc9f695d54ccdc1/diorama_trooper_idle.png',
   trooper_shoot:   'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@d9735f13ca8b9fb7c1ac98ab0dc9f695d54ccdc1/diorama_trooper_shoot.png',
@@ -4250,9 +4250,13 @@ function draw(){
       const skyQ3     =`rgb(${skyC(195,175,22,d,duskF)},${skyC(80,62,12,d,duskF)},${skyC(14,10,52,d,duskF)})`;
       const skyBottom =`rgb(${skyC(dayBottom[0],duskBottom[0],nightBottom[0],d,duskF)},${skyC(dayBottom[1],duskBottom[1],nightBottom[1],d,duskF)},${skyC(dayBottom[2],duskBottom[2],nightBottom[2],d,duskF)})`;
       const sg=sc.createLinearGradient(0,0,0,tY);
-      sg.addColorStop(0,skyTop); sg.addColorStop(0.30,skyQ1);
-      sg.addColorStop(0.60,skyMid); sg.addColorStop(0.82,skyQ3);
-      sg.addColorStop(1,skyBottom);
+      sg.addColorStop(0,    skyTop);
+      sg.addColorStop(0.15, skyQ1);
+      sg.addColorStop(0.35, `rgb(${(parseInt(skyQ1.match(/\d+/g)[0])+parseInt(skyMid.match(/\d+/g)[0]))>>1},${(parseInt(skyQ1.match(/\d+/g)[1])+parseInt(skyMid.match(/\d+/g)[1]))>>1},${(parseInt(skyQ1.match(/\d+/g)[2])+parseInt(skyMid.match(/\d+/g)[2]))>>1})`);
+      sg.addColorStop(0.55, skyMid);
+      sg.addColorStop(0.75, skyQ3);
+      sg.addColorStop(0.90, `rgb(${(parseInt(skyQ3.match(/\d+/g)[0])+parseInt(skyBottom.match(/\d+/g)[0]))>>1},${(parseInt(skyQ3.match(/\d+/g)[1])+parseInt(skyBottom.match(/\d+/g)[1]))>>1},${(parseInt(skyQ3.match(/\d+/g)[2])+parseInt(skyBottom.match(/\d+/g)[2]))>>1})`);
+      sg.addColorStop(1,    skyBottom);
       sc.fillStyle=sg; sc.fillRect(0,0,W,H);
       draw._skyCache=true; draw._skyLastD=Math.round(d*100);
       draw._skyLastW=W; draw._skyLastH=H;
