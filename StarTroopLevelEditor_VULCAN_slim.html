@@ -303,16 +303,19 @@ body{background:#1a0800;color:#fff;font-family:monospace;display:flex;flex-direc
 <script>
 const LAYER_LIBRARY = {
   'FAR': [
-    {label:'Far Mountains', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0000.png'},
-    {label:'AI Far', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0001.png'},
+    {label:'Alien Mesa (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_far_day.png'},
+    {label:'Alien Mesa (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_far_night.png'},
+    {label:'Legacy Mountains', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0000.png'},
   ],
   'MID': [
-    {label:'Midground', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0002.png'},
-    {label:'AI Mid', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0001.png'},
+    {label:'Dead Forest (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_mid_day.png'},
+    {label:'Dead Forest (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_mid_night.png'},
+    {label:'Legacy Midground', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0002.png'},
   ],
   'NEAR': [
-    {label:'Ground Fog', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0003.png'},
-    {label:'AI Near', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0001.png'},
+    {label:'Ground Scrub (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_near_day.png'},
+    {label:'Ground Scrub (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_near_night.png'},
+    {label:'Legacy Ground Fog', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0003.png'},
   ],
 };
 
@@ -1563,7 +1566,7 @@ function drawSecondMoon(ctx, W, tY, t, zoom) {
   const moonX = W * 0.12 + W * 0.76 * moonT;
   const moonY = tY * 0.72 - Math.sin(moonT * Math.PI) * tY * 0.55;
   const skyZoom = Math.max(0.3, Math.min(zoom, 3.0));
-  const mSize = Math.max(W, tY) * 0.055 * moonScale * skyZoom; // half size of primary
+  const mSize = Math.max(W, tY) * 0.055 * moonScale; // half size of primary — fixed size, no zoom
 
   if(!isFinite(moonX)||!isFinite(moonY)||!isFinite(mSize)||mSize<=0) return;
   const moonAlpha = Math.min(0.85, DN.darkness * 1.1);
@@ -4262,16 +4265,43 @@ function draw(){
     // ── Stars ─────────────────────────────────────────────────────────────────
     drawStars(ctx, W, tY, t, zoom);
 
-    // ── FAR parallax layers (FAR2 + FAR — gas giant sits behind MID mountains) ───
-    ['FAR2','FAR'].forEach(slot=>{
+    // ── FAR parallax layer ──────────────────────────────────────────────────
+    ['FAR'].forEach(slot=>{
       const st=LS[slot];if(!st.visible||!st.img||!st.img.complete||!st.img.naturalWidth)return;
-      // Parallax layers use FIXED height — no zoom scaling (they are background, not world)
-      // Scroll offset uses world-space camX (divide by zoom) for correct parallax at all zoom levels
-      const dH=tY*1.05,dW=dH*(st.img.naturalWidth/st.img.naturalHeight);
-      const drawY = tY - dH + (st.yOff || 0);
+      // Use image's natural aspect ratio — draw at bottom of sky area
+      const imgAR = st.img.naturalWidth / st.img.naturalHeight;
+      const dH = st.img.naturalHeight;   // use natural height, don't stretch
+      const dW = dH * imgAR;
+      // Scale so layer fills the sky width cleanly
+      const scaleH = tY * 0.9;          // fill ~90% of sky height
+      const scaleW = scaleH * imgAR;
+      const drawY = tY - scaleH + (st.yOff || 0);
       const worldOff = camX / zoom;
-      const off=-(worldOff*st.speed)%dW;
-      for(let x=off-dW;x<W+dW;x+=dW)ctx.drawImage(st.img,x,drawY,dW,dH);
+      const off = -(worldOff * st.speed) % scaleW;
+      ctx.save();
+      // Auto day/night blend — index 0=day, index 1=night
+      const _dayImgF = libImgs[slot] && libImgs[slot][0];
+      const _nightImgF = libImgs[slot] && libImgs[slot][1];
+      const _darkF = DN.darkness;
+      // Draw day layer at (1-darkness) alpha
+      if(_dayImgF && _dayImgF.complete && _dayImgF.naturalWidth && _darkF < 0.98) {
+        ctx.globalAlpha = Math.max(0, 1 - _darkF);
+        for(let x=off-scaleW; x<W+scaleW; x+=scaleW)
+          ctx.drawImage(_dayImgF, x, drawY, scaleW, scaleH);
+      }
+      // Draw night layer at darkness alpha (crossfade)
+      if(_nightImgF && _nightImgF.complete && _nightImgF.naturalWidth && _darkF > 0.02) {
+        ctx.globalAlpha = _darkF;
+        for(let x=off-scaleW; x<W+scaleW; x+=scaleW)
+          ctx.drawImage(_nightImgF, x, drawY, scaleW, scaleH);
+      }
+      // Fallback: if only one image loaded, draw it normally
+      if((!_dayImgF || !_nightImgF) && st.img) {
+        ctx.globalAlpha = 1.0;
+        for(let x=off-scaleW; x<W+scaleW; x+=scaleW)
+          ctx.drawImage(st.img, x, drawY, scaleW, scaleH);
+      }
+      ctx.restore();
     });
 
     // ── Gas giant — behind MID mountains, in front of FAR layer ──────────────
@@ -4279,15 +4309,37 @@ function draw(){
     drawPlanet(ctx, W, tY, camX, t, zoom);
     ctx.globalAlpha = 1;
 
-    // ── MID + NEAR parallax layers (in front of gas giant) ───────────────────
+    // ── MID + NEAR parallax layers (in front of gas giant) ────────────────────
     ['MID','NEAR'].forEach(slot=>{
       const st=LS[slot];if(!st.visible||!st.img||!st.img.complete||!st.img.naturalWidth)return;
-      // Parallax layers use FIXED height — no zoom scaling
-      const dH=tY*1.05,dW=dH*(st.img.naturalWidth/st.img.naturalHeight);
-      const drawY = tY - dH + (st.yOff || 0);
+      const imgAR = st.img.naturalWidth / st.img.naturalHeight;
+      // Scale to fill sky height — MID taller than NEAR
+      const scaleH = slot==='MID' ? tY * 0.85 : tY * 0.50;
+      const scaleW = scaleH * imgAR;
+      const drawY = tY - scaleH + (st.yOff || 0);
       const worldOff = camX / zoom;
-      const off=-(worldOff*st.speed)%dW;
-      for(let x=off-dW;x<W+dW;x+=dW)ctx.drawImage(st.img,x,drawY,dW,dH);
+      const off = -(worldOff * st.speed) % scaleW;
+      ctx.save();
+      // Auto day/night blend — index 0=day, index 1=night
+      const _dayImg = libImgs[slot] && libImgs[slot][0];
+      const _nightImg = libImgs[slot] && libImgs[slot][1];
+      const _dark = DN.darkness;
+      if(_dayImg && _dayImg.complete && _dayImg.naturalWidth && _dark < 0.98) {
+        ctx.globalAlpha = Math.max(0, 1 - _dark);
+        for(let x=off-scaleW; x<W+scaleW; x+=scaleW)
+          ctx.drawImage(_dayImg, x, drawY, scaleW, scaleH);
+      }
+      if(_nightImg && _nightImg.complete && _nightImg.naturalWidth && _dark > 0.02) {
+        ctx.globalAlpha = _dark;
+        for(let x=off-scaleW; x<W+scaleW; x+=scaleW)
+          ctx.drawImage(_nightImg, x, drawY, scaleW, scaleH);
+      }
+      if((!_dayImg || !_nightImg) && st.img) {
+        ctx.globalAlpha = 1.0;
+        for(let x=off-scaleW; x<W+scaleW; x+=scaleW)
+          ctx.drawImage(st.img, x, drawY, scaleW, scaleH);
+      }
+      ctx.restore();
     });
 
     // ── Moon — in front of everything ────────────────────────────────────────
