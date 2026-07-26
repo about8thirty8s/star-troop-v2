@@ -3066,12 +3066,29 @@ const NPC_DETECT_RANGE = 350;  // VULCAN: reduced from 380
 const NPC_SHOOT_RANGE  = 250;  // VULCAN: reduced from 320 — bugs can close distance
 const NPC_SHOOT_COOLDOWN = 1600; // VULCAN: increased from 1400 — bugs get more time to close
 
+// ── VULCAN: Cached unit arrays — rebuilt only when units change ──
+let _cachedBugs = null, _cachedTroopers = null, _unitCacheDirty = true;
+function invalidateUnitCache(){ _unitCacheDirty = true; }
+function getLivingBugs(){
+  if(_unitCacheDirty || !_cachedBugs){
+    _cachedBugs = UNITS.filter(b => (b.key === 'warrior_bug' || b.key === 'hopper_bug') && b.alive !== false);
+  }
+  return _cachedBugs;
+}
+function getLivingTroopers(){
+  if(_unitCacheDirty || !_cachedTroopers){
+    _cachedTroopers = UNITS.filter(t => t.key === 'trooper' && t.alive !== false);
+  }
+  return _cachedTroopers;
+}
+
 function tickNPCTroopers(dt){
   const dtS = dt / 1000;
   const worldW = GRID_COLS * TILE_PX;
+  _unitCacheDirty = false;  // Clear flag at start of tick cycle
 
   // ── Cache bug list once per tick (avoids O(n²) scan) ──────────────────────
-  const bugs = UNITS.filter(b => (b.key === 'warrior_bug' || b.key === 'hopper_bug') && b.alive !== false);  // VULCAN FIX: exclude dead bugs
+  const bugs = getLivingBugs();  // VULCAN: use cached array
   // VULCAN: Target coordination — track which bugs are currently being engaged
   const engagedBugs = new Map();
 
