@@ -118,6 +118,7 @@ body{background:#1a0800;color:#fff;font-family:monospace;display:flex;flex-direc
   <button id="env-panel-btn" onclick="toggleEnvPanel()" style="background:#0a1a2a;border:1px solid #2a6b8b;color:#7ad4ff;padding:4px 9px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:bold;">🌍 ENV</button>
   <div class="sep"></div>
   <button class="btn green" onclick="autoFill()">AUTO-FILL</button>
+  <button class="btn green" onclick="autoFillDemo()" style="background:#1a3010;border-color:#3a6020;color:#80ff60;">DEMO BATTLE</button>
   <button class="btn red"   onclick="clearAll()">CLEAR</button>
   <button class="btn blue"  onclick="exportJSON()">EXPORT</button>
   <label class="btn blue" style="cursor:pointer;">IMPORT<input type="file" accept=".json" style="display:none" onchange="importJSON(this)"/></label>
@@ -4551,27 +4552,17 @@ function importJSON(input){
   reader.readAsText(file);
 }
 autoFill();
-// VULCAN TEMP TEST: swarm overwhelm test (remove after testing)
-window.addEventListener('load', function(){
-  setTimeout(function(){
-    try {
-      // 4 troopers in a firing line
-      placeUnit(180,"trooper");placeUnit(280,"trooper");placeUnit(380,"trooper");placeUnit(480,"trooper");
-      // 10 warrior bugs in a swarm wave from the right
-      placeUnit(680,"warrior_bug");placeUnit(720,"warrior_bug");placeUnit(760,"warrior_bug");
-      placeUnit(800,"warrior_bug");placeUnit(840,"warrior_bug");placeUnit(880,"warrior_bug");
-      placeUnit(920,"warrior_bug");placeUnit(960,"warrior_bug");placeUnit(1000,"warrior_bug");
-      placeUnit(1040,"warrior_bug");
-      // 2 hoppers flying in from far right
-      placeUnit(1100,"hopper_bug");placeUnit(1150,"hopper_bug");
-      if(typeof zoomTarget!=="undefined")zoomTarget=3.0;
-      if(typeof PLAYER!=="undefined")PLAYER.worldX=330;
-      console.log('VULCAN TEMP TEST: swarm test placed, count=' + UNITS.length);
-    } catch(e) {
-      console.error('VULCAN TEMP TEST ERROR:', e.message);
-    }
-  }, 2500);
-});
+// Auto-fill demo: places a balanced encounter when user clicks AUTO-FILL
+// Players can also manually place units via the BUILD panel
+function autoFillDemo(){
+  // 4 troopers in a firing line
+  placeUnit(180,"trooper");placeUnit(280,"trooper");placeUnit(380,"trooper");placeUnit(480,"trooper");
+  // 3 warrior bugs approaching from the right
+  placeUnit(700,"warrior_bug");placeUnit(780,"warrior_bug");placeUnit(860,"warrior_bug");
+  // 1 hopper flying in
+  placeUnit(950,"hopper_bug");
+  console.log('Auto-fill demo: balanced encounter placed');
+}
 // Only start ONE draw loop — prevent double RAF
 if(document.readyState==='complete'||document.readyState==='interactive'){
   resize();grassInvalidate();rockInvalidate();requestAnimationFrame(draw);
