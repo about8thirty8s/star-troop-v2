@@ -3280,16 +3280,6 @@ function drawUnits(ctx, W, tY, t, zoom, darkness){
       ctx.restore();
     }
 
-    // VULCAN DEBUG: Show unit status text
-    if(u.alive !== false){
-      ctx.save();
-      ctx.font = '7px monospace';
-      ctx.fillStyle = u.key === 'trooper' ? '#00ff88' : '#ff4444';
-      ctx.textAlign = 'center';
-      const label = u.key.substr(0,3).toUpperCase()+' '+Math.round(u.hp)+'hp '+u.state;
-      ctx.fillText(label, sx+sw/2, sy-6);
-      ctx.restore();
-    }
     // HP bar for damaged units
     if(u.alive !== false && u.hp !== undefined && u.hp < u.maxHp){
       const barW = sw * 0.7;
