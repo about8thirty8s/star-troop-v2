@@ -167,6 +167,24 @@ body{background:#1a0800;color:#fff;font-family:monospace;display:flex;flex-direc
       <div class="st-loader"></div>
     </div>
     <div id="hud">
+    <script>
+    // Independent safety net — cannot be blocked by main script errors
+    (function(){
+      var count=0;
+      function hideLoading(){
+        var el=document.getElementById('loading');
+        if(el && el.style.display!=='none'){
+          el.style.opacity='0';
+          setTimeout(function(){el.style.display='none';},500);
+          console.warn('Safety net: loading screen hidden');
+        }
+      }
+      // Hide after 5s no matter what
+      setTimeout(hideLoading, 5000);
+      // Also hide after 10s as ultimate fallback
+      setTimeout(hideLoading, 10000);
+    })();
+    </script>
       <img id="hud-img" src="" alt=""/>
       <div><div class="hn" id="hud-name">Alien Soil Crust</div><div class="ht" id="hud-tool">paint</div></div>
     </div>
