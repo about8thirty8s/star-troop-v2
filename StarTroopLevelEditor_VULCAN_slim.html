@@ -2280,9 +2280,22 @@ function drawClouds(ctx, W, tY, camX, t, zoom) {
       ctx.drawImage(img, x, dy, dw, dh);
     }
 
-    // ── 2. Tint pass REMOVED — was drawing fillRect across entire width,
-    // creating visible horizontal bands in the sky. Clouds have their own
-    // color from PNG + night overlay handles darkening.
+    // ── 2. Subtle tint pass — draw tinted rect OVER the cloud band (source-over)
+    // No offscreen canvas — just a semi-transparent rect clipped to cloud band.
+    // Cloud PNGs have transparent backgrounds so the rect only tints sky, not
+    // "cloud pixels" directly, but the effect reads the same at these low alphas.
+    if(d > 0.15) {
+      // Night: cold blue wash over cloud band
+      ctx.globalAlpha = Math.min(0.14, moonlitBoost * 0.25);
+      ctx.fillStyle = 'rgba(80,110,200,1)';
+      ctx.fillRect(0, dy, W, dh);
+    }
+    if(duskF > 0.15) {
+      // Dusk/dawn: warm amber at horizon band only
+      ctx.globalAlpha = Math.min(0.12, duskBoost * 0.4);
+      ctx.fillStyle = 'rgba(200,80,10,1)';
+      ctx.fillRect(0, dy, W, dh);
+    }
 
     ctx.restore();
   }
