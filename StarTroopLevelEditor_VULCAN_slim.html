@@ -2762,7 +2762,7 @@ function updateUnitCounts(){
 function placeUnit(worldX, key){
   const def = UNIT_DEFS[key];
   if(!def) return;
-  const hp = key === 'trooper' ? 150 : key === 'warrior_bug' ? 250 : 120;  // VULCAN: warrior 250, hopper 120
+  const hp = key === 'trooper' ? 150 : key === 'warrior_bug' ? 350 : 180;  // VULCAN: warrior 350, hopper 180
   UNITS.push({ key, worldX, flip: false, hp, maxHp: hp, alive: true, fadeTimer: 0, attackCD: 0 });
   updateUnitCounts();
 }
@@ -4654,15 +4654,15 @@ autoFill();
 // Auto-fill demo: places a balanced encounter when user clicks AUTO-FILL
 // Players can also manually place units via the BUILD panel
 function autoFillDemo(){
-  // VULCAN: Balanced encounter — bugs are a real threat now
-  // 4 troopers in a firing line
-  placeUnit(200,"trooper");placeUnit(300,"trooper");placeUnit(400,"trooper");placeUnit(500,"trooper");
-  // 6 warrior bugs approaching from both sides
-  placeUnit(700,"warrior_bug");placeUnit(760,"warrior_bug");placeUnit(820,"warrior_bug");
-  placeUnit(80,"warrior_bug");placeUnit(140,"warrior_bug");
-  // 3 hoppers flying in from above
-  placeUnit(600,"hopper_bug");placeUnit(350,"hopper_bug");placeUnit(880,"hopper_bug");
-  console.log('VULCAN: Demo battle deployed — 4 troopers vs 8 bugs + 3 hoppers');
+  // VULCAN: Balanced encounter — bugs spawn BEYOND shoot range (250px)
+  // 4 troopers in a firing line at center
+  placeUnit(400,"trooper");placeUnit(500,"trooper");placeUnit(600,"trooper");placeUnit(700,"trooper");
+  // 6 warrior bugs approaching from the RIGHT (spawn at 1000+, well beyond 250px shoot range)
+  placeUnit(1000,"warrior_bug");placeUnit(1050,"warrior_bug");placeUnit(1100,"warrior_bug");
+  placeUnit(1150,"warrior_bug");placeUnit(1200,"warrior_bug");placeUnit(1250,"warrior_bug");
+  // 3 hoppers flying in from the LEFT (spawn at 150, beyond 250px from trooper at 400)
+  placeUnit(100,"hopper_bug");placeUnit(50,"hopper_bug");placeUnit(150,"hopper_bug");
+  console.log('VULCAN: Demo battle deployed — 4 troopers vs 6 warriors (right) + 3 hoppers (left)');
 }
 // Only start ONE draw loop — prevent double RAF
 if(document.readyState==='complete'||document.readyState==='interactive'){
