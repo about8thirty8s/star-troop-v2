@@ -275,7 +275,7 @@ body{background:#1a0800;color:#fff;font-family:monospace;display:flex;flex-direc
         🦟 HOPPER BUG <span id="cnt-hopper_bug" style="opacity:0.5;font-size:9px;">(0)</span>
       </button>
       <hr style="border:none;border-top:1px solid #1a0800;margin:4px 0;">
-      <button onclick="STRUCTURES.length=0;UNITS.length=0;updateUnitCounts();" style="padding:4px 6px;background:#2d0808;border:1px solid #7f1d1d;color:#fca5a5;font-size:9px;cursor:pointer;font-family:monospace;border-radius:3px;">
+      <button onclick="STRUCTURES.length=0;UNITS.length=0;invalidateUnitCache();updateUnitCounts();" style="padding:4px 6px;background:#2d0808;border:1px solid #7f1d1d;color:#fca5a5;font-size:9px;cursor:pointer;font-family:monospace;border-radius:3px;">
         🗑 CLEAR ALL
       </button>
     </div>
@@ -3211,10 +3211,10 @@ function tickBugs(dt){
     }
 
     if(nearestTrooper){
-      u.dir = nearestTrooper.worldX > u.worldX ? 1 : -1;
-      u.flip = u.dir < 0;
-
+      // VULCAN: Only update facing when approaching — prevents rapid jitter in melee
       if(nearestDist > BUG_MELEE_RANGE){
+        u.dir = nearestTrooper.worldX > u.worldX ? 1 : -1;
+        u.flip = u.dir < 0;
         u.worldX += u.dir * speed * dtS;
         u.state = u.key === 'warrior_bug' ? 'crawl' : 'fly';
       } else {
@@ -4648,7 +4648,7 @@ function autoFill(){
 
   grassInvalidate();
   rockInvalidate();}
-function clearAll(){if(confirm('Clear all tiles?'))tilesMap={};}
+function clearAll(){if(confirm('Clear all tiles?')){tilesMap={};grassInvalidate();rockInvalidate();}}
 function exportJSON(){
   const b=new Blob([JSON.stringify({tiles:tilesMap,preset:activePreset,cols:GRID_COLS,rows:GRID_ROWS,fadeDepth,structures:STRUCTURES.map(s=>({key:s.key,worldX:s.worldX})),units:UNITS.map(u=>({key:u.key,worldX:u.worldX}))},null,2)],{type:'application/json'});
   Object.assign(document.createElement('a'),{href:URL.createObjectURL(b),download:'level.json'}).click();
