@@ -4365,7 +4365,14 @@ function draw(){
       ctx.strokeStyle=er?'rgba(255,60,60,0.8)':'rgba(255,210,60,0.8)';
       ctx.lineWidth=1.2;ctx.fillRect(hx,hy,ts,ts);ctx.strokeRect(hx+.5,hy+.5,ts-1,ts-1);
     }
-  }catch(e){console.error('DRAW:',e);}
+  }catch(e){
+    console.error('DRAW:',e);
+    // Surface error visually on canvas so we can see it in browser
+    ctx.fillStyle='#ff0000';
+    ctx.font='12px monospace';
+    ctx.fillText('DRAW ERROR: '+e.message, 10, 20);
+    ctx.fillText('stack: '+(e.stack||'').substring(0,200), 10, 40);
+  }
   if(document.hidden){
     // Pause when tab not visible — resume on next visibility change
     document.addEventListener('visibilitychange',function _vr(){
