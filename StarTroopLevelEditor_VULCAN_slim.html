@@ -4984,5 +4984,35 @@ function envReset(){
 })();
 </script>
 
+
+<script>
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    var c = document.querySelector('canvas');
+    if(!c) { console.log('NO CANVAS'); return; }
+    var ctx = c.getContext('2d');
+    var W = c.width, H = c.height;
+    // Sample every 3px vertically at center X
+    var samples = [];
+    for(var y = 0; y < H; y += 3) {
+      try {
+        var px = ctx.getImageData(Math.floor(W/2), y, 1, 1).data;
+        samples.push({y: y, r: px[0], g: px[1], b: px[2], a: px[3]});
+      } catch(e) {}
+    }
+    // Find sharp transitions (diff > 10 between adjacent samples)
+    var bands = [];
+    for(var i = 1; i < samples.length; i++) {
+      var s0 = samples[i-1], s1 = samples[i];
+      var diff = Math.abs(s1.r-s0.r) + Math.abs(s1.g-s0.g) + Math.abs(s1.b-s0.b);
+      if(diff > 10) {
+        bands.push({y: s1.y, diff: diff, from: s0.r+','+s0.g+','+s0.b, to: s1.r+','+s1.g+','+s1.b});
+      }
+    }
+    console.log('VULCAN_BANDS:' + JSON.stringify({total: bands.length, bands: bands.slice(0, 40)}));
+  }, 5000);
+});
+</script>
+
 </body>
 </html>
