@@ -2744,7 +2744,7 @@ function updateUnitCounts(){
 function placeUnit(worldX, key){
   const def = UNIT_DEFS[key];
   if(!def) return;
-  const hp = key === 'trooper' ? 100 : key === 'warrior_bug' ? 200 : 80;
+  const hp = key === 'trooper' ? 150 : key === 'warrior_bug' ? 120 : 60;
   UNITS.push({ key, worldX, flip: false, hp, maxHp: hp, alive: true, fadeTimer: 0, attackCD: 0 });
   updateUnitCounts();
 }
@@ -3045,7 +3045,7 @@ function _drawHopperBug(ctx, sx, sy, sw, sh, darkness, t, flip){
 const NPC_PATROL_SPEED = 28;   // px/sec world space
 const NPC_DETECT_RANGE = 380;  // world px — distance to detect a bug unit
 const NPC_SHOOT_RANGE  = 320;
-const NPC_SHOOT_COOLDOWN = 2200; // ms between shots
+const NPC_SHOOT_COOLDOWN = 1400; // ms between shots
 
 function tickNPCTroopers(dt){
   const dtS = dt / 1000;
@@ -3091,7 +3091,7 @@ function tickNPCTroopers(dt){
         if(u.shootTimer >= NPC_SHOOT_COOLDOWN){
           u.shootTimer = 0;
           if(nearestBug && nearestBug.alive !== false){
-            nearestBug.hp -= 25;
+            nearestBug.hp -= 35;
             if(nearestBug.hp <= 0){
               nearestBug.hp = 0;
               nearestBug.alive = false;
@@ -3131,9 +3131,9 @@ function tickNPCTroopers(dt){
 }
 
 // ── BUG AI ────────────────────────────────────────────────────────────────────
-const BUG_MELEE_RANGE   = 32;
+const BUG_MELEE_RANGE   = 28;
 const BUG_ATTACK_CD     = 1000;
-const BUG_DMG           = 15;
+const BUG_DMG           = 12;
 const WARRIOR_CRAWL_SPEED = 30;
 const HOPPER_FLY_SPEED    = 55;
 
@@ -4551,17 +4551,19 @@ function importJSON(input){
   reader.readAsText(file);
 }
 autoFill();
-// VULCAN TEMP TEST: hardcode units for visual verification (remove after testing)
+// VULCAN TEMP TEST: balanced combat encounter (remove after testing)
 window.addEventListener('load', function(){
   setTimeout(function(){
     try {
-      placeUnit(200,"trooper");placeUnit(320,"trooper");placeUnit(440,"trooper");placeUnit(560,"trooper");
-      placeUnit(250,"warrior_bug");placeUnit(300,"warrior_bug");placeUnit(380,"warrior_bug");
-      placeUnit(450,"warrior_bug");placeUnit(520,"warrior_bug");placeUnit(600,"warrior_bug");
-      placeUnit(400,"hopper_bug");
+      // 4 troopers in a firing line
+      placeUnit(180,"trooper");placeUnit(280,"trooper");placeUnit(380,"trooper");placeUnit(480,"trooper");
+      // 3 warrior bugs approaching from the right — gives troopers time to shoot
+      placeUnit(700,"warrior_bug");placeUnit(780,"warrior_bug");placeUnit(860,"warrior_bug");
+      // 1 hopper bug flying in from far right
+      placeUnit(950,"hopper_bug");
       if(typeof zoomTarget!=="undefined")zoomTarget=3.5;
-      if(typeof PLAYER!=="undefined")PLAYER.worldX=380;
-      console.log('VULCAN TEMP TEST: units placed, count=' + UNITS.length);
+      if(typeof PLAYER!=="undefined")PLAYER.worldX=330;
+      console.log('VULCAN TEMP TEST: balanced encounter placed, count=' + UNITS.length);
     } catch(e) {
       console.error('VULCAN TEMP TEST ERROR:', e.message);
     }
