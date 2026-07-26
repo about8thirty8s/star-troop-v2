@@ -1181,7 +1181,7 @@ function drawSearchlights(ctx, W, tY, camX, t){
     const len = tY * 1.4;
     const ex = bx + Math.cos(angle) * len;
     const ey = tY  + Math.sin(angle) * len;
-    const beam = ctx.createLinearGradient(b.bx, tY, ex, ey);
+    const beam = ctx.createLinearGradient(bx, tY, ex, ey);  // VULCAN FIX: was b.bx (undefined)
     beam.addColorStop(0, `rgba(240,240,200,${(alpha*0.9).toFixed(3)})`);
     beam.addColorStop(0.3, `rgba(220,220,180,${(alpha*0.4).toFixed(3)})`);
     beam.addColorStop(1,   'rgba(200,200,160,0)');
