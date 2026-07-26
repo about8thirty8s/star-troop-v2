@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+window.__vulcanErrors = [];
+window.addEventListener('error', function(e) {
+  window.__vulcanErrors.push(e.message + ' @ line ' + e.lineno + ':' + e.colno);
+  console.error('VULCAN ERROR:', e.message, '@ line', e.lineno);
+});
+</script>
 <meta charset="UTF-8"/>
 <title>Star Troop — Level Editor</title>
 <style>
@@ -3287,7 +3294,6 @@ function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip,
     let animDef = null, frameIdx = 0;
     const animTime = (shootTimer || 0) + t * 0.001;
     
-  }
     if(key === 'trooper'){
       if(unitState === 'shoot' && def.animShoot){
         animDef = def.animShoot;
@@ -3392,7 +3398,6 @@ function drawUnitSprite(ctx, key, def, sx, sy, sw, sh, darkness, t, alpha, flip,
     }
   } else {
     // ── Fallback: canvas-drawn versions (while sheets load) ──────────────────
-  }
     if(key === 'trooper'){
       _drawNPCTrooper(ctx, sx, sy, sw, sh, darkness, t, flip, unitState, shootTimer);
     } else if(key === 'warrior_bug'){
