@@ -3070,7 +3070,7 @@ function tickNPCTroopers(dt){
   const worldW = GRID_COLS * TILE_PX;
 
   // ── Cache bug list once per tick (avoids O(n²) scan) ──────────────────────
-  const bugs = UNITS.filter(b => b.key === 'warrior_bug' || b.key === 'hopper_bug');
+  const bugs = UNITS.filter(b => (b.key === 'warrior_bug' || b.key === 'hopper_bug') && b.alive !== false);  // VULCAN FIX: exclude dead bugs
   // VULCAN: Target coordination — track which bugs are currently being engaged
   const engagedBugs = new Map();
 
@@ -3127,9 +3127,9 @@ function tickNPCTroopers(dt){
         u.shootTimer += dt;
         if(u.shootTimer >= NPC_SHOOT_COOLDOWN){
           u.shootTimer = 0;
-          if(nearestBug && nearestBug.alive !== false){
-            nearestBug.hp -= 25;  // VULCAN: reduced from 35
-            nearestBug.hitFlash = 150;  // VULCAN: hit flash duration in ms
+          if(nearestBug && nearestBug.alive !== false && nearestBug.hp > 0){  // VULCAN: guard overkill
+            nearestBug.hp -= 25;
+            nearestBug.hitFlash = 150;
             if(nearestBug.hp <= 0){
               nearestBug.hp = 0;
               nearestBug.alive = false;
@@ -3178,7 +3178,7 @@ const HOPPER_FLY_SPEED    = 85;  // VULCAN: increased from 55 — hoppers are FA
 function tickBugs(dt){
   const dtS = dt / 1000;
   const worldW = GRID_COLS * TILE_PX;
-  const troopers = UNITS.filter(u => u.key === 'trooper' && u.alive !== false);
+  const troopers = UNITS.filter(t => t.key === 'trooper' && t.alive !== false);  // VULCAN: filter dead troopers at source
 
   for(const u of UNITS){
     if(u.key !== 'warrior_bug' && u.key !== 'hopper_bug') continue;
@@ -3221,8 +3221,10 @@ function tickBugs(dt){
         u.attackCD = (u.attackCD || 0) + dt;
         if(u.attackCD >= BUG_ATTACK_CD){
           u.attackCD = 0;
-          nearestTrooper.hp -= BUG_DMG;
-          if(nearestTrooper.hp <= 0){
+          if(nearestTrooper.hp > 0){  // VULCAN: guard overkill
+            nearestTrooper.hp -= BUG_DMG;
+          }
+          if(nearestTrooper.hp <= 0 && nearestTrooper.alive !== false){
             nearestTrooper.hp = 0;
             nearestTrooper.alive = false;
             nearestTrooper.fadeTimer = 0;
