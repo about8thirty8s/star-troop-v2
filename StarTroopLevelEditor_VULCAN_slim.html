@@ -303,18 +303,18 @@ body{background:#1a0800;color:#fff;font-family:monospace;display:flex;flex-direc
 <script>
 const LAYER_LIBRARY = {
   'FAR': [
-    {label:'Alien Mesa (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_far_day.png'},
-    {label:'Alien Mesa (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_far_night.png'},
+    {label:'Alien Mesa (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_far_day_v2.png'},
+    {label:'Alien Mesa (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_far_night_v2.png'},
     {label:'Legacy Mountains', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0000.png'},
   ],
   'MID': [
-    {label:'Dead Forest (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_mid_day.png'},
-    {label:'Dead Forest (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_mid_night.png'},
+    {label:'Dead Forest (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_mid_day_v2.png'},
+    {label:'Dead Forest (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_mid_night_v2.png'},
     {label:'Legacy Midground', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0002.png'},
   ],
   'NEAR': [
-    {label:'Ground Scrub (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_near_day.png'},
-    {label:'Ground Scrub (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_near_night.png'},
+    {label:'Ground Scrub (Day)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_near_day_v2.png'},
+    {label:'Ground Scrub (Night)', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/bg_near_night_v2.png'},
     {label:'Legacy Ground Fog', src:'https://cdn.jsdelivr.net/gh/about8thirty8s/star-troop-v2@main/assets/asset_0003.png'},
   ],
 };
@@ -1390,7 +1390,7 @@ function drawCelestials(ctx, W, tY, t, zoom) {
     // ── VULCAN SUN: Massive multi-layer corona ─────────────────────────────────
     const isHigh = elevFrac > 0.3;
     // Layer 1: Mega outer glow — fills a big portion of the sky
-    const outerGlow = ctx.createRadialGradient(sunX, sunY, sunR*0.5, sunX, sunY, sunR * 9.0);
+    const outerGlow = ctx.createRadialGradient(sunX, sunY, sunR*0.5, sunX, sunY, sunR * 5.5);
     outerGlow.addColorStop(0,   isHigh ? 'rgba(255,140,20,0.28)' : 'rgba(200,40,5,0.32)');
     outerGlow.addColorStop(0.25,'rgba(255,100,10,0.14)');
     outerGlow.addColorStop(0.55,'rgba(220,60,5,0.06)');
@@ -1422,7 +1422,7 @@ function drawCelestials(ctx, W, tY, t, zoom) {
       ctx.fillStyle = horizBloom;
       ctx.save();
       ctx.scale(1, 0.4); // squash vertically for horizon spread
-      ctx.beginPath(); ctx.arc(sunX, sunY / 0.4, sunR * 12.0, 0, Math.PI*2); ctx.fill();
+      // horizon glow arc removed — was drawing oversized disc
       ctx.restore();
       ctx.globalAlpha = sunAlpha;
     }
@@ -1437,7 +1437,7 @@ function drawCelestials(ctx, W, tY, t, zoom) {
     // crossT=0 → pure B, crossT=1 → pure A
     const alphaA = crossT;           // 0 at horizon, 1 at zenith
     const alphaB = 1 - crossT;      // 1 at horizon, 0 at zenith
-    const sprSize = sunR * 2.6;
+    const sprSize = sunR * 1.8;  // reduced from 2.6 — was rendering too large
 
     // Draw B first (behind), then A on top — both only visible in crossfade zone
     if(imgB && imgB.complete && imgB.naturalWidth && alphaB > 0.01) {
@@ -4266,43 +4266,39 @@ function draw(){
     drawStars(ctx, W, tY, t, zoom);
 
     // ── FAR parallax layer ──────────────────────────────────────────────────
-    ['FAR'].forEach(slot=>{
-      const st=LS[slot];if(!st.visible||!st.img||!st.img.complete||!st.img.naturalWidth)return;
-      // Use image's natural aspect ratio — draw at bottom of sky area
-      const imgAR = st.img.naturalWidth / st.img.naturalHeight;
-      const dH = st.img.naturalHeight;   // use natural height, don't stretch
-      const dW = dH * imgAR;
-      // Scale so layer fills the sky width cleanly
-      const scaleH = tY * 0.9;          // fill ~90% of sky height
-      const scaleW = scaleH * imgAR;
-      const drawY = tY - scaleH + (st.yOff || 0);
-      const worldOff = camX / zoom;
-      const off = -(worldOff * st.speed) % scaleW;
-      ctx.save();
-      // Auto day/night blend — index 0=day, index 1=night
-      const _dayImgF = libImgs[slot] && libImgs[slot][0];
-      const _nightImgF = libImgs[slot] && libImgs[slot][1];
-      const _darkF = DN.darkness;
-      // Draw day layer at (1-darkness) alpha
-      if(_dayImgF && _dayImgF.complete && _dayImgF.naturalWidth && _darkF < 0.98) {
-        ctx.globalAlpha = Math.max(0, 1 - _darkF);
-        for(let x=off-scaleW; x<W+scaleW; x+=scaleW)
-          ctx.drawImage(_dayImgF, x, drawY, scaleW, scaleH);
+    // Draw approach: scale image so its WIDTH covers the canvas, anchor BOTTOM to tY+overlap
+    // Height follows AR naturally — image's own internal alpha handles sky fade
+    {
+      const slot='FAR', st=LS[slot];
+      if(st.visible && st.img && st.img.complete && st.img.naturalWidth) {
+        const imgAR = st.img.naturalWidth / st.img.naturalHeight;
+        // Scale: width covers at least 1.5× canvas so tiles are spaced nicely
+        const tileW = Math.max(W * 0.55, 320);
+        const tileH = tileW / imgAR;
+        const drawY = tY - tileH + (st.yOff||0) + tileH*0.12; // anchor bottom ~12% into terrain
+        const worldOff = camX / zoom;
+        const off = -(worldOff * st.speed) % tileW;
+        const _dayI  = libImgs[slot]?.[0], _nightI = libImgs[slot]?.[1];
+        const _dark  = DN.darkness;
+        ctx.save();
+        if(_dayI?.complete && _dayI.naturalWidth && _dark < 0.98) {
+          ctx.globalAlpha = 1 - _dark;
+          for(let x=off-tileW; x<W+tileW; x+=tileW)
+            ctx.drawImage(_dayI, x, drawY, tileW, tileH);
+        }
+        if(_nightI?.complete && _nightI.naturalWidth && _dark > 0.02) {
+          ctx.globalAlpha = _dark;
+          for(let x=off-tileW; x<W+tileW; x+=tileW)
+            ctx.drawImage(_nightI, x, drawY, tileW, tileH);
+        }
+        if(!_dayI && !_nightI && st.img) {
+          ctx.globalAlpha = 1;
+          for(let x=off-tileW; x<W+tileW; x+=tileW)
+            ctx.drawImage(st.img, x, drawY, tileW, tileH);
+        }
+        ctx.restore();
       }
-      // Draw night layer at darkness alpha (crossfade)
-      if(_nightImgF && _nightImgF.complete && _nightImgF.naturalWidth && _darkF > 0.02) {
-        ctx.globalAlpha = _darkF;
-        for(let x=off-scaleW; x<W+scaleW; x+=scaleW)
-          ctx.drawImage(_nightImgF, x, drawY, scaleW, scaleH);
-      }
-      // Fallback: if only one image loaded, draw it normally
-      if((!_dayImgF || !_nightImgF) && st.img) {
-        ctx.globalAlpha = 1.0;
-        for(let x=off-scaleW; x<W+scaleW; x+=scaleW)
-          ctx.drawImage(st.img, x, drawY, scaleW, scaleH);
-      }
-      ctx.restore();
-    });
+    }
 
     // ── Gas giant — behind MID mountains, in front of FAR layer ──────────────
     ctx.globalAlpha = 1;
@@ -4311,33 +4307,34 @@ function draw(){
 
     // ── MID + NEAR parallax layers (in front of gas giant) ────────────────────
     ['MID','NEAR'].forEach(slot=>{
-      const st=LS[slot];if(!st.visible||!st.img||!st.img.complete||!st.img.naturalWidth)return;
-      const imgAR = st.img.naturalWidth / st.img.naturalHeight;
-      // Scale to fill sky height — MID taller than NEAR
-      const scaleH = slot==='MID' ? tY * 0.85 : tY * 0.50;
-      const scaleW = scaleH * imgAR;
-      const drawY = tY - scaleH + (st.yOff || 0);
+      const st=LS[slot];
+      if(!st.visible || !st.img || !st.img.complete || !st.img.naturalWidth) return;
+      const imgAR  = st.img.naturalWidth / st.img.naturalHeight;
+      // Scale: MID fills ~70% of canvas width per tile, NEAR fills ~50%
+      const tileW  = slot==='MID' ? Math.max(W * 0.70, 400) : Math.max(W * 0.50, 280);
+      const tileH  = tileW / imgAR;
+      // Anchor bottom — MID sinks 8% into terrain, NEAR sinks 5%
+      const sink   = slot==='MID' ? tileH * 0.08 : tileH * 0.05;
+      const drawY  = tY - tileH + sink + (st.yOff||0);
       const worldOff = camX / zoom;
-      const off = -(worldOff * st.speed) % scaleW;
+      const off    = -(worldOff * st.speed) % tileW;
+      const _dayI  = libImgs[slot]?.[0], _nightI = libImgs[slot]?.[1];
+      const _dark  = DN.darkness;
       ctx.save();
-      // Auto day/night blend — index 0=day, index 1=night
-      const _dayImg = libImgs[slot] && libImgs[slot][0];
-      const _nightImg = libImgs[slot] && libImgs[slot][1];
-      const _dark = DN.darkness;
-      if(_dayImg && _dayImg.complete && _dayImg.naturalWidth && _dark < 0.98) {
-        ctx.globalAlpha = Math.max(0, 1 - _dark);
-        for(let x=off-scaleW; x<W+scaleW; x+=scaleW)
-          ctx.drawImage(_dayImg, x, drawY, scaleW, scaleH);
+      if(_dayI?.complete && _dayI.naturalWidth && _dark < 0.98) {
+        ctx.globalAlpha = 1 - _dark;
+        for(let x=off-tileW; x<W+tileW; x+=tileW)
+          ctx.drawImage(_dayI, x, drawY, tileW, tileH);
       }
-      if(_nightImg && _nightImg.complete && _nightImg.naturalWidth && _dark > 0.02) {
+      if(_nightI?.complete && _nightI.naturalWidth && _dark > 0.02) {
         ctx.globalAlpha = _dark;
-        for(let x=off-scaleW; x<W+scaleW; x+=scaleW)
-          ctx.drawImage(_nightImg, x, drawY, scaleW, scaleH);
+        for(let x=off-tileW; x<W+tileW; x+=tileW)
+          ctx.drawImage(_nightI, x, drawY, tileW, tileH);
       }
-      if((!_dayImg || !_nightImg) && st.img) {
-        ctx.globalAlpha = 1.0;
-        for(let x=off-scaleW; x<W+scaleW; x+=scaleW)
-          ctx.drawImage(st.img, x, drawY, scaleW, scaleH);
+      if(!_dayI && !_nightI && st.img) {
+        ctx.globalAlpha = 1;
+        for(let x=off-tileW; x<W+tileW; x+=tileW)
+          ctx.drawImage(st.img, x, drawY, tileW, tileH);
       }
       ctx.restore();
     });
