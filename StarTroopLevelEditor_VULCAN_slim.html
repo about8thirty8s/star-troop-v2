@@ -3095,7 +3095,7 @@ function tickNPCTroopers(dt){
   const engagedBugs = new Map();
   if(draw._dbgT === undefined) draw._dbgT = 0;
   draw._dbgT += dt;
-  if(draw._dbgT > 2000){ draw._dbgT = 0; console.log('TROOPER_TICK: bugs='+bugs.length+' UNITS='+UNITS.length+' aliveTroopers='+UNITS.filter(t=>t.key==='trooper'&&t.alive!==false).length+' aliveBugs='+UNITS.filter(b=>(b.key==='warrior_bug'||b.key==='hopper_bug')&&b.alive!==false).length); }
+  if(draw._dbgT > 2000){ draw._dbgT = 0; window._dbg = 'T: bugs='+bugs.length+' U='+UNITS.length+' aT='+UNITS.filter(t=>t.key==='trooper'&&t.alive!==false).length+' aB='+UNITS.filter(b=>(b.key==='warrior_bug'||b.key==='hopper_bug')&&b.alive!==false).length; }
 
   for(const u of UNITS){
     if(u.key !== 'trooper') continue;
@@ -3209,7 +3209,7 @@ function tickBugs(dt){
   const troopers = getLivingTroopers();  // VULCAN: use cached array
   if(draw._dbgB === undefined) draw._dbgB = 0;
   draw._dbgB += dt;
-  if(draw._dbgB > 2000){ draw._dbgB = 0; console.log('BUG_TICK: troopers='+troopers.length+' aliveTroopers='+UNITS.filter(t=>t.key==='trooper'&&t.alive!==false).length); }
+  if(draw._dbgB > 2000){ draw._dbgB = 0; window._dbg2 = 'B: tr='+troopers.length+' aT='+UNITS.filter(t=>t.key==='trooper'&&t.alive!==false).length; }
 
   for(const u of UNITS){
     if(u.key !== 'warrior_bug' && u.key !== 'hopper_bug') continue;
@@ -4310,6 +4310,7 @@ function draw(){
     tickRocks();  // regen rocks if tiles changed
 
     ctx.clearRect(0,0,W,H);ctx.imageSmoothingEnabled=false;
+    if(window._dbg){ ctx.fillStyle='#0f0'; ctx.font='14px monospace'; ctx.fillText(window._dbg, 10, 20); ctx.fillText(window._dbg2||'', 10, 38); }
 
     // ── Sky gradient — cached, only rebuilt when DN state changes ──────────────
     const d=DN.darkness;
