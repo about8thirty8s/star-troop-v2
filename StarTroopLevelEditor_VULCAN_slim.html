@@ -3093,6 +3093,9 @@ function tickNPCTroopers(dt){
   const bugs = getLivingBugs();  // VULCAN: use cached array
   // VULCAN: Target coordination — track which bugs are currently being engaged
   const engagedBugs = new Map();
+  if(draw._dbgT === undefined) draw._dbgT = 0;
+  draw._dbgT += dt;
+  if(draw._dbgT > 2000){ draw._dbgT = 0; console.log('TROOPER_TICK: bugs='+bugs.length+' UNITS='+UNITS.length+' aliveTroopers='+UNITS.filter(t=>t.key==='trooper'&&t.alive!==false).length+' aliveBugs='+UNITS.filter(b=>(b.key==='warrior_bug'||b.key==='hopper_bug')&&b.alive!==false).length); }
 
   for(const u of UNITS){
     if(u.key !== 'trooper') continue;
@@ -3204,6 +3207,9 @@ function tickBugs(dt){
   const dtS = dt / 1000;
   const worldW = GRID_COLS * TILE_PX;
   const troopers = getLivingTroopers();  // VULCAN: use cached array
+  if(draw._dbgB === undefined) draw._dbgB = 0;
+  draw._dbgB += dt;
+  if(draw._dbgB > 2000){ draw._dbgB = 0; console.log('BUG_TICK: troopers='+troopers.length+' aliveTroopers='+UNITS.filter(t=>t.key==='trooper'&&t.alive!==false).length); }
 
   for(const u of UNITS){
     if(u.key !== 'warrior_bug' && u.key !== 'hopper_bug') continue;
