@@ -2762,7 +2762,7 @@ function updateUnitCounts(){
 function placeUnit(worldX, key){
   const def = UNIT_DEFS[key];
   if(!def) return;
-  const hp = key === 'trooper' ? 150 : key === 'warrior_bug' ? 350 : 180;  // VULCAN: warrior 350, hopper 180
+  const hp = key === 'trooper' ? 200 : key === 'warrior_bug' ? 180 : 90;  // VULCAN: rebalanced — trooper 200, warrior 180, hopper 90
   UNITS.push({ key, worldX, flip: false, hp, maxHp: hp, alive: true, fadeTimer: 0, attackCD: 0 });
   invalidateUnitCache();
   updateUnitCounts();
@@ -3061,10 +3061,10 @@ function _drawHopperBug(ctx, sx, sy, sw, sh, darkness, t, flip){
 
 // ── NPC TROOPER AI ────────────────────────────────────────────────────────────
 // Each trooper has: state ('idle'|'patrol'|'alert'|'shoot'), dir, shootTimer, alertTimer
-const NPC_PATROL_SPEED = 28;   // px/sec world space
-const NPC_DETECT_RANGE = 350;  // VULCAN: reduced from 380
-const NPC_SHOOT_RANGE  = 250;  // VULCAN: reduced from 320 — bugs can close distance
-const NPC_SHOOT_COOLDOWN = 1600; // VULCAN: increased from 1400 — bugs get more time to close
+const NPC_PATROL_SPEED = 22;   // VULCAN: slower patrol — more shooting, less walking
+const NPC_DETECT_RANGE = 380;  // VULCAN: wider detection
+const NPC_SHOOT_RANGE  = 300;  // VULCAN: longer range — start shooting sooner
+const NPC_SHOOT_COOLDOWN = 1200; // VULCAN: faster fire rate — 1.2s between shots
 
 // ── VULCAN: Cached unit arrays — rebuilt only when units change ──
 let _cachedBugs = null, _cachedTroopers = null;
@@ -3153,7 +3153,7 @@ function tickNPCTroopers(dt){
         if(u.shootTimer >= NPC_SHOOT_COOLDOWN){
           u.shootTimer = 0;
           if(nearestBug && nearestBug.alive !== false && nearestBug.hp > 0){  // VULCAN: guard overkill
-            nearestBug.hp -= 25;
+            nearestBug.hp -= 35;
             nearestBug.hitFlash = 150;
             if(nearestBug.hp <= 0){
               nearestBug.hp = 0;
@@ -3195,11 +3195,11 @@ function tickNPCTroopers(dt){
 }
 
 // ── BUG AI ────────────────────────────────────────────────────────────────────
-const BUG_MELEE_RANGE   = 32;   // VULCAN: slightly larger melee reach
-const BUG_ATTACK_CD     = 800;  // VULCAN: faster attacks from 1000
-const BUG_DMG           = 18;   // VULCAN: increased from 12 — bugs are dangerous
-const WARRIOR_CRAWL_SPEED = 55;  // VULCAN: increased from 30 — bugs actually close distance
-const HOPPER_FLY_SPEED    = 85;  // VULCAN: increased from 55 — hoppers are FAST
+const BUG_MELEE_RANGE   = 32;   // VULCAN: melee reach
+const BUG_ATTACK_CD     = 900;  // VULCAN: slightly slower attacks — 0.9s
+const BUG_DMG           = 14;   // VULCAN: reduced from 18 — less lethal per hit
+const WARRIOR_CRAWL_SPEED = 45;  // VULCAN: reduced from 55 — gives troopers more shooting time
+const HOPPER_FLY_SPEED    = 70;  // VULCAN: reduced from 85 — hoppers still fast but killable
 
 function tickBugs(dt){
   const dtS = dt / 1000;
@@ -3528,7 +3528,7 @@ function _drawNPCTrooper(ctx, sx, sy, sw, sh, darkness, t, flip, unitState, shoo
   const bobY = isWalking ? Math.abs(Math.sin(tCycle * 6)) * sh * 0.025 : Math.sin(tCycle * 1.8) * sh * 0.015;
 
   // Shoot timing — driven by AI state
-  const SHOOT_INTERVAL = 1600, FLASH_DUR = 180;  // VULCAN: synced with NPC_SHOOT_COOLDOWN
+  const SHOOT_INTERVAL = 1200, FLASH_DUR = 180;  // VULCAN: synced with NPC_SHOOT_COOLDOWN
   const isShooting = (unitState === 'shoot') && (shootTimer !== undefined) && ((shootTimer % SHOOT_INTERVAL) < FLASH_DUR);
   const shootPhaseMs = isShooting ? (shootTimer % SHOOT_INTERVAL) : 0;
   const flashT     = isShooting ? shootPhaseMs / FLASH_DUR : 0;
