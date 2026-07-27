@@ -3067,17 +3067,20 @@ const NPC_SHOOT_RANGE  = 250;  // VULCAN: reduced from 320 — bugs can close di
 const NPC_SHOOT_COOLDOWN = 1600; // VULCAN: increased from 1400 — bugs get more time to close
 
 // ── VULCAN: Cached unit arrays — rebuilt only when units change ──
-let _cachedBugs = null, _cachedTroopers = null, _unitCacheDirty = true;
-function invalidateUnitCache(){ _unitCacheDirty = true; }
+let _cachedBugs = null, _cachedTroopers = null;
+let _bugsCacheDirty = true, _troopersCacheDirty = true;
+function invalidateUnitCache(){ _bugsCacheDirty = true; _troopersCacheDirty = true; }
 function getLivingBugs(){
-  if(_unitCacheDirty || !_cachedBugs){
+  if(_bugsCacheDirty || !_cachedBugs){
     _cachedBugs = UNITS.filter(b => (b.key === 'warrior_bug' || b.key === 'hopper_bug') && b.alive !== false);
+    _bugsCacheDirty = false;
   }
   return _cachedBugs;
 }
 function getLivingTroopers(){
-  if(_unitCacheDirty || !_cachedTroopers){
+  if(_troopersCacheDirty || !_cachedTroopers){
     _cachedTroopers = UNITS.filter(t => t.key === 'trooper' && t.alive !== false);
+    _troopersCacheDirty = false;
   }
   return _cachedTroopers;
 }
@@ -3085,7 +3088,6 @@ function getLivingTroopers(){
 function tickNPCTroopers(dt){
   const dtS = dt / 1000;
   const worldW = GRID_COLS * TILE_PX;
-  _unitCacheDirty = false;  // Clear flag at start of tick cycle
 
   // ── Cache bug list once per tick (avoids O(n²) scan) ──────────────────────
   const bugs = getLivingBugs();  // VULCAN: use cached array
@@ -3137,8 +3139,12 @@ function tickNPCTroopers(dt){
     // ── State machine ──────────────────────────────────────────────────────
     if(nearestBug && nearestDist < NPC_DETECT_RANGE){
       // Face the bug
-      u.dir  = nearestBug.worldX > u.worldX ? 1 : -1;
-      u.flip = u.dir < 0;
+      // VULCAN: Only flip when target moves to opposite side by >8px (prevents jitter)
+      const facingDir = nearestBug.worldX > u.worldX ? 1 : -1;
+      if(facingDir !== u.dir && Math.abs(nearestBug.worldX - u.worldX) > 8){
+        u.dir  = facingDir;
+        u.flip = u.dir < 0;
+      }
 
       if(nearestDist < NPC_SHOOT_RANGE){
         u.state = 'shoot';
