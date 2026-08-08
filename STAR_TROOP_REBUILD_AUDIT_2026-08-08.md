@@ -180,3 +180,26 @@ Generated concept references are approved only for trooper armor, enemy caste si
 - Ensure Tanker and other surviving aliens remain readable against the defeat palette.
 
 **Pass 2 verdict:** Architecture passes. Graphical overhaul is materially improved but not accepted as final until the four correction items above are verified live.
+
+## Pass 2.1 Live Validation — 2026-08-08 17:57 AEST
+
+### Passed Live
+
+1. **Duplicate planet fixed:** day frame now shows exactly one low-contrast dominant planet; defeat/night shows one smaller distinct moon.
+2. **Parallax seams fixed:** mountain layers extend cleanly behind the gameplay terrain with no visible rectangular canvas bottoms in the observed center frame.
+3. **Persistent wrecks implemented:** the destroyed Hub remains as a collapsed shell at defeat; low barricade/tower debris also persists instead of the battlefield becoming empty.
+4. **HUD and day separation improved:** larger HUD typography is legible at embedded scale; cool gunmetal structures and troopers separate better from burnt-orange terrain.
+
+### Failed Live — Night Palette Still Green/Teal
+
+The builder reports correct target constants (`#100F20`, `#171A32`, `#343047`) and a red-charcoal defeat overlay, but the actual defeat screenshot renders a broad saturated green/teal sky. The code-level claim therefore does not match runtime output.
+
+Likely fault boundary:
+
+- A color interpolation/parser path is converting the target hex values incorrectly; or
+- A later full-screen atmosphere/composite layer overwrites the corrected sky; or
+- Phase/defeat draw order is applying an unintended green semantic tint globally.
+
+Next correction must inspect every full-screen fill/gradient/composite after the base sky draw, log or directly verify resolved CSS color strings, and temporarily bypass shared color-lerp helpers by using explicit night RGB/RGBA values. Acid green must never be used as a screen-wide atmosphere color.
+
+**Pass 2.1 verdict:** 3 of 4 critical defects fixed. Final visual acceptance remains blocked only by the runtime night/defeat color path. Wreck contrast may receive minor tuning after the palette is corrected.
