@@ -154,3 +154,29 @@ Every unit must pass the one-second black-silhouette test.
 ## Reference Art Decision
 
 Generated concept references are approved only for trooper armor, enemy caste silhouette and palette language. The generated fortification perspective is rejected because it drifts into 3/4 diorama geometry. Camera and structure perspective must be enforced by code and orthographic side elevations.
+
+## Pass 2 Live Validation — 2026-08-08 17:47 AEST
+
+### Accepted
+
+- Direct playable launch remains intact.
+- Trooper silhouettes and internal armor definition are materially improved.
+- Hub, barricades and floodlight tower now share a coherent military-industrial family.
+- Terrain has visible crust/mid/deep geology.
+- Defeat state triggers correctly after the automated night assault.
+- HUD state updates correctly: wave, power, trooper count, HP and score.
+
+### Rejected / Correction Required
+
+1. **Duplicate giant planets:** two nearly identical large spheres appear simultaneously in the day scene. This reads as duplicated layer content rather than intentional astronomy. Retain one dominant planet; any secondary moon must differ strongly in scale, position and phase visibility.
+2. **Incorrect night/defeat palette:** the observed defeat frame uses a saturated teal/cyan sky instead of the locked purple-black/deep-navy night constitution. Replace teal with controlled navy/purple values and preserve warm base lighting.
+3. **Hard parallax seams:** far mountain silhouettes terminate in obvious rectangular horizontal edges across the viewport. Layer canvases must extend below the terrain horizon or clip behind the gameplay ground without visible rectangles.
+4. **Destroyed structures vanish completely:** the Command Hub, walls and tower disappear at defeat, leaving an empty baseline. Destroyed structures must persist as side-on wreck/rubble states with embers/smoke, preserving battle history and clarifying why the player lost.
+
+### Additional Tuning
+
+- HUD typography remains small at embedded preview scale and needs another legibility pass.
+- The world remains overly orange-monochrome during day; introduce restrained gunmetal/cool shadow separation without violating the palette.
+- Ensure Tanker and other surviving aliens remain readable against the defeat palette.
+
+**Pass 2 verdict:** Architecture passes. Graphical overhaul is materially improved but not accepted as final until the four correction items above are verified live.
